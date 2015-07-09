@@ -47,6 +47,8 @@ void read_sensors() */
 {
     int32_t rc;
 
+    struct timespec real_clock, start_time;
+
     // detach the thread so that main can resume
     errno = 0;
     //rc = pthread_detach(pthread_self());
@@ -56,6 +58,10 @@ void read_sensors() */
     }
 
     /* ADD INTERRUPT HERE ------------------------------------------------------- */
+
+
+    // using a clock to simulate the interrupt
+    clock_getttime(CLOCK_REALTIME, &real_clock)
 
     /* TO OCCUR IN RESPONSE TO THE INTERRUPT SIGNAL (BELOW) --------------------- */
 
