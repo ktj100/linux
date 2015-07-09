@@ -49,7 +49,7 @@ void read_sensors() */
 
     // detach the thread so that main can resume
     errno = 0;
-    //rc = pthread_detach(pthread_self());
+    rc = pthread_detach(pthread_self());
     if (rc != 0)
     {
         printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
