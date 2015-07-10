@@ -60,25 +60,25 @@ void read_sensors() */
 
     struct timespec real_clock, start_time;
 
-    time_t run_time = 0;
-
     int8_t delay_finished = 0;
+    int32_t voltage[5], timestamp[9], logical[5];
+    int32_t temp, i;
 
-    int32_t new_value, voltage[5], i, timestamp[9], logical[5], temp, success;
-
-    size_t data_period = 30;   // this value will be determined by AACM for actual code
-    size_t timestamp_values = data_period * 9;
-
-    int32_t pfp_values[data_period], ptlt_values[data_period], ptrt_values[data_period]; 
-    int32_t tcmp_values[data_period], cop_values[data_period];
-    int32_t cam_secs[timestamp_values], cam_nsecs[timestamp_values];
-
+    time_t run_time = 0;
     int32_t tot_logicals = 0, tot_stamps = 0;
 
-//#ifdef TESTING
-    FILE *rawfp, *camfp;
-//#endif
+    size_t data_period = 30;   // this value will be determined by AACM for actual code
+    int32_t pfp_values[data_period];
+    int32_t ptlt_values[data_period];
+    int32_t ptrt_values[data_period]; 
+    int32_t tcmp_values[data_period];
+    int32_t cop_values[data_period];
 
+    size_t timestamp_values = data_period * 9;
+    int32_t cam_secs[timestamp_values], cam_nsecs[timestamp_values];
+
+    FILE *rawfp, *camfp;
+    
     // using a clock to simulate the interrupt
     clock_gettime(CLOCK_REALTIME, &start_time);
 
@@ -108,8 +108,8 @@ void read_sensors() */
         }
         for(i = 0; !feof(rawfp); i++)
         {
-            new_value = fscanf(rawfp, "%d", &voltage[i]);
-            if(new_value != 1)
+            temp = fscanf(rawfp, "%d", &voltage[i]);
+            if(1 != temp != 1)
             {
                 printf("ERROR: Scan failed before reaching EOF\n");
                 break;
@@ -134,8 +134,8 @@ void read_sensors() */
         }
         for(i = 0; !feof(camfp); i++)
         {
-            new_value = fscanf(camfp, "%d", &timestamp[i]);
-            if(new_value != 1)
+            temp = fscanf(camfp, "%d", &timestamp[i]);
+            if(temp != 1)
             {
                 printf("ERROR: Scan failed before reaching EOF\n");
                 break;

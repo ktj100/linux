@@ -7,7 +7,8 @@
 
 static pthread_t sensor_thread;
 
-void *read_sensors(void *arg);
+//void *read_sensors(void *arg);
+void read_sensors(void);
 int32_t convert_pfp (int32_t voltage);
 int32_t convert_ptxt (int32_t voltage);
 int32_t convert_tcmp (int32_t voltage);
@@ -19,7 +20,7 @@ int32_t main(void)
 
     // spawn thread for sensor reading
     errno = 0;
-    rc = pthread_create(&sensor_thread, NULL, read_sensors, NULL);
+    //rc = pthread_create(&sensor_thread, NULL, read_sensors, NULL);
     if(0 != rc)
     {
 //#ifdef TESTING
@@ -30,6 +31,8 @@ int32_t main(void)
 //#endif
     }
 
+    read_sensors();
+
     while(1)
     {
         printf("Main is running...\n");
@@ -37,19 +40,20 @@ int32_t main(void)
     }
 }
 
-void *read_sensors(void *arg)
+//void *read_sensors(void *arg)
+void read_sensors()
 {
     int32_t rc;
 
     // detach the thread so that main can resume
     errno = 0;
-    rc = pthread_detach(pthread_self());
+    //rc = pthread_detach(pthread_self());
     if (rc != 0)
     {
         printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
     }
 
-    int32_t value, voltage[5], i, timestamp[9], logical[5];
+    int32_t value, voltage[5], i, timestamp[9], logical[5], temp, success;
 
     int32_t data_period = 30;   // this value will be determined by AACM for actual code
 
@@ -67,11 +71,15 @@ void *read_sensors(void *arg)
     {
         // read in 1 Hz values and print
 //#ifdef TESTING
+    	//printf("\nLoop 1\n\n");
+
         rawfp = fopen("raw.in", "r");
 
         if (rawfp == NULL) {
             printf("Can't open input file raw.in!\n");
         }
+
+        //printf("\nLoop 2\n\n");
 
         i = 0;
         while(!feof(rawfp))
@@ -87,6 +95,7 @@ void *read_sensors(void *arg)
             i++;
         }
 //#endif
+        //printf("\nLoop 3\n\n");
 
         // convert volatges to logical values
         logical[0] = convert_pfp(voltage[0]);
@@ -94,6 +103,8 @@ void *read_sensors(void *arg)
         logical[2] = convert_ptxt(voltage[2]);
         logical[3] = convert_tcmp(voltage[3]);
         logical[4] = convert_cop(voltage[4]);
+
+        //printf("\nLoop 4\n\n");
 
         // read in cam timestamps and print
 //#ifdef TESTING
@@ -104,6 +115,8 @@ void *read_sensors(void *arg)
         if (camfp == NULL) {
             printf("Can't open input file cam.in!\n");
         }
+
+        //printf("\nLoop 5\n\n");
 
         i = 0;
         while(!feof(camfp))
@@ -119,12 +132,16 @@ void *read_sensors(void *arg)
             i++;
         }
 
+        //printf("\nLoop 6\n\n");
+
         // remove all old timestamp values and replace with NULL characters
         for(; i < 9; i++)
         {
             timestamp[i] = 0;
         }
 //#endif
+
+        //printf("\nLoop 7\n\n");
 
         // print out all values
         // 1 Hz Values
@@ -139,23 +156,45 @@ void *read_sensors(void *arg)
         //    printf("Nano Stamp   %d: %d\n", i + 1, cam_nsecs[tot_stamps-i-1]);
         //}
 
+        /* DEBUGGING 
+        printf("logical[0] = %d\n", logical[0]);
+        printf("logical[1] = %d\n", logical[1]);
+		printf("logical[2] = %d\n", logical[2]);
+        printf("logical[3] = %d\n", logical[3]);
+        printf("logical[4] = %d\n", logical[4]);*/
+
         // store all values until they are requested by AACM
-        for(i = 0; i < 5; i++)
-        {
-            pfp_values[tot_logicals + i]  = logical[0];
-            ptlt_values[tot_logicals + i] = logical[1];
-            ptrt_values[tot_logicals + i] = logical[2];
-            tcmp_values[tot_logicals + i] = logical[3];
-            cop_values[tot_logicals + i]  = logical[4];
+        for(i = 0; i < 5; success = (i++))		// without the "success =", 'i' stops incrementing when 
+        {										// this for loop is activated for the 16th time
+        	/* DEBUGGING
+        	printf("'i' increment success = %d\n", success);
+        	printf("\ni: %d\n\n", i);
+            printf("Total Logical Values: %d, Stored Here: %d\n", tot_logicals + i, logical[0]);
+            printf("Total Logical Values: %d, Stored Here: %d\n", tot_logicals + i, logical[1]);
+            printf("Total Logical Values: %d, Stored Here: %d\n", tot_logicals + i, logical[2]);
+            printf("Total Logical Values: %d, Stored Here: %d\n", tot_logicals + i, logical[3]);
+            printf("Total Logical Values: %d, Stored Here: %d\n", tot_logicals + i, logical[4]); */
+        	index = tot_logicals + i;
+            pfp_values[index]  = logical[0];
+            ptlt_values[index] = logical[1];
+            ptrt_values[index] = logical[2];
+            tcmp_values[index] = logical[3];
+            cop_values[index]  = logical[4];
         }
+
+        //printf("\nLoop 8\n\n");
 
         // split timestamps into seconds and nanoseconds AND store
         split_timestamps(&timestamp, &cam_secs, &cam_nsecs, tot_stamps);
+
+        //printf("\nLoop 9\n\n");
 
         // increment totals
         for(i = 0; timestamp[i] != 0; i++);
         tot_stamps += i;
         tot_logicals += 5;
+
+        //printf("\nLoop 10\n\n");
 
         // print out all stored values
         for(i = 0; i < tot_stamps; i++)
@@ -164,17 +203,13 @@ void *read_sensors(void *arg)
             printf("Nano Stamp   %d: %d\n", i + 1, cam_nsecs[i]);
         }
 
+        //printf("\nLoop 11\n\n");
+
         sleep(1);
     }
 
     printf("Infinite loop exited... \n");
-
-    return(0);
 }
-
-
-
-
 
 int32_t convert_pfp (int32_t voltage)
 {
@@ -185,10 +220,6 @@ int32_t convert_pfp (int32_t voltage)
     return (pressure);
 }
 
-
-
-
-
 int32_t convert_ptxt (int32_t voltage)
 {
     int32_t temp;
@@ -197,10 +228,6 @@ int32_t convert_ptxt (int32_t voltage)
 
     return (temp);
 }
-
-
-
-
 
 int32_t convert_tcmp (int32_t voltage)
 {
@@ -211,10 +238,6 @@ int32_t convert_tcmp (int32_t voltage)
     return (temp);
 }
 
-
-
-
-
 int32_t convert_cop (int32_t voltage)
 {
     int32_t pressure;
@@ -223,10 +246,6 @@ int32_t convert_cop (int32_t voltage)
 
     return (pressure);
 }
-
-
-
-
 
 void split_timestamps(int32_t *timestamp, int32_t *cam_secs, int32_t *cam_nsecs, int32_t total)
 {

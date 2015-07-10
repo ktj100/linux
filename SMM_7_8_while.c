@@ -21,7 +21,7 @@ int32_t main(void)
 
     // spawn thread for sensor reading
     errno = 0;
-    //rc = pthread_create(&sensor_thread, NULL, read_sensors, NULL);
+    rc = pthread_create(&sensor_thread, NULL, read_sensors, NULL);
     if(0 != rc)
     {
 //#ifdef TESTING
@@ -32,7 +32,8 @@ int32_t main(void)
 //#endif
     }
 
-    read_sensors();
+    /* DEBUGGING
+    read_sensors(); */
 
     while(1)
     {
