@@ -69,7 +69,7 @@ void read_sensors() */
     size_t data_period = 30;   // this value will be determined by AACM for actual code
     int32_t pfp_values[data_period];
     int32_t ptlt_values[data_period];
-    int32_t ptrt_values[data_period]; 
+    int32_t ptrt_values[data_period];
     int32_t tcmp_values[data_period];
     int32_t cop_values[data_period];
 
@@ -115,14 +115,14 @@ void read_sensors() */
         for(i = 0; !feof(rawfp); i++)
         {
             temp = fscanf(rawfp, "%d", &voltage[i]);
-            if(1 != temp != 1)
+            if(1 != temp)
             {
                 printf("ERROR: Scan failed before reaching EOF\n");
                 break;
             }
             else
             {
-                //printf("Scanned Value: %ld\n", voltage[i]);
+                //printf("Scanned Value: %d\n", voltage[i]);
             }
         }
         fclose(rawfp);
@@ -169,23 +169,29 @@ void read_sensors() */
 
         /* DEBUGGING */
         // print out all stored values
-        if(10 < tot_stamps)
-            i = tot_stamps - 10;
+        if(9 < tot_stamps)
+            i = tot_stamps - 9;
         else
             i = 0;
         for(; i < tot_stamps; i++)
         {
             printf("\nSecond Stamp %d: %d\n", i + 1, cam_secs[i]);
             printf("Nano Stamp   %d: %9d\n", i + 1, cam_nsecs[i]);
-
-            /*if(i < tot_logicals)
+        }
+        if(3 < tot_logicals)
+            i = tot_logicals - 3;
+        else
+            i = 0;
+        for(; i < tot_logicals; i++)
+        {
+            if(i < tot_logicals)
             {
                 printf("\nPFP %d: %d\n", i + 1, pfp_values[i]);
-                printf("\nPTLT %d: %d\n", i + 1, ptlt_values[i]);
-                printf("\nPTRT %d: %d\n", i + 1, ptrt_values[i]);
-                printf("\nTCMP %d: %d\n", i + 1, tcmp_values[i]);
-                printf("\nCOP %d: %d\n", i + 1, cop_values[i]);
-            }*/
+                printf("PTLT %d: %d\n", i + 1, ptlt_values[i]);
+                printf("PTRT %d: %d\n", i + 1, ptrt_values[i]);
+                printf("TCMP %d: %d\n", i + 1, tcmp_values[i]);
+                printf("COP %d: %d\n", i + 1, cop_values[i]);
+            }
         }
 
         /* DEBUGGING */
@@ -220,7 +226,7 @@ int32_t convert_pfp (int32_t voltage)
     int32_t pressure;
 
     /* This algorithm is only for testing. Actual algorithm will replace it. */
-    pressure = voltage * 50;
+    pressure = voltage / 20;
 
     return (pressure);
 }
@@ -230,7 +236,7 @@ int32_t convert_ptxt (int32_t voltage)
     int32_t temp;
 
     /* This algorithm is only for testing. Actual algorithm will replace it. */
-    temp = voltage * 20;
+    temp = voltage / 20;
 
     return (temp);
 }
@@ -240,7 +246,7 @@ int32_t convert_tcmp (int32_t voltage)
     int32_t temp;
 
     /* This algorithm is only for testing. Actual algorithm will replace it. */
-    temp = voltage * 10;
+    temp = voltage / 200;
 
     return (temp);
 }
@@ -250,7 +256,7 @@ int32_t convert_cop (int32_t voltage)
     int32_t pressure;
 
     /* This algorithm is only for testing. Actual algorithm will replace it. */
-    pressure = voltage * 2 - 5;
+    pressure = voltage / 500 - 5;
 
     return (pressure);
 }
