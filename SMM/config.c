@@ -6,9 +6,10 @@
 #include <string.h>
 #include <time.h>
 
-#include "config.h"
 #include "sensor.h"
 #include "fpga_sim.h"
+
+;
 
 int32_t subscribe_config(void)
 {
@@ -20,15 +21,16 @@ int32_t subscribe_config(void)
 
     // ALLOCATE SPACE FOR THE STORAGE OF THE LOGICAL VALUES 
     // = period of collection time in seconds
-    *pfp_values = (int32_t*)malloc(data_period);
-    *ptlt_values = (int32_t*)malloc(data_period);
-    *ptrt_values = (int32_t*)malloc(data_period);
-    *tcmp_values = (int32_t*)malloc(data_period);
-    *cop_values = (int32_t*)malloc(data_period);
+    pfp_values = (int32_t*)malloc(data_period);
+    ptlt_values = (int32_t*)malloc(data_period);
+    ptrt_values = (int32_t*)malloc(data_period);
+    tcmp_values = (int32_t*)malloc(data_period);
+    cop_values = (int32_t*)malloc(data_period);
 
     // ALLOCATE SPACE FOR THE STORAGE OF THE TIMESTAMP VALUES 
     // = period of collection time in seconds * 9 values per second (max)
-    *cam_secs = (int32_t*)malloc(timestamps_period);
-    *cam_nsecs = (int32_t*)malloc(timestamps_period);
+    cam_secs = (int32_t*)malloc(timestamps_period);
+    cam_nsecs = (int32_t*)malloc(timestamps_period);
 
+    return(0);
 }
