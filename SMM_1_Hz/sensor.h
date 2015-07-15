@@ -1,3 +1,12 @@
+#define pfp_raw_min -100000000
+#define pfp_raw_max 100000000
+#define ptxt_raw_min -100000000
+#define ptxt_raw_max 100000000
+#define tcmp_raw_min -100000000
+#define tcmp_raw_max 100000000
+#define cop_raw_min -100000000
+#define cop_raw_max 100000000
+
 int32_t pfp_val;
 int32_t ptlt_val;
 int32_t ptrt_val;

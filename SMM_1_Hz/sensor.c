@@ -11,29 +11,127 @@
 
 ;
 
-/*int32_t tot_logicals = 0;*/
-int32_t tot_stamps = 0;
-
 int32_t get_logicals(void)
 {
     //int32_t i;
-    int32_t voltages[5] = {0,0,0,0,0};
+    int32_t raw[5] = {0,0,0,0,0};
 
     // READ IN 1 HZ VOLTAGE VALUES
-    fpga_sim_voltages(&voltages[0]);
+    fpga_sim_voltages(&raw[0]);
 
     // SAVE VOLTAGE VALUES TO VARIABLES
-    pfp_val = convert_pfp(voltages[0]);
-    ptlt_val = convert_ptxt(voltages[1]);
-    ptrt_val = convert_ptxt(voltages[2]);
-    tcmp_val = convert_tcmp(voltages[3]);
-    cop_val = convert_cop(voltages[4]);
+    if(0 != convert_pfp(raw[0]))
+    {
 
+    }
+    if(0 != convert_ptxt(raw[1]))
+    {
+
+    }
+    if(0 != convert_ptxt(raw[2]))
+    {
+
+    }
+    if(0 != convert_tcmp(raw[3]))
+    {
+
+    }
+    if(0 != convert_cop(raw[4]))
+    {
+
+    }
+
+    /* DEBUGGING */
     printf("\nPFP: %d\n", pfp_val);
     printf("PTLT: %d\n", ptlt_val);
     printf("PTRT: %d\n", ptrt_val);
     printf("TCMP: %d\n", tcmp_val);
     printf("COP: %d\n", cop_val);
+
+    return(0);
+}
+
+int32_t convert_pfp (int32_t voltage)
+{
+    // CHECK IF RAW VOLTAGE IS VALID AND INSIDE RANGE
+    if(voltage >= pfp_raw_max || voltage <= pfp_raw_min)
+    {
+        syslog(LOG_ERR, "%s:%d PFP raw value outside valid range", __FUNCTION__, __LINE__);
+        pfp_val = NULL;
+        return(1);
+    }
+
+    // CONVERT RAW VOLTAGE TO LOGICAL VALUE
+    // This algorithm is only for testing. Actual algorithm will replace it.
+    pfp_val = voltage / 20;
+
+    return(0);
+}
+
+int32_t convert_ptlt (int32_t voltage)
+{
+    // CHECK IF RAW VOLTAGE IS VALID AND INSIDE RANGE
+    if(voltage >= ptxt_raw_max || voltage <= ptxt_raw_min)
+    {
+        syslog(LOG_ERR, "%s:%d PTLT raw value outside valid range", __FUNCTION__, __LINE__);
+        ptlt_val = NULL;
+        return(1);
+    }
+
+    // CONVERT RAW VOLTAGE TO LOGICAL VALUE
+    // This algorithm is only for testing. Actual algorithm will replace it.
+    ptlt_val = voltage / 20;
+
+    return(0);
+}
+
+int32_t convert_ptrt (int32_t voltage)
+{
+    // CHECK IF RAW VOLTAGE IS VALID AND INSIDE RANGE
+    if(voltage >= ptxt_raw_max || voltage <= ptxt_raw_min)
+    {
+        syslog(LOG_ERR, "%s:%d PTRT raw value outside valid range", __FUNCTION__, __LINE__);
+        ptrt_val = NULL;
+        return(1);
+    }
+
+    // CONVERT RAW VOLTAGE TO LOGICAL VALUE
+    // This algorithm is only for testing. Actual algorithm will replace it.
+    ptrt_val = voltage / 20;
+
+    return(0);
+}
+
+int32_t convert_tcmp (int32_t voltage)
+{
+    // CHECK IF RAW VOLTAGE IS VALID AND INSIDE RANGE
+    if(voltage >= tcmp_raw_max || voltage <= tcmp_raw_min)
+    {
+        syslog(LOG_ERR, "%s:%d TCMP raw value outside valid range", __FUNCTION__, __LINE__);
+        tcmp_val = NULL;
+        return(1);
+    }
+
+    // CONVERT RAW VOLTAGE TO LOGICAL VALUE
+    // This algorithm is only for testing. Actual algorithm will replace it.
+    temp = voltage / 200;
+
+    return(0);
+}
+
+int32_t convert_cop (int32_t voltage)
+{
+    // CHECK IF RAW VOLTAGE IS VALID AND INSIDE RANGE
+    if(voltage >= cop_raw_max || voltage <= cop_raw_min)
+    {
+        syslog(LOG_ERR, "%s:%d COP raw value outside valid range", __FUNCTION__, __LINE__);
+        cop_val = NULL;
+        return(1);
+    }
+
+    // CONVERT RAW VOLTAGE TO LOGICAL VALUE
+    // This algorithm is only for testing. Actual algorithm will replace it.
+    pressure = voltage / 500 - 5;
 
     return(0);
 }
@@ -51,54 +149,14 @@ int32_t get_timestamps(void)
     return(0);
 }
 
-int32_t convert_pfp (int32_t voltage)
-{
-    int32_t pressure;
-
-    /* This algorithm is only for testing. Actual algorithm will replace it. */
-    pressure = voltage / 20;
-
-    return (pressure);
-}
-
-int32_t convert_ptxt (int32_t voltage)
-{
-    int32_t temp;
-
-    /* This algorithm is only for testing. Actual algorithm will replace it. */
-    temp = voltage / 20;
-
-    return (temp);
-}
-
-int32_t convert_tcmp (int32_t voltage)
-{
-    int32_t temp;
-
-    /* This algorithm is only for testing. Actual algorithm will replace it. */
-    temp = voltage / 200;
-
-    return (temp);
-}
-
-int32_t convert_cop (int32_t voltage)
-{
-    int32_t pressure;
-
-    /* This algorithm is only for testing. Actual algorithm will replace it. */
-    pressure = voltage / 500 - 5;
-
-    return (pressure);
-}
-
 void split_timestamps(int64_t *timestamps)
 {
     int32_t i;
+    int32_t tot_stamps = 0;
 
     for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
     {
         // these formulas will be replaced by the actual formulas
-        // they currently use the tens place for the seconds and the ones for the nsecs.
         cam_secs[i] = timestamps[i] / 1000000000L;
         cam_nsecs[i] = timestamps[i] - cam_secs[i] * 1000000000L;
     }
@@ -106,7 +164,6 @@ void split_timestamps(int64_t *timestamps)
     tot_stamps = i;
 
     /* DEBUGGING */
-    // print out all stored values
     for(i = 0; i < tot_stamps; i++)
     {
         printf("\nSecond Stamp %d: %d\n", i + 1, cam_secs[i]);

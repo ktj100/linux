@@ -45,7 +45,7 @@ int32_t wait_for_fpga(void)
 
 // 
 
-void fpga_sim_voltages(int *voltage)
+void fpga_sim_voltages(int *raw)
 {
     int32_t i, temp;
 
@@ -56,7 +56,7 @@ void fpga_sim_voltages(int *voltage)
     }
     for(i = 0; !feof(rawfp); i++)
     {
-        temp = fscanf(rawfp, "%d", &voltage[i]);
+        temp = fscanf(rawfp, "%d", &raw[i]);
         if(1 != temp)
         {
             printf("ERROR: Scan failed before reaching EOF\n");
@@ -64,7 +64,7 @@ void fpga_sim_voltages(int *voltage)
         }
         else
         {
-            //printf("Scanned Value: %d\n", voltage[i]);
+            //printf("Scanned Value: %d\n", raw[i]);
         }
     }
     fclose(rawfp);
