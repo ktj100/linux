@@ -11,18 +11,18 @@
 
 ;
 
-int32_t tot_logicals = 0;
+/*int32_t tot_logicals = 0;*/
 int32_t tot_stamps = 0;
 
 int32_t get_logicals(void)
 {
-    int32_t i;
+    //int32_t i;
     int32_t voltages[5] = {0,0,0,0,0};
 
     // READ IN 1 HZ VOLTAGE VALUES
     fpga_sim_voltages(&voltages[0]);
 
-    pfp_values[tot_logicals] = convert_pfp(voltages[0]);
+    /*pfp_values[tot_logicals] = convert_pfp(voltages[0]);
     ptlt_values[tot_logicals] = convert_ptxt(voltages[1]);
     ptrt_values[tot_logicals] = convert_ptxt(voltages[2]);
     tcmp_values[tot_logicals] = convert_tcmp(voltages[3]);
@@ -31,7 +31,7 @@ int32_t get_logicals(void)
     // INCREMENT TOTAL TRACKER
     tot_logicals++;
 
-    /* DEBUGGING */
+    /* DEBUGGING 
     // print out all stored values
     if(3 < tot_logicals)
         i = tot_logicals - 3;
@@ -53,7 +53,20 @@ int32_t get_logicals(void)
     if(tot_logicals == data_period)
     {
         return(1);
-    }
+    }*/
+
+    pfp_values = convert_pfp(voltages[0]);
+    ptlt_values = convert_ptxt(voltages[1]);
+    ptrt_values = convert_ptxt(voltages[2]);
+    tcmp_values = convert_tcmp(voltages[3]);
+    cop_values = convert_cop(voltages[4]);
+
+    printf("\nPFP: %d\n", pfp_values);
+    printf("PTLT: %d\n", ptlt_values);
+    printf("PTRT: %d\n", ptrt_values);
+    printf("TCMP: %d\n", tcmp_values);
+    printf("COP: %d\n", cop_values);
+
     return(0);
 }
 
@@ -113,7 +126,7 @@ int32_t convert_cop (int32_t voltage)
 void split_timestamps(int64_t *timestamps)
 {
     int32_t i;
-    for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
+    /*for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
     {
         // these formulas will be replaced by the actual formulas
         // they currently use the tens place for the seconds and the ones for the nsecs.
@@ -123,7 +136,7 @@ void split_timestamps(int64_t *timestamps)
     // INCREMENT TOTAL TRACKER
     tot_stamps += i;
 
-    /* DEBUGGING */
+    /* DEBUGGING 
     // print out all stored values
     if(9 < tot_stamps)
         i = tot_stamps - 9;
@@ -134,10 +147,28 @@ void split_timestamps(int64_t *timestamps)
         printf("\nSecond Stamp %d: %d\n", i + 1, cam_secs[i]);
         printf("Nano Stamp   %d: %9d\n", i + 1, cam_nsecs[i]);
     }
-    printf("\nTotal Logicals: %d\nTotal Timestamps: %d\n", tot_logicals, tot_stamps);
+    printf("\nTotal Logicals: %d\nTotal Timestamps: %d\n", tot_logicals, tot_stamps);*/
+
+    for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
+    {
+        // these formulas will be replaced by the actual formulas
+        // they currently use the tens place for the seconds and the ones for the nsecs.
+        cam_secs[i] = timestamps[i] / 1000000000L;
+        cam_nsecs[i] = timestamps[i] - cam_secs[i] * 1000000000L;
+    }
+    // INCREMENT TOTAL TRACKER
+    tot_stamps = i;
+
+    /* DEBUGGING */
+    // print out all stored values
+    for(i = 0; i < tot_stamps; i++)
+    {
+        printf("\nSecond Stamp %d: %d\n", i + 1, cam_secs[i]);
+        printf("Nano Stamp   %d: %9d\n", i + 1, cam_nsecs[i]);
+    }
 }
 
-void clear_logicals(void)
+/*void clear_logicals(void)
 {
     int32_t i;
 
@@ -164,4 +195,4 @@ void clear_timestamps(void)
         cam_secs[i] = 0;
         cam_nsecs[i] = 0;
     }
-}
+}*/

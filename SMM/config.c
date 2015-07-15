@@ -11,7 +11,7 @@
 
 ;
 
-int32_t subscribe_config(void)
+/*int32_t subscribe_config(void)
 {
     // GET PERIOD REQUIRED FOR PUBLISH MESSAGES FOR LOGICAL VALUES
     // (done in fpga_sim.h)
@@ -31,6 +31,16 @@ int32_t subscribe_config(void)
     // = period of collection time in seconds * 9 values per second (max)
     cam_secs = (int32_t*)malloc(timestamps_period);
     cam_nsecs = (int32_t*)malloc(timestamps_period);
+
+    return(0);
+}*/
+
+int32_t subscribe_config(void)
+{
+    // ALLOCATE SPACE FOR THE STORAGE OF THE TIMESTAMP VALUES 
+    // = period of collection time in seconds (1 second) * 9 values per second (max)
+    cam_secs = (int32_t*)malloc(9);
+    cam_nsecs = (int32_t*)malloc(9);
 
     return(0);
 }

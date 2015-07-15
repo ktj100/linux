@@ -31,7 +31,6 @@ void main(void)
     // using a clock to simulate the interrupt
     clock_gettime(CLOCK_REALTIME, &start_time);
 
-
     // set initial delta time value
 
     while(1)

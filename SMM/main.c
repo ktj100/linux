@@ -18,17 +18,17 @@ void *read_sensors(void *arg);
 int32_t main(void)
 {
     // DECLARE VARIABLES
-    int32_t config_status;
+    //int32_t config_status;
 
     // SET UP EXPORT FREQUENCY FOR AACM
 
     // CONFIGURE SENSOR READING VALUES
-    config_status = subscribe_config();
+    //config_status = subscribe_config();
     // ADD ERROR HANDLING FOR CONFIGURATION ERRORS
-    if(config_status)
-    {
+    //if(config_status)
+    //{
 
-    }
+    //}
 
     int32_t rc;
 
@@ -54,7 +54,7 @@ void read_sensors() */
 {
     int32_t rc, fpga_ready;
     int32_t get_lv_status, get_ts_status;
-    int32_t reset = 0;
+    //int32_t reset = 0;
 
     // detach the thread so that main can resume
     errno = 0;
@@ -85,10 +85,10 @@ void read_sensors() */
         // ADD ERROR CHECKING FOR STATUS
         if(1 == get_lv_status)
         {
-            // STORAGE IS FULL
+            /*// STORAGE IS FULL
             // SEND VALUES OUT TO AACM
 
-            reset = 1;
+            reset = 1;*/
         }
         else if (0 == get_lv_status)
         {
@@ -103,7 +103,10 @@ void read_sensors() */
             
         }
 
-        // CHECK FOR FULL VALUE LISTS, AND CLEAR THEM OUT IF NEEDED
+        // SEND VALUES TO AACM
+
+
+        /*// CHECK FOR FULL VALUE LISTS, AND CLEAR THEM OUT IF NEEDED
         if(1 == reset)
         {
             clear_logicals();
@@ -111,6 +114,6 @@ void read_sensors() */
 
             // RESET THE RESET SIGNAL
             reset = 0;
-        }
+        }*/
     }
 }
