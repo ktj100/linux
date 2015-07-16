@@ -5,6 +5,7 @@
 #include <syslog.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "sensor.h"
 #include "fpga_sim.h"
@@ -24,11 +25,11 @@ int32_t get_logicals(void)
     {
 
     }
-    if(0 != convert_ptxt(raw[1]))
+    if(0 != convert_ptlt(raw[1]))
     {
 
     }
-    if(0 != convert_ptxt(raw[2]))
+    if(0 != convert_ptrt(raw[2]))
     {
 
     }
@@ -114,7 +115,7 @@ int32_t convert_tcmp (int32_t voltage)
 
     // CONVERT RAW VOLTAGE TO LOGICAL VALUE
     // This algorithm is only for testing. Actual algorithm will replace it.
-    temp = voltage / 200;
+    tcmp_val = voltage / 200;
 
     return(0);
 }
@@ -131,7 +132,7 @@ int32_t convert_cop (int32_t voltage)
 
     // CONVERT RAW VOLTAGE TO LOGICAL VALUE
     // This algorithm is only for testing. Actual algorithm will replace it.
-    pressure = voltage / 500 - 5;
+    cop_val = voltage / 500 - 5;
 
     return(0);
 }

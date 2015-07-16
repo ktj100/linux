@@ -5,6 +5,7 @@
 #include <syslog.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "sensor.h"
 #include "fpga_sim.h"
@@ -74,7 +75,7 @@ void read_sensors() */
             {
                 syslog(LOG_ERR, "%s:%d FPGA not working properly", __FUNCTION__, __LINE__);
             }
-            clock_gettime(CLOCK_REALTIME, &current_time)
+            clock_gettime(CLOCK_REALTIME, &current_time);
             if (/* current_time >= 1.5 sec + start_time */0)
             {
                 syslog(LOG_ERR, "%s:%d FPGA timeoutl", __FUNCTION__, __LINE__);

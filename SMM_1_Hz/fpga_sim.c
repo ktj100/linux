@@ -5,6 +5,7 @@
 #include <syslog.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "sensor.h"
 #include "fpga_sim.h"
