@@ -17,8 +17,7 @@
 #include <unistd.h>
 #include <stdint.h>
 
-#define AACM_MAX_LAUNCH_ATTEMPTS    5
-#define MOD_MAX_LAUNCH_ATTEMPTS     5
+#define MAX_LAUNCH_ATTEMPTS    5
 
 // #if 0 disables printf()
 // #if 1 enables printf()
@@ -46,7 +45,6 @@ struct child_pid_list_struct
     const char *dir;
     char *item_name;
     int32_t alive;
-    //int8_t fail_start;
     struct child_pid_list_struct *next;
 };
 
@@ -91,56 +89,24 @@ int32_t main( int argc , char *argv[] )
     {
         PRINT_F(("\nOPEN DIRECTORY: %s \n", dirs[dir_index] ));
 
-        // CHANGE THIS SO THAT THE AACM IS HANDLED LIKE THE OTHERS-----------------------------------------------------------
-        /*if ( (0 == dir_index) ) 
+        launch_status = launch_item(dirs[dir_index]);
+        if ( -1 == launch_status )
         {
-            for ( aacm_loop = 0; aacm_loop < AACM_MAX_LAUNCH_ATTEMPTS; aacm_loop++ ) 
-            {
-                launch_status = launch_item(dirs[dir_index]);
-                if (1 == launch_status)
-                {
-                    syslog(LOG_ERR, "Failed to launch AACM! Attempt: %d", ( aacm_loop + 1 ) );
-                    PRINT_F(("DIRECTORY %s IS EMPTY! NOTHING LAUNCHED! ATTEMPT: %d \n", dirs[dir_index] , ( aacm_loop + 1) ));
-                    // allow a wait between failed launch attempts
-                    sleep(5);
-                }
-                else
-                {
-                    syslog(LOG_NOTICE, "ITEMS IN %s LAUNCHED!", dirs[dir_index]  );
-                    PRINT_F(("ITEMS IN %s LAUNCHED! \n", dirs[dir_index] ));
-                    PRINT_F(("CLOSE DIRECTORY: %s \n\n", dirs[dir_index] ));
-                    break;
-                }
-            }
-            if ( AACM_MAX_LAUNCH_ATTEMPTS == aacm_loop ) 
-            {
-                syslog(LOG_ERR, "Failed to launch! Max attempts reached: %d", ( aacm_loop ) );
-                PRINT_F(("\n\nMAX LAUNCH ATTEMPTS REACHED!  STOP LOADING! \n\n"));
-                // break; 
-                exit(1);
-            }
-            else
-            {
-                // TCP server/client connection needs to be made here ...
-                // BARSM_TO_AACM_INIT_MSG ... to GE-app
-                // BARSM_TO_AACM_INIT_MSG_ACK ... from GE-app
-            }*/
+            // AACM was not able to start
+            syslog(LOG_ERR, "Unable to start AACM! (%d:%s)", errno, strerror(errno));
+            PRINT_F(("Unable to start AACM! (%d:%s) \n", errno, strerror(errno)));
+            exit(-errno);
         }
-        // -------------------------------------------------------------------------------------------------------------------
+        else if (1 == launch_status)
+        {
+            syslog(LOG_ERR, "DIRECTORY %s IS EMPTY! NOTHING LAUNCHED!", dirs[dir_index] );
+            PRINT_F(("DIRECTORY %s IS EMPTY! NOTHING LAUNCHED! \n\n", dirs[dir_index]));
+        }
         else
         {
-            launch_status = launch_item(dirs[dir_index]);
-            if (1 == launch_status)
-            {
-                syslog(LOG_ERR, "DIRECTORY %s IS EMPTY! NOTHING LAUNCHED!", dirs[dir_index] );
-                PRINT_F(("DIRECTORY %s IS EMPTY! NOTHING LAUNCHED! \n\n", dirs[dir_index]));
-            }
-            else
-            {
-                syslog(LOG_NOTICE, "ITEMS IN %s LAUNCHED!", dirs[dir_index] );
-                PRINT_F(("ITEMS IN %s LAUNCHED! \n", dirs[dir_index] ));
-                PRINT_F(("CLOSE DIRECTORY: %s \n\n", dirs[dir_index] ));
-            }
+            syslog(LOG_NOTICE, "ITEMS IN %s LAUNCHED!", dirs[dir_index] );
+            PRINT_F(("ITEMS IN %s LAUNCHED! \n", dirs[dir_index] ));
+            PRINT_F(("CLOSE DIRECTORY: %s \n\n", dirs[dir_index] ));
         }
     }
     PRINT_F(("\n\nDONE START EVERYTHING!\n\n"));
@@ -148,7 +114,7 @@ int32_t main( int argc , char *argv[] )
     nth_node->next = NULL;
     
     
-    // print list ... similiar usage to traverse and check pids ...
+    // print list ... similar usage to traverse and check pids ...
     
 //  while( NULL != nth_node->next )
 //  {
@@ -163,9 +129,9 @@ int32_t main( int argc , char *argv[] )
         // check if any of the processes have gone zombie or killed
         nth_node = first_node;  // list back to first node
         PRINT_F(("\n\n in while before checking \n\n"));
-        PRINT_F(("\nPID: %d\n", getpid()));
+        //PRINT_F(("\nPID: %d\n", getpid()));
         check_modules( );
-        sleep(60);
+        sleep(12);
     }
 
     return(0);
@@ -211,8 +177,7 @@ int32_t launch_item( const char *directory )
     int32_t dir_index = 0;  
     int32_t return_val = 0; 
     int32_t empty_dir = 1;
-    int32_t k = 0, i = 0;  
-    int32_t mod_loop = 0; 
+    int32_t k = 0, i = 0;
 
     DIR *dir;
     errno = 0;
@@ -241,46 +206,15 @@ int32_t launch_item( const char *directory )
 
                 // THIS CHUCK WILL BE INTERGRATED WITH THE APP/MODULE SECTION AFTER DEBUGGING-------------------------------
                 errno = 0;
-                if ( (0 != execl(concat, dp->d_name, (char *)NULL)) )
+                // TESTING
+                //if ( (0 != execl( "/opt/rc360/modules/TPA/hello", "hello" , (char *)NULL)) )
+                if ( (0 != execl( concat, dp->d_name, (char *)NULL)) )
                 {
                     syslog(LOG_ERR, "Failed to launch! (%d:%s)", errno, strerror(errno));
                     PRINT_F(("failed to launch! (%d:%s) \n", errno, strerror(errno)));
                     // force the spawned process to exit
                     exit(-errno);
                 }
-                // ---------------------------------------------------------------------------------------------------------
-
-                // ALL ERROR CHECKING WILL BE MOVED OUT OF THIS SECTION AND GIVEN TO THE PARENT PROCESS---------------------
-                /*else
-                {
-                    // modules and applications can have four launch attempts
-                    for ( mod_loop = 0; mod_loop < MOD_MAX_LAUNCH_ATTEMPTS; mod_loop++)
-                    {
-                        if ( (0 != execl( /* concat, dp->d_name  "/opt/rc360/modules/TPA/hello", "hello" , (char *)NULL)) )
-                        {
-                            syslog(LOG_ERR, "Failed to launch %s on attempt %d! (%d:%s)", 
-                                dp->d_name, mod_loop + 1, errno, strerror(errno));
-                            PRINT_F(("\nfailed to launch %s on attempt %d! (%d:%s) \n\n", 
-                                dp->d_name, mod_loop + 1, errno, strerror(errno)));
-                            // have the process exit if it has attempted launch too many times
-                            if ( mod_loop + 1 == MOD_MAX_LAUNCH_ATTEMPTS )
-                            {
-                                exit(-errno);
-                            }
-                            else
-                            {
-                                sleep(5);
-                            }
-                        }
-                        else
-                        {
-                            PRINT_F(("Launched %s on attempt %d! \n", dp->d_name, mod_loop + 1));
-                            // successful lauch exits the loop
-                            break;
-                        }
-                    }                    
-                }*/
-                // --------------------------------------------------------------------------------------------------------
             }
             else if (-1 == pid)
             {
@@ -295,43 +229,51 @@ int32_t launch_item( const char *directory )
                 nth_node->dir = concat;
                 nth_node->item_name = dp->d_name;
 
-                // THIS SECTION WILL BE REVISED TO USE THE restart_process FUNCTION IF A PROCESS DOESN'T START RIGHT--------
-                // check if the child process started correctly after giving it time
-                sleep(5);
+                // check if the process just launched was successful, if not, try up to four times to restart it
                 errno = 0;
-
-                // waitpid will return a 0 if all is well, and the pid if the process is not functioning properly
-                /*for ( i = 1, nth_node->alive = waitpid(pid, &rc, WNOHANG); i <= 5 && nth_node->alive > 0; i++)
+                for (   sleep(5), nth_node->alive = waitpid(pid, &rc, WNOHANG), i = 1; 
+                        // at this point, if 'execl' failed, 'waitpid' may return either the pid value OR '-1'
+                        0 != nth_node->alive && i < MAX_LAUNCH_ATTEMPTS; i++ )
                 {
+                    // report execl fail error
+                    if ( -1 == nth_node->alive )
+                    {
+                        syslog(LOG_ERR, "Child process for %s failed to exec! (%d:%s)", dp->d_name, errno, strerror(errno));
+                        PRINT_F(("Child process for %s failed to exec! (%d:%s) \n", dp->d_name, errno, strerror(errno)));
+                    }
+                    restart_process();
                     sleep(5);
+                    // overwrite the alive value given by 'restart_process'
                     nth_node->alive = waitpid(pid, &rc, WNOHANG);
-                    PRINT_F(("\nwaitpid return %d: %d\n\n", i, nth_node->alive));
                 }
-                if ( 0 < nth_node->alive )
-                {
-                    syslog(LOG_ERR, "App/Mod %s disabled permanently! (%d:%s)", dp->d_name, errno, strerror(errno));
-                    PRINT_F(("App/Mod %s disabled permanently! (%d:%s) \n", dp->d_name, errno, strerror(errno)));
-                }
-                else if ( 0 == nth_node->alive)
-                {
-                    //syslog( LOG_NOTICE , "Child PID %d added to list" , nth_node->child_pid );
 
-                    if (NULL != nth_node->next )
+                //syslog( LOG_NOTICE , "Child PID %d added to list" , nth_node->child_pid );
+
+                if ( -1 == nth_node->alive )
+                {
+                    syslog(LOG_ERR, "Process for %s disabled permanently! (%d:%s)", dp->d_name, errno, strerror(errno));
+                    PRINT_F(("Process for %s disabled permanently! (%d:%s) \n", dp->d_name, errno, strerror(errno)));
+
+                    // return a termination value to signal BARSM shutdown if it is AACM that failed
+                    if ( "/opt/rc360/system/" == directory )
                     {
-                        PRINT_F(( "CHILD linked list 'pid': %d \n" , nth_node->child_pid ));
-                        PRINT_F(( "CHILD linked list 'dir': %s \n" , concat ));
-                        PRINT_F(( "CHILD linked list 'name': %s \n" , nth_node->item_name ));
-                        PRINT_F(( "this address %p \n" , nth_node ));
-                        PRINT_F(( "next address %p \n" , nth_node->next )); 
+                        return (-1);
                     }
-                    else
-                    {
-                        syslog(LOG_ERR, "realloc() error when adding node to linked list.");
-                        PRINT_F(("BAD malloc \n"));
-                    }
-                }*/
-                // ---------------------------------------------------------------------------------------------------------
-                
+                }
+                else if ( NULL != nth_node->next )
+                {
+                    PRINT_F(( "CHILD linked list 'pid': %d \n" , nth_node->child_pid ));
+                    PRINT_F(( "CHILD linked list 'dir': %s \n" , concat ));
+                    PRINT_F(( "CHILD linked list 'name': %s \n" , nth_node->item_name ));
+                    PRINT_F(( "this address %p \n" , nth_node ));
+                    PRINT_F(( "next address %p \n" , nth_node->next )); 
+                }
+                else
+                {
+                    syslog(LOG_ERR, "realloc() error when adding node to linked list.");
+                    PRINT_F(("BAD malloc \n"));
+                }
+
                 nth_node = nth_node->next;
             }
         }
@@ -370,7 +312,7 @@ int32_t check_modules()
         errno = 0;
         waitreturn = waitpid(nth_node->child_pid, &rc, WNOHANG);
 
-        if ( 0 < nth_node->alive )
+        if ( -1 == nth_node->alive )
         {
             // the process was not able to start up, so ignore
         }
@@ -378,26 +320,26 @@ int32_t check_modules()
         {
             // killed
             printf("\nERROR: Child process with PID %d is not existent. Restarting...\n", nth_node->child_pid);
-            nth_node->alive = -1;   // -1 indicates that this process needs to be replaced
+            nth_node->alive = 1;   // 1 indicates that this process needs to be replaced
         }
         else if (0 < waitreturn)
         {
             // zombied
             printf("\nERROR: Child process with PID %d is a zombie. Restarting...\n", waitreturn);
-            nth_node->alive = -1;   // -1 indicates that this process needs to be replaced
+            nth_node->alive = 1;   // 1 indicates that this process needs to be replaced
         }
-        if (-1 == nth_node->alive)  // either killed or zombied, restart ...
+        if (1 == nth_node->alive)  // either killed or zombied, restart ...
         {
             restart_process();
         }
 
-        PRINT_F(( "PID: %d \n"   , nth_node->child_pid ));
+        /* PRINT_F(( "PID: %d \n"   , nth_node->child_pid ));
         PRINT_F(( "DIR: %s \n"    , nth_node->dir ));
         PRINT_F(( "NAME: %s \n" , nth_node->item_name ));
-        PRINT_F(( "ALIVE: %d \n" , nth_node->alive ));
+        PRINT_F(( "ALIVE: %d \n" , nth_node->alive )); */
         nth_node = nth_node->next;
     }
-    sleep(1);   // added to help see printf comments.  
+    //sleep(1);   // added to help see printf comments.  
     return(0);
 }
 
@@ -405,7 +347,7 @@ int32_t check_modules()
 
 //===========================================================================================================================================
 // FUNCTION: void restart_process()
-//      - Used to start a file back up that stopped running when it shouldn't have.
+//      - Used to start a process to replace one that ended prematurely or wouldn't start.
 //      - Sets the 'alive' portion of the struct to 0 to indicate that the process is functioning properly.
 //      - Starts up a new process to run the same file that shut down, using the same list link for the failed process.
 //      - Restarts whatever process is described by the information in the active link in the linked list.
@@ -428,6 +370,8 @@ void restart_process()
     {
         // execute the file again in the new child process
         errno = 0;
+        // TESTING
+        //if ( (0 != execl( "/opt/rc360/modules/TPA/hello", "hello" , (char *)NULL)) )
         if ( (0 != execl(nth_node->dir, nth_node->item_name, (char *)NULL)) )
         {
             syslog(LOG_ERR, "failed to launch! (%d:%s)", errno, strerror(errno));
@@ -443,6 +387,6 @@ void restart_process()
     {
         // add the new slot for the new process
         nth_node->child_pid = new_pid;
-        nth_node->alive = 0;    // 0 indicates it has been restarted at least once.
+        nth_node->alive = 0;    // 1 indicates that the process has been restarted and should be good
     }
 }
