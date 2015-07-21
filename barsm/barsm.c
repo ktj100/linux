@@ -33,7 +33,7 @@ const char *dirs[] =
 {
     "/opt/rc360/system/",       // AACM
     "/opt/rc360/modules/GE/",   // GE MODULES
-    "/opt/rc360/modules/TPA/",  // TP MODULES
+    "/opt/rc360/modules/TPA/",  // TP MODULESl
     "/opt/rc360/apps/GE/",      // GE APPS
     "/opt/rc360/apps/TPA/"      // TP APPS
 };
