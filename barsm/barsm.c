@@ -92,11 +92,13 @@ int32_t main( int argc , char *argv[] )
         {
             for ( aacm_loop = 0; aacm_loop < AACM_MAX_LAUNCH_ATTEMPTS; aacm_loop++ ) 
             {
-                launch_status = launch_item(dirs[dir_index]);
+                launch_status = /* launch_item(dirs[dir_index]) */ 1;
                 if (1 == launch_status)
                 {
                     syslog(LOG_ERR, "Failed to launch AACM! Attempt: %d", ( aacm_loop + 1 ) );
                     PRINT_F(("DIRECTORY %s IS EMPTY! NOTHING LAUNCHED! ATTEMPT: %d \n", dirs[dir_index] , ( aacm_loop + 1) ));
+                    // allow a wait between failed launch attempts
+                    sleep(5);
                 }
                 else
                 {
@@ -110,7 +112,8 @@ int32_t main( int argc , char *argv[] )
             {
                 syslog(LOG_ERR, "Failed to launch! Max attempts reached: %d", ( aacm_loop ) );
                 PRINT_F(("\n\nMAX LAUNCH ATTEMPTS REACHED!  STOP LOADING! \n\n"));
-                break;
+                /* break; */
+                exit(1);
             }
             else
             {
