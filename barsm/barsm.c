@@ -1,4 +1,4 @@
-//=======================================
+// ======================================
 // GET
 // ASSIMILATOR 
 // BARSM
@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #define MAX_LAUNCH_ATTEMPTS    5
+#define LAUNCH_CHECK_PERIOD	   2
 
 // #if 0 disables printf()
 // #if 1 enables printf()
@@ -31,7 +32,7 @@
 // DIRECTORIES TO OPEN/READ 
 const char *dirs[] = 
 {
-    "/opt/rc360/system/",       // AACM
+    "/opt/rc360/system/",       // AACMl
     "/opt/rc360/modules/GE/",   // GE MODULES
     "/opt/rc360/modules/TPA/",  // TP MODULESl
     "/opt/rc360/apps/GE/",      // GE APPS
@@ -134,6 +135,15 @@ int32_t main( int argc , char *argv[] )
         sleep(12);
     }
 
+    // Won't get here with the above while(1) loop.  But, if this main ever exits, this free's all the nodes in the linked list. 
+    nth_node = first_node;
+    while( NULL != nth_node->next )
+    { 
+        tmp_toFree = nth_node;
+        nth_node = nth_node->next;
+        free(tmp_toFree);
+    }
+    free(first_node);
     return(0);
 
     // SYS_INIT
@@ -177,7 +187,7 @@ int32_t launch_item( const char *directory )
     int32_t dir_index = 0;  
     int32_t return_val = 0; 
     int32_t empty_dir = 1;
-    int32_t k = 0, i = 0;
+    int32_t k = 0, i = 0, run_time = 0;
 
     DIR *dir;
     errno = 0;
@@ -229,25 +239,42 @@ int32_t launch_item( const char *directory )
                 nth_node->dir = concat;
                 nth_node->item_name = dp->d_name;
 
-                // check if the process just launched was successful, if not, try up to four times to restart it
+                // TESTING
+                /*nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+                PRINT_F(("\nAfter first waitpid: %d\n", nth_node->alive));
+                nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+                PRINT_F(("After second waitpid: %d\n\n", nth_node->alive));
+                sleep(5);
+                nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+                PRINT_F(("\nAfter third waitpid: %d\n", nth_node->alive));
+                nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+                PRINT_F(("After fourth waitpid: %d\n\n", nth_node->alive));*/
+
+                /* check if the process just launched was successful, if not, try up to four times to restart it
+                   The waitpid() function will return a false positive if the child process has not yet tried to 
+                   execl(). The run_time value is used to make sure that enough time has been given to make sure 
+                   that execl() was called. */
+                run_time = 0;
                 errno = 0;
-                for (   sleep(5), nth_node->alive = waitpid(pid, &rc, WNOHANG), i = 1; 
-                        // at this point, if 'execl' failed, 'waitpid' may return either the pid value OR '-1'
-                        0 != nth_node->alive && i < MAX_LAUNCH_ATTEMPTS; i++ )
+                for ( i = 1 ; i < MAX_LAUNCH_ATTEMPTS && run_time <= 15 ; )
                 {
-                    // report execl fail error
-                    if ( -1 == nth_node->alive )
+                	sleep(LAUNCH_CHECK_PERIOD);
+                	nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+                	PRINT_F(("\nWaitpid return: %d\n", nth_node->alive));
+                	if ( 0 != nth_node->alive )
                     {
                         syslog(LOG_ERR, "Child process for %s failed to exec! (%d:%s)", dp->d_name, errno, strerror(errno));
                         PRINT_F(("Child process for %s failed to exec! (%d:%s) \n", dp->d_name, errno, strerror(errno)));
+                        // restart process
+                        restart_process();
+                        i++;
+                        run_time = 0;
                     }
-                    restart_process();
-                    sleep(5);
-                    // overwrite the alive value given by 'restart_process'
-                    nth_node->alive = waitpid(pid, &rc, WNOHANG);
+                    else
+                    {
+                    	run_time += LAUNCH_CHECK_PERIOD;
+                    }
                 }
-
-                //syslog( LOG_NOTICE , "Child PID %d added to list" , nth_node->child_pid );
 
                 if ( -1 == nth_node->alive )
                 {
@@ -273,12 +300,13 @@ int32_t launch_item( const char *directory )
                     syslog(LOG_ERR, "realloc() error when adding node to linked list.");
                     PRINT_F(("BAD malloc \n"));
                 }
-
+                free(concat);
                 nth_node = nth_node->next;
             }
         }
         sleep(1);
     }
+    closedir(dir);
     return_val = empty_dir;
     return return_val;
 }
@@ -319,13 +347,13 @@ int32_t check_modules()
         else if (-1 == waitreturn)
         {
             // killed
-            printf("\nERROR: Child process with PID %d is not existent. Restarting...\n", nth_node->child_pid);
+            PRINT_F(("\nERROR: Child process with PID %d is not existent. Restarting...\n", nth_node->child_pid));
             nth_node->alive = 1;   // 1 indicates that this process needs to be replaced
         }
         else if (0 < waitreturn)
         {
             // zombied
-            printf("\nERROR: Child process with PID %d is a zombie. Restarting...\n", waitreturn);
+            PRINT_F(("\nERROR: Child process with PID %d is a zombie. Restarting...\n", waitreturn));
             nth_node->alive = 1;   // 1 indicates that this process needs to be replaced
         }
         if (1 == nth_node->alive)  // either killed or zombied, restart ...
@@ -387,6 +415,6 @@ void restart_process()
     {
         // add the new slot for the new process
         nth_node->child_pid = new_pid;
-        nth_node->alive = 0;    // 1 indicates that the process has been restarted and should be good
+        nth_node->alive = 0;    // 0 indicates that the process has been restarted and should be good
     }
 }
