@@ -19,6 +19,7 @@
 
 #define MAX_LAUNCH_ATTEMPTS    5
 #define LAUNCH_CHECK_PERIOD	   2
+#define START_ENSURE_DELAY     5
 
 // #if 0 disables printf()
 // #if 1 enables printf()
@@ -50,7 +51,7 @@ struct child_pid_list_struct
 };
 
 typedef struct child_pid_list_struct child_pid_list; 
-child_pid_list *first_node, *nth_node;
+child_pid_list *first_node, *nth_node, *tmp_toFree;
 int32_t aacm_loop = 0;
 
 // FUNCTION DECLARATIONS
@@ -122,7 +123,7 @@ int32_t main( int argc , char *argv[] )
 //      PRINT_F(( "PID: %d \n"   , nth_node->child_pid ));
 //      PRINT_F(( "DIR: %s \n"    , nth_node->dir ));
 //      PRINT_F(( "NAME: %s \n\n" , nth_node->item_name ));
-//      nth_node = nth_node->next;
+//      nth_node = nth_node->next;l
 //  }
 
     while(1)
@@ -256,7 +257,7 @@ int32_t launch_item( const char *directory )
                    that execl() was called. */
                 run_time = 0;
                 errno = 0;
-                for ( i = 1 ; i < MAX_LAUNCH_ATTEMPTS && run_time <= 15 ; )
+                for ( i = 1 ; i < MAX_LAUNCH_ATTEMPTS && run_time <= START_ENSURE_DELAY ; )
                 {
                 	sleep(LAUNCH_CHECK_PERIOD);
                 	nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
@@ -290,7 +291,7 @@ int32_t launch_item( const char *directory )
                 else if ( NULL != nth_node->next )
                 {
                     PRINT_F(( "CHILD linked list 'pid': %d \n" , nth_node->child_pid ));
-                    PRINT_F(( "CHILD linked list 'dir': %s \n" , concat ));
+                    PRINT_F(( "CHILD linked list 'dir': %s \n" , nth_node->dir ));
                     PRINT_F(( "CHILD linked list 'name': %s \n" , nth_node->item_name ));
                     PRINT_F(( "this address %p \n" , nth_node ));
                     PRINT_F(( "next address %p \n" , nth_node->next )); 
@@ -300,11 +301,12 @@ int32_t launch_item( const char *directory )
                     syslog(LOG_ERR, "realloc() error when adding node to linked list.");
                     PRINT_F(("BAD malloc \n"));
                 }
-                free(concat);
+                //free(concat);
                 nth_node = nth_node->next;
             }
+        	sleep(1);
+            //free(concat);
         }
-        sleep(1);
     }
     closedir(dir);
     return_val = empty_dir;
@@ -366,6 +368,7 @@ int32_t check_modules()
         PRINT_F(( "NAME: %s \n" , nth_node->item_name ));
         PRINT_F(( "ALIVE: %d \n" , nth_node->alive )); */
         nth_node = nth_node->next;
+        //sleep(1);
     }
     //sleep(1);   // added to help see printf comments.  
     return(0);
@@ -402,7 +405,8 @@ void restart_process()
         //if ( (0 != execl( "/opt/rc360/modules/TPA/hello", "hello" , (char *)NULL)) )
         if ( (0 != execl(nth_node->dir, nth_node->item_name, (char *)NULL)) )
         {
-            syslog(LOG_ERR, "failed to launch! (%d:%s)", errno, strerror(errno));
+            syslog(LOG_ERR, "failed to launch %s! (%d:%s)", nth_node->item_name, errno, strerror(errno));
+            PRINT_F(("Child process for %s failed to exec! (%d:%s) \n", nth_node->item_name, errno, strerror(errno)));
             // force the spawned process to exit
             exit(-errno);
         }
