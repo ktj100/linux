@@ -32,6 +32,7 @@ class logfollower(object):
 
     def _filter_log_lines(self, lines):
         return [self._match_line(l) for l in lines]  # list comprehension
+        # _match_line creates dictionary, this creates a list of dictionaries
 
         # result = []
         # for l in lines:

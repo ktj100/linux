@@ -21,11 +21,13 @@ def procinfo(pid):
                 result = matchobj.groupdict()
                 result['name'] = name
                 return result
+    # returns the list of info for the given PID
 
 def procname(pid):
     info = procinfo(pid)
     if info:
         return info['name']
+    # returns the name for a given PID
 
 def infolist():
     return list(map(procinfo, pidlist()))
@@ -35,9 +37,11 @@ def proclist():
 
 def findproc(proc):
     return list(filter(lambda x: x.get('name') == proc, infolist()))
+    # checks all instances of 'name' in infolist and sees if it matches 'proc' input.
 
 def findchild(ppid):
     return list(filter(lambda x: x.get('ppid') == ppid, infolist()))
+    # lists all the children of the given parent PID
 
 if __name__ == '__main__':
     import sys
