@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # place one 170 sec, one 50 sec, one 0 sec, one non executable, and one infinite app/module in each directory
 # start barsm 
 # watch for creation of a child PID
@@ -35,3 +37,39 @@
 # 4
 # 5
 
+import re
+import sys
+import time
+import subprocess
+
+import log
+
+if __name__ == '__main__':
+
+    if len(sys.argv) >= 2:
+        proc = sys.argv[1]
+    else:
+        proc = None
+
+    follow = log.logfollower()
+    
+    # subprocess.call("cd ~/Documents/linux/barsm/", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/barsm.c -o barsm", shell=True)
+    # subprocess.call("~/Documents/linux/barsm/barsm", shell=True)
+    test_output = open('test.out', 'w')
+    subprocess.Popen("valgrind ~/Documents/linux/barsm/barsm -v --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --malloc-fill=B5 --free-fill=4A", stdout=test_output, stderr=test_output, shell=True)
+
+    while True:
+        #print(follow.read(proc))  # we can specify a process ID on the command
+        logs = follow.read(proc)
+        errors = 0
+        # for "'ERROR:" in logs
+        #     errors = errors + 1
+        search = "ERROR"
+        for l in logs:
+            errors += l['message'].count(search)
+
+        print(logs)
+        print(errors)
+
+        time.sleep(1)

@@ -349,12 +349,14 @@ int32_t check_modules()
         else if (-1 == waitreturn)
         {
             // killed
+            syslog(LOG_ERR, "ERROR: Child process with PID %d is not existent. Restarting... ", nth_node->child_pid);
             PRINT_F(("\nERROR: Child process with PID %d is not existent. Restarting...\n", nth_node->child_pid));
             nth_node->alive = 1;   // 1 indicates that this process needs to be replaced
         }
         else if (0 < waitreturn)
         {
             // zombied
+            syslog(LOG_ERR, "ERROR: Child process with PID %d is a zombie. Restarting... ", nth_node->child_pid);
             PRINT_F(("\nERROR: Child process with PID %d is a zombie. Restarting...\n", waitreturn));
             nth_node->alive = 1;   // 1 indicates that this process needs to be replaced
         }

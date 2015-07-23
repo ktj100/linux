@@ -33,11 +33,11 @@ class logfollower(object):
     def _filter_log_lines(self, lines):
         return [self._match_line(l) for l in lines]  # list comprehension
 
-        result = []
-        for l in lines:
-            val = self._match_line(l)
-            result.append(val)
-        return result
+        # result = []
+        # for l in lines:
+        #     val = self._match_line(l)
+        #     result.append(val)
+        # return result
 
     def start(self):
         # Seek to the end of the file, so that only new log entries will be 
