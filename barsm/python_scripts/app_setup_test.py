@@ -37,52 +37,50 @@
 # 4
 # 5
 
-# import re
 import sys
-# import time
+import time
 import subprocess
-#
-# import log
-#
-# if __name__ == '__main__':
-#
-#     if len(sys.argv) >= 2:
-#         proc = sys.argv[1]
-#     else:
-#         proc = None
-#
-#     follow = log.logfollower()
-#
-#     # subprocess.call("cd ~/Documents/linux/barsm/", shell=True)
-#     subprocess.call("gcc ~/Documents/linux/barsm/barsm.c -o barsm", shell=True)
-#     # subprocess.call("~/Documents/linux/barsm/barsm", shell=True)
-#     test_output = open('test.out', 'w')
-#     subprocess.Popen("valgrind ~/Documents/linux/barsm/barsm -v --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --malloc-fill=B5 --free-fill=4A", stdout=test_output, stderr=test_output, shell=True)
-#
-#     while True:
-#         #print(follow.read(proc))  # we can specify a process ID on the command
-#         logs = follow.read(proc)
-#         errors = 0
-#         # for "'ERROR:" in logs
-#         #     errors = errors + 1
-#         search = "ERROR"
-#         for l in logs:
-#             errors += l['message'].count(search)
-#
-#         print(logs)
-#         print(errors)
-#
-#         time.sleep(1)
 
+# This program places compiled versions of each application type into each directory
 if __name__ == '__main__':
     # clear out all app directories
-    subprocess.call("sudo rm /opt/rc360/system/*", shell=True)
-    subprocess.call("sudo rm /opt/rc360/modules/GE/*", shell=True)
-    subprocess.call("sudo rm /opt/rc360/modules/TPA/*", shell=True)
-    subprocess.call("sudo rm /opt/rc360/apps/GE/*", shell=True)
-    subprocess.call("sudo rm /opt/rc360/apps/TPA/*", shell=True)
+    subprocess.call("rm /opt/rc360/system/*", shell=True)
+    subprocess.call("rm /opt/rc360/modules/GE/*", shell=True)
+    subprocess.call("rm /opt/rc360/modules/TPA/*", shell=True)
+    subprocess.call("rm /opt/rc360/apps/GE/*", shell=True)
+    subprocess.call("rm /opt/rc360/apps/TPA/*", shell=True)
 
-    # compile needed applications
-    subprocess.call("gcc /home/travis/Documents/linux/barsm/dummies/hundred_sec.c -o hundred_sec", shell=True)
+    # AACM
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/zero_sec.c -o /opt/rc360/system/zero_sec_aacm", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/thirty_sec.c -o /opt/rc360/system/thirty_sec_aacm", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/hundred_sec.c -o /opt/rc360/system/hundred_sec_aacm", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/infinite_sec.c -o /opt/rc360/system/infinite_sec_aacm", shell=True)
+    subprocess.call("cp ~/Documents/linux/barsm/dummies/non_exec.c /opt/rc360/system/", shell=True)
 
-    # send needed applications to necessary locations
+    # GE MODULES
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/zero_sec.c -o /opt/rc360/modules/GE/zero_sec_ge_mod", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/thirty_sec.c -o /opt/rc360/modules/GE/thirty_sec_ge_mod", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/hundred_sec.c -o /opt/rc360/modules/GE/hundred_sec_ge_mod", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/infinite_sec.c -o /opt/rc360/modules/GE/infinite_sec_ge_mod", shell=True)
+    subprocess.call("cp ~/Documents/linux/barsm/dummies/non_exec.c /opt/rc360/modules/GE/", shell=True)
+
+    # TPA MODULES
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/zero_sec.c -o /opt/rc360/modules/TPA/zero_sec_tpa_mod", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/thirty_sec.c -o /opt/rc360/modules/TPA/thirty_sec_tpa_mod", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/hundred_sec.c -o /opt/rc360/modules/TPA/hundred_sec_tpa_mod", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/infinite_sec.c -o /opt/rc360/modules/TPA/infinite_sec_tpa_mod", shell=True)
+    subprocess.call("cp ~/Documents/linux/barsm/dummies/non_exec.c /opt/rc360/modules/TPA/", shell=True)
+
+    # GE APPS
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/zero_sec.c -o /opt/rc360/apps/GE/zero_sec_ge_app", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/thirty_sec.c -o /opt/rc360/apps/GE/thirty_sec_ge_app", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/hundred_sec.c -o /opt/rc360/apps/GE/hundred_sec_ge_app", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/infinite_sec.c -o /opt/rc360/apps/GE/infinite_sec_ge_app", shell=True)
+    subprocess.call("cp ~/Documents/linux/barsm/dummies/non_exec.c /opt/rc360/apps/GE/", shell=True)
+
+    # TPA APPS
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/zero_sec.c -o /opt/rc360/apps/TPA/zero_sec_tpa_app", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/thirty_sec.c -o /opt/rc360/apps/TPA/thirty_sec_tpa_app", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/hundred_sec.c -o /opt/rc360/apps/TPA/hundred_sec_tpa_app", shell=True)
+    subprocess.call("gcc ~/Documents/linux/barsm/dummies/infinite_sec.c -o /opt/rc360/apps/TPA/infinite_sec_tpa_app", shell=True)
+    subprocess.call("cp ~/Documents/linux/barsm/dummies/non_exec.c /opt/rc360/apps/TPA/", shell=True)

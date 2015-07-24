@@ -12,15 +12,29 @@ def procinfo(pid):
     pat = r'^(?P<pid>\d+) \(\S+\) (?P<state>[RSDZTW]) (?P<ppid>\d+) .*$'
 
     import os.path
-    with open('/proc/{}/cmdline'.format(pid), 'r') as cmdfile:
-        name = os.path.basename(cmdfile.readline().split('\0')[0])
+    if os.path.isdir("/proc/{}".format(pid)):
+        with open('/proc/{}/cmdline'.format(pid), 'r') as cmdfile:
+            name = os.path.basename(cmdfile.readline().split('\0')[0])
 
-        with open('/proc/{}/stat'.format(pid), 'r') as statfile:
-            matchobj = re.match(pat, statfile.readline())
-            if matchobj:
-                result = matchobj.groupdict()
-                result['name'] = name
-                return result
+            with open('/proc/{}/stat'.format(pid), 'r') as statfile:
+                matchobj = re.match(pat, statfile.readline())
+                if matchobj:
+                    result = matchobj.groupdict()
+                    result['name'] = name
+                    return result
+    # When a process disappears after being found by pidlist, but before being 
+    # analyzed by procinfo, the script would end. So this if/else addition 
+    # keeps that from happening.
+    else:
+        with open('/proc/1/cmdline'.format(pid), 'r') as cmdfile:
+            name = os.path.basename(cmdfile.readline().split('\0')[0])
+
+            with open('/proc/1/stat'.format(pid), 'r') as statfile:
+                matchobj = re.match(pat, statfile.readline())
+                if matchobj:
+                    result = matchobj.groupdict()
+                    result['name'] = name
+                    return result
     # returns the list of info for the given PID
 
 def procname(pid):
