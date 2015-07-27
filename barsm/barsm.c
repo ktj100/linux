@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #define MAX_LAUNCH_ATTEMPTS    5
+// LAUNCH_CHECK_PERIOD must equal five to meet system requirements
 #define LAUNCH_CHECK_PERIOD	   1
 // START_ENSURE_DELAY must be greater than any possible amount of time that may pass between
 // a child process being forked and the execl() command completion in the child process
@@ -110,6 +111,7 @@ int32_t main( int argc , char *argv[] )
             // free(first_node);
 
             // AACM was not able to start
+            sleep(1);   // this is to give the test scripts time to confirm that there were no lasting children
             syslog(LOG_ERR, "ERROR: AACM Cannot be started! (%d:%s)", errno, strerror(errno));
             PRINT_F(("ERROR: AACM Cannot be started! (%d:%s) \n", errno, strerror(errno)));
 
@@ -238,8 +240,8 @@ int32_t launch_item( const char *directory )
                 //if ( (0 != execl( "/opt/rc360/modules/TPA/hello", "hello" , (char *)NULL)) )
                 if ( (0 != execl( concat, dp->d_name, (char *)NULL)) )
                 {
-                    syslog(LOG_ERR, "ERROR: 'execl()' failed for %s in %s! (%d:%s)", dp->d_name, directory, errno, strerror(errno));
-                    PRINT_F(("ERROR: 'execl()' failed for %s in %s! (%d:%s) \n", dp->d_name, directory, errno, strerror(errno)));
+                    syslog(LOG_ERR, "ERROR: 'execl()' failed for %s! (%d:%s)", concat, errno, strerror(errno));
+                    PRINT_F(("ERROR: 'execl()' failed for %s! (%d:%s) \n", concat, errno, strerror(errno)));
                     // force the spawned process to exit
                     exit(-errno);
                 }
@@ -277,15 +279,17 @@ int32_t launch_item( const char *directory )
                 for ( i = 1 ; i < MAX_LAUNCH_ATTEMPTS && run_time <= START_ENSURE_DELAY ; )
                 {
                     sleep(LAUNCH_CHECK_PERIOD);
+                    errno = 0;
                     nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
                     //PRINT_F(("\nWaitpid return: %d\n", nth_node->alive));
                     if ( 0 != nth_node->alive )
                     {
-                        syslog(LOG_ERR, "ERROR: File %s in %s not launched properly! (%d:%s)", dp->d_name, directory, errno, strerror(errno));
+                        syslog(LOG_ERR, "ERROR: File launch failed! (%s in %s) (try #%d) (%d:%s)", dp->d_name, directory, i, errno, strerror(errno));
                         PRINT_F(("ERROR: File %s not launched properly! (%d:%s) \n", dp->d_name, errno, strerror(errno)));
                         // restart process
                         restart_process();
                         i++;
+                        nth_node->alive = 0;
                         run_time = 0;
                     }
                     else
@@ -294,11 +298,17 @@ int32_t launch_item( const char *directory )
                     }
                 }
                 sleep(START_ENSURE_DELAY);
+                errno = 0;
                 nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
 
                 //PRINT_F(("\nFinal 'alive' value: %d\n", nth_node->alive));
                 if ( 0 != nth_node->alive )
                 {
+                    // This last launch error needs to be outside the previous for loop in order to log the error for a 
+                    // fifth launch error. Thi
+                    syslog(LOG_ERR, "ERROR: File launch failed! (%s in %s) (try #%d) (%d:%s)", dp->d_name, directory, i, errno, strerror(errno));
+                    PRINT_F(("ERROR: File %s not launched properly! (%d:%s) \n", dp->d_name, errno, strerror(errno)));
+
                     syslog(LOG_ERR, "NOTICE: Process for %s in %s disabled permanently! (%d:%s)", dp->d_name, directory, errno, strerror(errno));
                     PRINT_F(("NOTICE: Process for %s in %s disabled permanently! (%d:%s) \n", dp->d_name, directory, errno, strerror(errno)));
                     nth_node->alive = -1;
