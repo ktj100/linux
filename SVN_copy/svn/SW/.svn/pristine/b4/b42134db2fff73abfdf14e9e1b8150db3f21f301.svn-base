@@ -1,0 +1,999 @@
+//#include <sys/socket.h> -
+//#include <sys/poll.h>
+//#include <netinet/in.h>
+//#include <arpa/inet.h> -
+//#include <stdio.h> -
+//#include <string.h> -
+//#include <strings.h> 
+//#include <unistd.h> -
+//#include <stdlib.h> -
+//#include <stdbool.h> -
+//#include <errno.h>
+
+#include <sys/poll.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <libgen.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <errno.h>
+#include <syslog.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <signal.h>
+#include <time.h>
+#include <pthread.h>
+
+#define MSGBUFSIZE 1000   /* Size of receive buffer */
+
+#define CMD_REGISTER_APP                0x0001
+#define CMD_REGISTER_APP_ACK            0x0002
+#define CMD_REGISTER_DATA               0x0003
+#define CMD_REGISTER_DATA_ACK           0x0004
+#define CMD_SUBSCRIBE                   0x0005
+
+#define CMD_SUBSCRIBE_ACK               0x0006
+#define CMD_OPEN                        0x0008
+#define CMD_CLOSE                       0x0009
+#define CMD_PUBLISH                     0x000A
+
+#define MINPER_PFP_VALUE                1000
+#define MINPER_PTLT_TEMPERATURE         1000
+#define MINPER_PTRT_TEMPERATURE         1000
+#define MINPER_TCMP                     1000
+#define MINPER_CAM_SEC_1                1000
+#define MINPER_CAM_NSEC_1               1000
+#define MINPER_COP_PRESSURE             1000
+
+#define TEST_MP_PERIOD                  1000
+
+void remote_set32(uint8_t *ptr, uint32_t val);
+void remote_set16(uint8_t *ptr, uint16_t val); 
+uint16_t remote_get16(uint8_t *ptr); 
+uint32_t remote_get32(uint8_t *ptr);
+
+void process_register_app(int32_t csocket);
+void process_register_app_ack(int32_t csocket);
+void process_register_data(int32_t csocket);
+void process_register_data_ack(int32_t csocket);
+
+void process_receive_publish(int32_t csocket);
+void process_subscribe();
+void process_subscribe_ack();
+void process_openUDP();
+
+bool UDPsetup();
+bool TCPsetup();
+
+enum subscribeMPs
+{
+    MP_PFP_VALUE                        = 1003,
+    MP_PTLT_TEMPERATURE                 = 1004,
+    MP_PTRT_TEMPERATURE                 = 1005,
+    MP_TCMP                             = 1006,
+    MP_CAM_SEC_1                        = 1031,
+    MP_CAM_NSEC_1                       = 1032,
+    MP_COP_PRESSURE                     = 1033,
+};
+
+
+// GLOBALS
+static int32_t clientSocket_TCP = -1;
+static int32_t clientSocket_UDP = -1;
+static int32_t TCPclntSock = 0;
+struct sockaddr_in DestAddr_TCP;
+int32_t DestAddr_TCP_size;
+struct sockaddr_in DestAddr_UDP, cliaddr_UDP;
+int32_t DestAddr_UDP_size;
+int32_t cliAddr_UDP_size;
+
+socklen_t UDPaddr_size, UDPclient_addr_size;
+
+struct sockaddr_storage toRcvUDP;
+struct sockaddr_storage toSendUDP;
+socklen_t toRcvUDP_size = sizeof(toRcvUDP);
+socklen_t toSendUDP_size = sizeof(toSendUDP);
+
+//  TCP INFO
+char ServerIPAddress[]  = "127.0.0.1";
+int TCPServerPort       =  8000;
+
+
+int32_t main(int argc, char *argv[])
+{
+    int32_t pid;
+
+    //  AACM SERVER ADDRESS INFO
+//  char ServerIPAddress[]  = "127.0.0.1";
+//  int TCPServerPort       =  8000;
+
+    if (false == UDPsetup() )
+    {
+        printf("ERROR SETTING UP UDP\n");
+    }
+
+    if (false == TCPsetup() )
+    {
+        printf("ERROR SETTING UP TCP\n");
+    }
+
+    listen(clientSocket_TCP, MSGBUFSIZE);
+    DestAddr_TCP_size = sizeof(DestAddr_TCP);
+
+    TCPclntSock = accept(clientSocket_TCP , (struct sockaddr *)&DestAddr_TCP , &DestAddr_TCP_size );
+
+    // TCP STUFF
+    process_register_app(TCPclntSock);         // RX
+    sleep(3);
+    process_register_app_ack(TCPclntSock);     // TX
+                                            
+    process_register_data(TCPclntSock);        // RX
+    sleep(3);
+    process_register_data_ack(TCPclntSock);    // TX
+
+
+    // UDP STUFF
+    printf("POLLING FOR UDP OPEN... \n");
+    process_openUDP();              // RX
+    printf("SENDING SUBSCRIBE ...\n");
+    sleep(5);
+    process_subscribe();            // TX
+    printf("POLLING FOR SUBSCRIBE_ACK ... \n");
+    process_subscribe_ack();        // RX
+
+    // WILL NEED ANOTHER LOOP FOR RECEIVING PUBLISH
+    while (1)
+    {
+        printf("SENDING SUBSCRIBE ...\n");
+        sleep(3);
+        process_subscribe();
+        printf("POLLING FOR SUBSCRIBE_ACK ... \n");
+        process_subscribe_ack();
+    }
+
+    //close(clientSocket_TCP);
+    //close(clientSocket_UDP);
+
+    return 0;
+}
+
+void remote_set16(uint8_t *ptr, uint16_t val) 
+{
+    /* The easiest way to do this would be to cast the buffer pointer as
+     * a uint16_t, then assign the byteswap-d value to the cast buffer pointer.
+     * But this isn't necessarily alignment-safe on all platforms.
+     *
+     * *((uint16_t*) ptr) = htobe16(val);
+     *
+     * Everything has to be hard so we do it our own way. */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    /* The local variable can be assigned to a byte array and can be
+     * byte-accessed safely. */
+    uint8_t *val_ptr = (uint8_t*) &val;
+
+    ptr[0] = val_ptr[0];
+    ptr[1] = val_ptr[1];
+#else
+    memcpy(ptr, &val, sizeof(val));
+#endif
+}
+
+void remote_set32(uint8_t *ptr, uint32_t val) 
+{
+    /* The easiest way to do this would be to cast the buffer pointer as
+     * a uint32_t, then assign the byteswap-d value to the cast buffer pointer.
+     * But this isn't necessarily alignment-safe on all platforms.
+     *
+     * *((uint32_t*) ptr) = htobe32(val);
+     *
+     * Everything has to be hard so we do it our own way. */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    /* The local variable can be assigned to a byte array and can be
+     * byte-accessed safely. */
+    uint8_t *val_ptr = (uint8_t*) &val;
+
+    ptr[0] = val_ptr[0];
+    ptr[1] = val_ptr[1];
+    ptr[2] = val_ptr[2];
+    ptr[3] = val_ptr[3];
+#else
+    memcpy(ptr, &val, sizeof(val));
+#endif
+}
+
+uint16_t remote_get16(uint8_t *ptr) 
+{
+    uint16_t val;
+
+    /* The easiest way to do this would be to cast the buffer, and then byteswap
+     * the resulting 16bit value.  But this isn't necessarily alignment-safe on
+     * all platforms.
+     *
+     * val = be16toh(*((uint16_t*) ptr));
+     *
+     * Everything has to be hard so we do it our own way. */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    val = ptr[1];
+    val <<= 8;
+    val |= ptr[0];
+#else
+    memcpy(&val, ptr, sizeof(val));
+#endif
+
+    return val;
+}
+
+uint32_t remote_get32(uint8_t *ptr) 
+{
+    uint32_t val;
+
+    /* The easiest way to do this would be to cast the buffer, and then byteswap
+     * the resulting 16bit value.  But this isn't necessarily alignment-safe on
+     * all platforms.
+     *
+     * val = be16toh(*((uint16_t*) ptr));
+     *
+     * Everything has to be hard so we do it our own way. */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    val = ptr[3];
+    val <<= 8;
+    val |= ptr[2];
+    val <<= 8;
+    val |= ptr[1];
+    val <<= 8;
+    val |= ptr[0];
+#else
+    memcpy(&val, ptr, sizeof(val));
+#endif
+
+    return val;
+}
+
+
+void process_receive_publish(int32_t csocket)
+{
+    enum publish_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        TOPIC_ID                = 4,
+        NUM_MPS                 = 4,
+        SEQ_NUM                 = 2,
+        MP                      = 4,
+        MP_VAL                  = 4,
+        MSG_SIZE                =   CMD_ID +
+                                    LENGTH +
+                                    TOPIC_ID +
+                                    NUM_MPS +
+                                    SEQ_NUM +
+                                    5*(MP + MP_VAL),
+    };
+
+    uint16_t command;
+    uint8_t *ptr;
+    uint8_t mesg[ MSGBUFSIZE ];
+    int32_t retBytes;
+    int32_t k;
+    int32_t mp[256];
+    uint32_t totalSize, numMPs, numTimeStamps;
+
+    retBytes = recv( csocket , mesg , MSGBUFSIZE , 0 );
+
+    ptr = mesg;
+    command = remote_get16(mesg);
+    ptr += CMD_ID;
+    ptr += LENGTH;
+    ptr += TOPIC_ID;
+    numMPs = remote_get32(ptr);
+    ptr += NUM_MPS;
+    ptr += SEQ_NUM;
+
+    totalSize = (retBytes - 14)/4;
+
+    if (CMD_PUBLISH == command) 
+    {
+        printf("\nPUBLISH TRUE!\n");
+    }
+    else
+    {
+        printf("PUBLISH ERROR!\n");
+    }
+    printf("PUBLISH RCV SIZE: %d\n", retBytes);
+    printf("NUM MPS: %d\n",numMPs);
+
+    for ( k = 0 ; k < totalSize ; k++ ) 
+    {
+        mp[k] = remote_get32(ptr);
+        ptr += MP;
+        printf("MP VAL: %d\n", mp[k]);
+    }
+}
+
+void process_register_app(int32_t csocket)
+{
+    uint16_t command;
+    uint8_t *ptr;
+    uint8_t mesg[ MSGBUFSIZE ];
+    int32_t retBytes;
+
+    struct pollfd myPoll[1];
+    myPoll[0].fd = csocket;
+    myPoll[0].events = POLLIN; 
+
+    int32_t retPoll;
+    struct timeval tv;
+
+    // add timeout of ? 3 seconds here
+    tv.tv_sec = 3;
+    tv.tv_usec = 0;
+
+    // WAIT TO RECEIVE RESPONSE ...
+    retPoll = poll( myPoll, 1, -1 );
+    if ( retPoll == -1 ) 
+    {
+        printf("ERROR WITH POLL\n");
+    }
+    else if (retPoll == 0 ) 
+    {
+        printf("SELECT TIMEOUT ERROR\n");
+    } 
+    else
+    {
+        if (myPoll[0].revents & POLLIN)
+        {
+            retBytes = recv( csocket , mesg , MSGBUFSIZE , 0 );
+            command = remote_get16(mesg);
+        }
+    }
+
+    // check message
+    if (CMD_REGISTER_APP == command) 
+    {
+        printf("REGISTER_APP TRUE!\n");
+    }
+    else
+    {
+        printf("REGISTER_APP ERROR!\n");
+    }
+    printf("REGISTER_APP SIZE: %d\n", retBytes);
+}
+
+void process_register_app_ack(int32_t csocket)
+{
+    enum registerApp_ack_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        ERROR                   = 2,
+        MSG_SIZE                =   CMD_ID + 
+                                    LENGTH + 
+                                    ERROR,
+    };
+
+    uint8_t *ptr, *msgLenPtr;
+    uint8_t mesg_s[ MSG_SIZE ];
+    int32_t lenVal, sendBytes;
+
+    ptr = mesg_s;
+    remote_set16( ptr , CMD_REGISTER_APP_ACK);
+    ptr += CMD_ID;
+
+    msgLenPtr = ptr;
+    ptr += LENGTH;
+
+    *ptr = 0;
+    ptr += ERROR;
+
+    *ptr = MSG_SIZE;
+    ptr += MSG_SIZE;
+
+    // actual length
+    lenVal = MSG_SIZE - CMD_ID - LENGTH;
+    memcpy(msgLenPtr, &lenVal, sizeof(lenVal));
+
+    sendBytes = send( csocket , mesg_s , MSG_SIZE , 0 );
+
+    if ((MSG_SIZE != sendBytes)) 
+    {
+        printf("REGISTER_APP_ACK ERROR!\n");
+    }
+    else
+    {
+        printf("REGISTER_APP_ACK TRUE!\n");         
+    }
+    printf("REGISTER_APP_ACK SIZE: %d\n", sendBytes);
+}
+
+void process_register_data(int32_t csocket)
+{
+    uint16_t command;
+    uint8_t *ptr;
+    uint8_t mesg[ MSGBUFSIZE ];
+    int32_t retBytes;
+
+
+    struct pollfd myPoll[1];
+    myPoll[0].fd = csocket;
+    myPoll[0].events = POLLIN; 
+
+    int32_t retPoll;
+    struct timeval tv;
+
+    // add timeout of ? 3 seconds here
+    tv.tv_sec = 3;
+    tv.tv_usec = 0;
+
+    // WAIT TO RECEIVE RESPONSE ...
+    retPoll = poll( myPoll, 1, -1 );
+    if ( retPoll == -1 ) 
+    {
+        printf("ERROR WITH SELECT\n");
+    }
+    else if (retPoll == 0 ) 
+    {
+        printf("SELECT TIMEOUT ERROR\n");
+    } 
+    else
+    {
+        if (myPoll[0].revents & POLLIN)
+        {
+            retBytes = recv( csocket , mesg , MSGBUFSIZE , 0 );
+            command = remote_get16(mesg);
+        }
+    }
+
+    // check message
+    if (CMD_REGISTER_DATA == command) 
+    {
+        printf("REGISTER_DATA TRUE!\n");
+    }
+    else
+    {
+        printf("REGISTER_DATA ERROR!\n");
+    }
+    printf("REGISTER_DATA SIZE: %d\n",retBytes);
+}
+
+void process_register_data_ack(int32_t csocket)
+{
+
+    enum registerApp_ack_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        ERROR                   = 2,
+        ERROR_PFP_VALUE         = 2,
+        ERROR_PTLT_TEMPERATURE  = 2,
+        ERROR_PTRT_TEMPERATURE  = 2,
+        ERROR_TCMP              = 2,
+        ERROR_COP_PRESSURE      = 2,
+        ERROR_COP_FO_REAL       = 2,
+        ERROR_COP_FO_IMAG       = 2,
+        ERROR_COP_HO_REAL       = 2,
+        ERROR_COP_HO_IMAG       = 2,
+        ERROR_COP_SQ            = 2,
+        ERROR_CRANK_FO_REAL     = 2,
+        ERROR_CRANK_FO_IMAG     = 2,
+        ERROR_CRANK_HO_REAL     = 2,
+        ERROR_CRANK_HO_IMAG     = 2,
+        ERROR_CRANK_SQ          = 2,
+        ERROR_CAM_SEC_1         = 2,
+        ERROR_CAM_NSEC_1        = 2,
+        ERROR_TURBO_REAL        = 2,
+        ERROR_TURBO_IMAG        = 2,
+        ERROR_TURBO_SQ          = 2,
+        MSG_SIZE                =   CMD_ID + 
+                                    LENGTH + 
+                                    ERROR +
+                                    ERROR_PFP_VALUE +
+                                    ERROR_PTLT_TEMPERATURE +
+                                    ERROR_PTRT_TEMPERATURE +
+                                    ERROR_TCMP +
+                                    ERROR_COP_PRESSURE +
+                                    ERROR_COP_FO_REAL +
+                                    ERROR_COP_FO_IMAG +
+                                    ERROR_COP_HO_REAL +
+                                    ERROR_COP_HO_IMAG +
+                                    ERROR_COP_SQ +
+                                    ERROR_CRANK_FO_REAL +
+                                    ERROR_CRANK_FO_IMAG +
+                                    ERROR_CRANK_HO_REAL +
+                                    ERROR_CRANK_HO_IMAG +
+                                    ERROR_CRANK_SQ +
+                                    ERROR_CAM_SEC_1 +
+                                    ERROR_CAM_NSEC_1 +
+                                    ERROR_TURBO_REAL +
+                                    ERROR_TURBO_IMAG +
+                                    ERROR_TURBO_SQ,
+    };
+
+    uint16_t command;
+    uint8_t *ptr, *msgLenPtr;
+    uint8_t mesg_s[ MSG_SIZE ];
+    int32_t sendBytes;
+    uint32_t lenVal;
+
+    int32_t k;
+
+    ptr = mesg_s;
+    remote_set16( ptr , CMD_REGISTER_DATA_ACK);
+    ptr += CMD_ID;
+
+    msgLenPtr = ptr;
+    ptr += LENGTH;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    remote_set16( ptr , 0);
+    ptr += ERROR;
+
+    *ptr = MSG_SIZE;
+    ptr += MSG_SIZE;
+
+    // actual length
+    lenVal = MSG_SIZE - CMD_ID - LENGTH;
+    memcpy(msgLenPtr, &lenVal, sizeof(lenVal));
+
+    sendBytes = send( csocket , mesg_s , MSG_SIZE , 0 );
+
+    if ((MSG_SIZE != sendBytes)) 
+    {
+        printf("REGISTER_DATA_ACK ERROR!\n");
+    }
+    else
+    {
+        printf("REGISTER_DATA_ACK TRUE!\n");         
+    }
+    printf("REGISTER_DATA_ACK SIZE: %d\n", sendBytes);
+}
+
+
+void process_subscribe()
+{
+    enum subscribe_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        HOST_OS                 = 1,
+        SRC_PROC_ID             = 4,
+        SRC_APP_NAME            = 4,
+        NUM_MPS                 = 4,
+        SEQ_NUM                 = 2,
+        MP                      = 4,
+        MP_PER                  = 4,
+        MP_NUM_SAMPLES          = 4,
+        MSG_SIZE                =   CMD_ID +
+                                    LENGTH +
+                                    HOST_OS +
+                                    SRC_PROC_ID +
+                                    SRC_APP_NAME +
+                                    NUM_MPS +
+                                    SEQ_NUM +
+                                    MP +
+                                    MP_PER +
+                                    MP_NUM_SAMPLES,
+    };
+    uint16_t command;
+    uint8_t *ptr, *msgLenPtr;
+    uint8_t mesg_s[ MSGBUFSIZE ];
+    int32_t sendBytes;
+    uint32_t lenVal, cntBytes;
+    uint8_t host_os = 0;
+
+    int32_t k;
+
+    cntBytes = 0;
+    lenVal = 0;
+
+    ptr = mesg_s;
+    remote_set16( ptr , CMD_SUBSCRIBE);
+    ptr += CMD_ID;
+    cntBytes += CMD_ID;
+
+    msgLenPtr = ptr;
+    ptr += LENGTH;
+    cntBytes += LENGTH;
+
+    memcpy(ptr, &host_os, sizeof(host_os));
+    ptr += HOST_OS;
+    cntBytes += HOST_OS;
+
+    remote_set32( ptr , getpid());
+    ptr += SRC_PROC_ID;
+    cntBytes += SRC_PROC_ID;
+
+    remote_set32( ptr , 0);
+    ptr += SRC_APP_NAME;
+    cntBytes += SRC_APP_NAME;
+
+    remote_set32( ptr , 7);
+    ptr += NUM_MPS;
+    cntBytes += NUM_MPS;
+
+    remote_set16( ptr , 0);
+    ptr += SEQ_NUM;
+    cntBytes += SEQ_NUM;
+
+
+    remote_set32( ptr , MP_PFP_VALUE);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    remote_set32( ptr , MP_PTLT_TEMPERATURE);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    remote_set32( ptr , MP_PTRT_TEMPERATURE);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    remote_set32( ptr , MP_TCMP);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    remote_set32( ptr , MP_CAM_SEC_1);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    remote_set32( ptr , MP_CAM_NSEC_1);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    remote_set32( ptr , MP_COP_PRESSURE);
+    ptr += MP;
+    remote_set32( ptr , TEST_MP_PERIOD);
+    ptr += MP_PER;
+    remote_set32( ptr , 5);
+    ptr += MP_NUM_SAMPLES;
+
+    cntBytes += 7 * ( MP + MP_PER + MP_NUM_SAMPLES );
+
+    *ptr = MSG_SIZE;
+    ptr += MSG_SIZE;
+
+    // actual length
+    lenVal = cntBytes - CMD_ID - LENGTH;
+    memcpy(msgLenPtr, &lenVal, sizeof(lenVal));
+
+    UDPaddr_size = sizeof(DestAddr_UDP);
+    sendBytes = sendto(clientSocket_UDP, mesg_s, cntBytes, 0, (struct sockaddr *)&toRcvUDP, toRcvUDP_size);
+    //sendBytes = send( csocket , mesg_s , cntBytes , 0 );
+
+    if ((cntBytes != sendBytes))
+    {
+        printf("SUBSCRIBE ERROR!\n");
+    }
+    else
+    {
+        printf("SUBSCRIBE TRUE!\n");
+    }
+    printf("SUBSCRIBE SIZE: %d\n\n", sendBytes);
+}
+
+
+void process_subscribe_ack()
+{
+    enum subscribe_ack_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        TOPIC_ID                = 4,
+        ERROR                   = 2,
+        ERROR_MP                = 2,
+        MSG_SIZE                =   CMD_ID +
+                                    LENGTH +
+                                    TOPIC_ID +
+                                    ERROR +
+                                    ERROR_MP,
+    };
+
+    uint16_t command;
+    uint8_t *ptr;
+    uint8_t mesg[ MSGBUFSIZE ];
+    int32_t retBytes;
+
+    struct pollfd myPoll[1];
+    myPoll[0].fd = clientSocket_UDP;
+    myPoll[0].events = POLLIN; 
+
+    int32_t retPoll;
+    struct timeval tv;
+
+    // add timeout of ? 3 seconds here
+    tv.tv_sec = 3;
+    tv.tv_usec = 0;
+
+    // WAIT TO RECEIVE RESPONSE ...
+    retPoll = poll( myPoll, 1, -1 );
+    if ( retPoll == -1 ) 
+    {
+        printf("ERROR WITH POLL\n");
+    }
+    else if (retPoll == 0 ) 
+    {
+        printf("SELECT TIMEOUT ERROR\n");
+    } 
+    else
+    {
+        if (myPoll[0].revents & POLLIN)
+        {
+            // it's not polling for a response ... it grabs and goes ...
+            retBytes = recvfrom(clientSocket_UDP , mesg , MSGBUFSIZE , 0 , (struct sockaddr *)&toRcvUDP , &toRcvUDP_size);
+            //retBytes = recv( csocket , mesg , MSGBUFSIZE , 0 );
+            command = remote_get16(mesg);
+        }
+    }
+
+    // check message
+    if (CMD_SUBSCRIBE_ACK == command) 
+    {
+        printf("SUBSCRIBE_ACK TRUE!\n");
+    }
+    else
+    {
+        printf("SUBSCRIBE_ACK ERROR!\n");
+    }
+    printf("SUBSCRIBE_ACK SIZE: %d\n\n",retBytes);
+}
+
+bool TCPsetup( )
+{
+    bool success = true;
+//  //  int32_t UDPsocket,UDP_clilength, UDP_clntsock;
+//  //  struct sockaddr_in UDP_servaddr;
+//  //  socklen_t UDP_clilen;
+//
+//  clientSocket_TCP = socket( AF_INET , SOCK_STREAM , 0 );
+//  bzero( &DestAddr_TCP , sizeof(DestAddr_TCP) );
+//  DestAddr_TCP.sin_family = AF_INET;
+//  DestAddr_TCP.sin_addr.s_addr = htonl(INADDR_ANY);
+//  DestAddr_TCP.sin_port = htons(8000);
+//
+//  if (0 != bind( clientSocket_TCP , (struct sockaddr *)&DestAddr_TCP , sizeof(DestAddr_TCP)) )
+//  {
+//      success = false;
+//      printf("BIND ERROR\n");
+//  }
+
+    // CREATE TCP SOCKET
+    if (true == success)
+    {
+        errno = 0;
+        clientSocket_TCP = socket(AF_INET, SOCK_STREAM, 0);
+        if (0 > clientSocket_TCP)
+        {
+            success = false;
+            //syslog(LOG_ERR, "%s:%d Failed to create socket %d (%d:%s) ", __FUNCTION__, __LINE__, clientSocket_TCP, errno, strerror(errno));
+        }
+    }
+
+    // CONNECT TO TCP SERVER
+    errno = 0;
+    if (true == success)
+    {
+        //memset(&DestAddr_TCP,0,sizeof(DestAddr_TCP));				// clear struct
+        bzero(&DestAddr_TCP,sizeof(DestAddr_TCP));
+        DestAddr_TCP.sin_family = AF_INET;
+        DestAddr_TCP.sin_addr.s_addr = htonl(INADDR_ANY);
+        DestAddr_TCP.sin_port = htons(8000);
+        //DestAddr_TCP.sin_family = AF_INET;					        // must be this
+        //DestAddr_TCP.sin_port = htons(TCPServerPort);	            // set the port to write to
+        //DestAddr_TCP.sin_addr.s_addr = inet_addr(ServerIPAddress);  // set destination IP address
+        //memset(&(DestAddr_TCP.sin_zero), '\0', 8);                  // zero the rest of the struct
+    }
+
+    if (0 != bind(clientSocket_TCP,(struct sockaddr *)&DestAddr_TCP,sizeof(DestAddr_TCP)) )
+    {
+        success = false;
+        printf("BIND ERROR\n");
+    }
+
+
+    return success;
+
+}
+
+
+
+bool UDPsetup( )
+{
+    bool success = true;
+
+    //  UDP INFO (THIS IS WHAT THE DOCUMENTS STATE IT NEED TO BE)
+//  char UDPAddress[]       = "225.0.0.37";
+//  int UDPPort             =  4096;
+
+    char UDPAddress[]  = "127.0.0.1";
+    int UDPPort       =  4096;
+
+
+//  int32_t UDPsocket,UDP_clilength, UDP_clntsock;
+//  struct sockaddr_in UDP_servaddr;
+//  socklen_t UDP_clilen;
+
+    // CREATE UDP SOCKET
+    if (true == success)
+    {
+        errno = 0;
+        clientSocket_UDP = socket(AF_INET, SOCK_DGRAM, 0);
+        if (0 > clientSocket_UDP)
+        {
+            printf("ERROR WITH UDP SOCKET\n");
+            success = false;
+        }
+    }
+
+    // CONNECT TO UDP SERVER
+    errno = 0;
+    if (true == success)
+    {
+        memset(&DestAddr_UDP,0,sizeof(DestAddr_UDP));				// clear struct
+        DestAddr_UDP.sin_family = AF_INET;					        // must be this
+        DestAddr_UDP.sin_port = htons(UDPPort);	                    // set the port to write to
+        DestAddr_UDP.sin_addr.s_addr = inet_addr(UDPAddress);       // set destination IP address
+        memset(&(DestAddr_UDP.sin_zero), '\0', 8);                  // zero the rest of the struct
+    }
+
+    if (0 != bind(clientSocket_UDP,(struct sockaddr *)&DestAddr_UDP, sizeof(DestAddr_UDP)) )
+    {
+        success = false;
+        printf("BIND ERROR\n");
+    }
+
+    return success;
+}
+
+void process_openUDP()
+{
+    // send at boot
+    enum openUDP_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        APP_ID                  = 2,
+        MSG_SIZE                =   CMD_ID + 
+                                    LENGTH + 
+                                    APP_ID,
+    };
+
+    uint16_t command;
+    uint8_t *ptr;
+    uint8_t mesg[ MSG_SIZE ];
+    int32_t retBytes = 0;
+    uint16_t actualLength, app_id, calcLength;
+
+    cliAddr_UDP_size = sizeof(cliaddr_UDP);
+
+    struct pollfd myPoll[1];
+    int retPoll;
+
+    myPoll[0].fd = clientSocket_UDP;
+    myPoll[0].events = POLLIN;
+
+    retPoll = poll( myPoll, 1, -1 );
+    if ( retPoll == -1 )
+    {
+        printf("ERROR WITH POLL\n");
+    }
+    else if (retPoll == 0 )
+    {
+        printf("SELECT TIMEOUT ERROR\n");
+    }
+    else
+    {
+        if (myPoll[0].revents & POLLIN)
+        {
+            retBytes = recvfrom(clientSocket_UDP , mesg , MSG_SIZE , 0 , (struct sockaddr *)&toRcvUDP , &toRcvUDP_size);
+
+            command = remote_get16(mesg);
+            ptr = mesg;
+            ptr += CMD_ID;
+
+            actualLength = remote_get16(ptr);
+            ptr += LENGTH;
+
+            app_id = remote_get16(ptr);
+            ptr += APP_ID;
+
+            calcLength =  MSG_SIZE - CMD_ID - LENGTH;
+        }
+    }
+
+    // check message
+    if ( (MSG_SIZE != retBytes) || (actualLength != calcLength))
+    {
+        //syslog(LOG_ERR, "%s:%d insufficient message data %u != %u ", __FUNCTION__, __LINE__, sendBytes, MSG_SIZE);      
+        printf("UDP_OPEN RETURN BYTES/LENGTH ERROR! \n");
+    }
+    else
+    {
+        printf("UDP_OPEN TRUE! \n");
+    }
+    printf("UDP_OPEN SIZE: %d\n" , retBytes);
+}
+
+
+
+

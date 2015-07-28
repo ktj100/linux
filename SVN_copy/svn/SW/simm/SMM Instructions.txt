@@ -1,0 +1,19 @@
+Instructions to run the FPGA half of the SIMM files V2:
+
+
+Put all of teh following files into one folder:
+
+-> main.c
+-> sensor.c
+-> sensor.h
+-> fpga_sim.c
+-> fpga_sim.h
+
+
+Compile the following and run in separate terminals:
+
+$ gcc -Wall main.c sensor.c fpga_sim.c -o smm -lpthread
+$ ./smm
+
+$ gcc fake_fpga.c -o fpga
+$ ./fpga

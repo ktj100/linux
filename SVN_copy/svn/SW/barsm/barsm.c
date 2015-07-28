@@ -19,10 +19,10 @@
 
 #define MAX_LAUNCH_ATTEMPTS    5
 // LAUNCH_CHECK_PERIOD must equal five to meet system requirements
-#define LAUNCH_CHECK_PERIOD	   1
+#define LAUNCH_CHECK_PERIOD	   5
 // START_ENSURE_DELAY must be greater than any possible amount of time that may pass between
 // a child process being forked and the execl() command completion in the child process
-#define START_ENSURE_DELAY     3
+#define START_ENSURE_DELAY     4
 
 // #if 0 disables printf()
 // #if 1 enables printf()

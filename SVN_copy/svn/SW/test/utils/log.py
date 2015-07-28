@@ -51,7 +51,7 @@ class logfollower(object):
         self.log = open(self.path, 'r')
 
     def close(self):
-        close(self.log)
+        self.log.close()
 
     def read(self, proc_filter=None):
         # Read to the end of the log file, capture the output and parse it

@@ -3,17 +3,65 @@
 # This file provides supporting classes/functions to all the BARSM Python scripts.
 
 import subprocess
+import proc
+import time
+import random
 
-barsm_loc = "~/Documents/linux/barsm/"
-apps_loc = "~/Documents/linux/barsm/dummies/"
+barsm_loc = "/svn/SW/barsm/src/"
+apps_loc = "/svn/SW/test/utils/dummies/"
 
-# clear out all app directories	
+
 def remove():
     subprocess.call("rm /opt/rc360/system/*", shell=True)
     subprocess.call("rm /opt/rc360/modules/GE/*", shell=True)
     subprocess.call("rm /opt/rc360/modules/TPA/*", shell=True)
     subprocess.call("rm /opt/rc360/apps/GE/*", shell=True)
     subprocess.call("rm /opt/rc360/apps/TPA/*", shell=True)
+
+
+def random_fail_start():
+    random.seed()
+    r = random.randint(1, 8)
+    print(r)
+
+    subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/system/aacm', shell=True)
+
+    if 1 == r:
+        subprocess.call('gcc '+apps_loc+'zero_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+    elif 5 == r:
+        subprocess.call('cp '+apps_loc+'non_exec.c /opt/rc360/modules/GE/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+
+    if 2 == r:
+        subprocess.call('gcc '+apps_loc+'zero_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+    elif 6 == r:
+        subprocess.call('cp '+apps_loc+'non_exec.c /opt/rc360/modules/TPA/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+
+    if 3 == r:
+        subprocess.call('gcc '+apps_loc+'zero_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+    elif 7 == r:
+        subprocess.call('cp '+apps_loc+'non_exec.c /opt/rc360/apps/GE/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+
+    if 4 == r:
+        subprocess.call('gcc '+apps_loc+'zero_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+    elif 8 == r:
+        subprocess.call('cp '+apps_loc+'non_exec.c /opt/rc360/apps/TPA/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+
+
+def start_barsm():
+    # start BARSM
+    test_output = open('test.out', 'w')
+
+    subprocess.call('gcc '+barsm_loc+'barsm.c -o '+barsm_loc+'barsm', shell=True)
+    subprocess.Popen('valgrind '+barsm_loc+'barsm -v --read-var-info=yes --leak-check=full --track-origins=yes ' \
+        'show-reachable=yes --malloc-fill=B5 --free-fill=4A', stdout=test_output, stderr=test_output, shell=True)
 
 
 def monitor_launch():
@@ -26,27 +74,80 @@ def monitor_launch():
     child_amount = 0
     start_tries = 0
 
-
-    while (7 * child_amount) + 30 >= run_time and barsm_info:
+    while (8 * child_amount) + 25 >= run_time and barsm_info:
         all_child = proc.findchild(barsm_pid)
+        print(all_child)
         # prev_amount = child_amount
         child_amount = len(all_child)
 
-        time.sleep(0.1)
-        run_time += 0.1
+        time.sleep(1)
+        run_time += 1
+        print(run_time)
+        # m = (4 * child_amount) + 20
+        # print(m)
         barsm_info = proc.findproc("valgrind.bin")
 
     if not barsm_info and 0 == child_amount:
         # return 0 if aacm never launched and BARSM exited
         return 0
-
     elif 4 == child_amount:
         # return 1 if the correct number of apps launched
         return 1
-
     else:
         # return 2 if another module never launched
         return 2
+
+
+def norm_launch():
+
+    # clear out all app directories
+    remove()
+
+    # place items in directories
+    subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/system/aacm', shell=True)
+    subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+    subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+    subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+
+    # start barsm
+    start_barsm()
+
+    # Get BARSM PID
+    barsm_info = proc.findproc("valgrind.bin")
+    barsm_pid = (barsm_info[0]['pid'])
+    print(barsm_info[0]['pid'])
+
+    run_time = 0
+    child_amount = 0
+
+    while (7 * child_amount) + 5 >= run_time and barsm_info:
+        all_child = proc.findchild(barsm_pid)
+        print(all_child)
+        # prev_amount = child_amount
+        child_amount = len(all_child)
+
+        time.sleep(0.5)
+        run_time += 0.5
+        print(run_time)
+        # m = (4 * child_amount) + 20
+        # print(m)
+        barsm_info = proc.findproc("valgrind.bin")
+
+
+def kill_procs():
+    # Get BARSM PID
+    barsm_info = proc.findproc("valgrind.bin")
+    barsm_pid = (barsm_info[0]['pid'])
+    
+    # find child PIDs
+    all_child = proc.findchild(barsm_pid)
+    for c, entry in enumerate(all_child):
+        child_pid = all_child[c]['pid']
+        subprocess.call('kill -15 '+child_pid, shell=True)
+
+    subprocess.call('kill -15 '+barsm_pid, shell=True)
+
 
 
 

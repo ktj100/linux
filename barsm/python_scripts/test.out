@@ -1,42 +1,90 @@
-==6842== Memcheck, a memory error detector
-==6842== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
-==6842== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
-==6842== Command: /home/travis/Documents/linux/barsm/barsm -v --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --malloc-fill=B5 --free-fill=4A
-==6842== 
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
+==12193== Memcheck, a memory error detector
+==12193== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==12193== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==12193== Command: /home/travis/Documents/linux/barsm/barsm -v --read-var-info=yes --leak-check=full --track-origins=yes show-reachable=yes --malloc-fill=B5 --free-fill=4A
+==12193== 
 FIRST NODE: 0x51fc040 
 NEXT NODE: (nil) 
 
 OPEN DIRECTORY: /opt/rc360/system/ 
 
-Launching ... /opt/rc360/system/zero_sec_aacm 
-ERROR: File zero_sec_aacm not launched properly! (0:Success) 
-ERROR: File zero_sec_aacm not launched properly! (0:Success) 
-ERROR: File zero_sec_aacm not launched properly! (0:Success) 
-ERROR: File zero_sec_aacm not launched properly! (0:Success) 
-NOTICE: Process for zero_sec_aacm in /opt/rc360/system/ disabled permanently! (0:Success) 
-ERROR: AACM Cannot be started! (0:Success) 
-==6842== 
-==6842== HEAP SUMMARY:
-==6842==     in use at exit: 32,928 bytes in 4 blocks
-==6842==   total heap usage: 30 allocs, 26 frees, 89,245 bytes allocated
-==6842== 
-==6842== LEAK SUMMARY:
-==6842==    definitely lost: 0 bytes in 0 blocks
-==6842==    indirectly lost: 0 bytes in 0 blocks
-==6842==      possibly lost: 32,816 bytes in 1 blocks
-==6842==    still reachable: 112 bytes in 3 blocks
-==6842==         suppressed: 0 bytes in 0 blocks
-==6842== Rerun with --leak-check=full to see details of leaked memory
-==6842== 
-==6842== For counts of detected and suppressed errors, rerun with: -v
-==6842== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+Launching ... /opt/rc360/system/aacm 
+CHILD linked list 'pid': 12194 
+CHILD linked list 'dir': /opt/rc360/system/aacm 
+CHILD linked list 'name': aacm 
+this address 0x51fc040 
+next address 0x5204180 
+COMPLETED: All items in /opt/rc360/system/ launched! 
+CLOSE DIRECTORY: /opt/rc360/system/ 
+
+
+OPEN DIRECTORY: /opt/rc360/modules/GE/ 
+
+Launching ... /opt/rc360/modules/GE/gemod 
+CHILD linked list 'pid': 12218 
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod 
+CHILD linked list 'name': gemod 
+this address 0x5204180 
+next address 0x520f3f0 
+COMPLETED: All items in /opt/rc360/modules/GE/ launched! 
+CLOSE DIRECTORY: /opt/rc360/modules/GE/ 
+
+
+OPEN DIRECTORY: /opt/rc360/modules/TPA/ 
+
+Launching ... /opt/rc360/modules/TPA/tpamod 
+CHILD linked list 'pid': 12220 
+CHILD linked list 'dir': /opt/rc360/modules/TPA/tpamod 
+CHILD linked list 'name': tpamod 
+this address 0x520f3f0 
+next address 0x52198b0 
+COMPLETED: All items in /opt/rc360/modules/TPA/ launched! 
+CLOSE DIRECTORY: /opt/rc360/modules/TPA/ 
+
+
+OPEN DIRECTORY: /opt/rc360/apps/GE/ 
+
+Launching ... /opt/rc360/apps/GE/geapp 
+CHILD linked list 'pid': 12223 
+CHILD linked list 'dir': /opt/rc360/apps/GE/geapp 
+CHILD linked list 'name': geapp 
+this address 0x52198b0 
+next address 0x5223d70 
+COMPLETED: All items in /opt/rc360/apps/GE/ launched! 
+CLOSE DIRECTORY: /opt/rc360/apps/GE/ 
+
+
+OPEN DIRECTORY: /opt/rc360/apps/TPA/ 
+
+Launching ... /opt/rc360/apps/TPA/tpaapp 
+CHILD linked list 'pid': 12225 
+CHILD linked list 'dir': /opt/rc360/apps/TPA/tpaapp 
+CHILD linked list 'name': tpaapp 
+this address 0x5223d70 
+next address 0x522e230 
+COMPLETED: All items in /opt/rc360/apps/TPA/ launched! 
+CLOSE DIRECTORY: /opt/rc360/apps/TPA/ 
+
+
+COMPLETED: Launch sequence complete!
+
+ in while before checking 
+
+
+ in check_modules 
+
+==12193== 
+==12193== HEAP SUMMARY:
+==12193==     in use at exit: 373 bytes in 11 blocks
+==12193==   total heap usage: 42 allocs, 31 frees, 220,619 bytes allocated
+==12193== 
+==12193== LEAK SUMMARY:
+==12193==    definitely lost: 0 bytes in 0 blocks
+==12193==    indirectly lost: 0 bytes in 0 blocks
+==12193==      possibly lost: 0 bytes in 0 blocks
+==12193==    still reachable: 373 bytes in 11 blocks
+==12193==         suppressed: 0 bytes in 0 blocks
+==12193== Rerun with --leak-check=full to see details of leaked memory
+==12193== 
+==12193== For counts of detected and suppressed errors, rerun with: -v
+==12193== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
