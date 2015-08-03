@@ -1,4 +1,3 @@
-
 FILE *sigfp, *rawfp, *camfp;
 
 int32_t wait_for_fpga(void);
