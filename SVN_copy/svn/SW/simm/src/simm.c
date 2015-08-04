@@ -37,6 +37,9 @@
 static pthread_t thread_TCP;        // read, write TCP
 static pthread_t sensor_thread;     // get FPGA data
 static pthread_t thread_subscribe;  // waits for a subscribe and returns subscribe_ack
+pthread_mutex_t pubMutex    = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t pubCond      = PTHREAD_COND_INITIALIZER;
+
 //static pthread_t thread_SIN;      // process data, logical, etc.
 
 
@@ -166,11 +169,14 @@ static bool simm_init(void) // 2.1
         // time before we exit?
     }
 
+    goPublish = true;
+    num_topics = 1;
+    publishMe = malloc(sizeof(topicToPublish) * num_topics);
     printf("POLLING FOR SUBSCRIBE ... \n");
     if (false != process_subscribe( clientSocket_UDP ) )
     {
         printf("SENDING SUBSCRIBE_ACK ... \n\n");
-        sleep(1);
+        //sleep(1);
         if ( true != process_subscribe_ack( clientSocket_UDP , DestAddr_UDP ) )
         {
             syslog(LOG_ERR, "%s:%d subscribe_ack detected an error", __FUNCTION__, __LINE__);
@@ -283,11 +289,12 @@ static void* simm_runtime_subscribe(void * UNUSED(param) )
         if (false != process_subscribe( clientSocket_UDP ) )
         {
             printf("SENDING SUBSCRIBE_ACK ... \n");
-            sleep(1);
+            //sleep(1);
             if ( true != process_subscribe_ack( clientSocket_UDP , DestAddr_UDP ) )
             {
                 syslog(LOG_ERR, "%s:%d subscribe_ack detected an error", __FUNCTION__, __LINE__);
             }
+            //addTopic();
             printf("SENT SUBSCRIBE ACK\n");
         }
     }
@@ -306,6 +313,9 @@ static void* simm_runtime_publish(void * UNUSED(param) )
     bool timeChk = true;
     struct timespec sec_begin, sec_end;
 
+    struct timespec timeToWait, currentTime;
+    int rt;
+
     rc = pthread_detach( pthread_self() );
     if (rc != 0)
     {
@@ -314,23 +324,47 @@ static void* simm_runtime_publish(void * UNUSED(param) )
     }
 
     printf("PUBLISH THREAD STARTED!\n");
+    printf("PUBLISH TIME: %d\n", publishPeriod);
+    // 1st version
     // using the clock_gettime() function will change in order to support a publish based on SUBSCRIBE
     clock_gettime(CLOCK_REALTIME, &sec_begin);  // get first start time ...
     while ( ( true == success ) )
     {
-        if(true == timeChk) // if time has not elapsed ...
+        //printf("publishMe[0].period: %d\n", publishMe[0].period);
+        if (0 < publishMe[0].period)
         {
-            clock_gettime(CLOCK_REALTIME, &sec_end);    // time to check
-            timeChk = check_elapsedTime( sec_begin, sec_end, 1 );   // check elapsed time of 1 second
-        }
-        // 1 second has elapsed, time to publish
-        if ( false == timeChk )
-        {
-            process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns );
-            timeChk = true;
-            clock_gettime(CLOCK_REALTIME, &sec_begin);
+            if (true == timeChk) // if time has not elapsed ...
+            {
+                clock_gettime(CLOCK_REALTIME, &sec_end);    // time to check
+                timeChk = check_elapsedTime( sec_begin, sec_end, (publishMe[0].period/1000) );   // check elapsed time of 1 second
+            }
+            // period has elapsed, time to publish
+            if ( ( false == timeChk ) && ( true == goPublish ) )
+            {
+                printf("PUBLISH TIME: %d\n", publishPeriod);
+                process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns );
+                timeChk = true;
+                clock_gettime(CLOCK_REALTIME, &sec_begin);
+            }
         }
     }
+
+//  // 2nd version
+//  clock_gettime(CLOCK_REALTIME, &currentTime);
+//  timeToWait.tv_sec = currentTime.tv_sec + ( publishPeriod / 1000 );
+//
+//  while ( ( true == success ) )
+//  {
+//      if ( true == goPublish )
+//      {
+//          pthread_mutex_lock(&pubMutex);
+//          rt = pthread_cond_timedwait(&pubCond, &pubMutex, &timeToWait);
+//          pthread_mutex_unlock(&pubMutex);
+//          process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns );
+//
+//      }
+//  }
+
     close(clientSocket_UDP);
     pthread_exit(0);
     exit(0);

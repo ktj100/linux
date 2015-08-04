@@ -19,14 +19,35 @@
 typedef struct
 {
     uint32_t mp;
-    uint32_t period;
+    float *mp_val_float;
+    int32_t *mp_val_long;
+    int32_t period;
     uint32_t numSamples;
     bool logical;
     bool valid;
 } MPinfo;
 
-MPinfo *subscribeMP;
+//SUBSCRIBE TOPIC INFO
+typedef struct
+{
+    uint32_t topic_id;
+    uint32_t period;
+    uint32_t numMPs;
+    MPinfo *topicSubscription;
+} topicToPublish;
+
+
+//MPinfo *subscribeMP;
+topicToPublish *publishMe;
+
 uint32_t num_mps;
+uint32_t num_topics;
+uint32_t currentTopic;
+uint32_t src_app_name;
+int32_t subPeriodToChk;
+int32_t publishPeriod;
+int32_t *periodTrack;
+bool goPublish;
 
 void remote_set16(uint8_t *ptr, uint16_t val);
 void remote_set32(uint8_t *ptr, uint32_t val);
@@ -141,6 +162,13 @@ enum errorCodes
 enum hostOS
 {
     PETALINUX   = 0,
+    // others ... ?
+};
+
+// Host OSs
+enum topicIDs
+{
+    APP_FDL_ID   = 1000,
     // others ... ?
 };
 

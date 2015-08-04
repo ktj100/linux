@@ -906,20 +906,23 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
     ptr += LENGTH;
     cntBytes += LENGTH;
 
-    remote_set32( ptr , 0);
+    // this will change ...
+    remote_set32( ptr , APP_FDL_ID);
     ptr += TOPIC_ID;
     cntBytes += TOPIC_ID;
 
-    remote_set32( ptr , 7);
+    // this will change ...
+    remote_set32( ptr , publishMe[0].numMPs);
     ptr += NUM_MPS;
     cntBytes += NUM_MPS;
 
+    // ???
     remote_set16( ptr , 0);
     ptr += SEQ_NUM;
     cntBytes += SEQ_NUM;
 
     // published based on subscription (to include valid/invalid mps) 
-    for (i = 0 ; i < num_mps ; i++)
+    for (i = 0 ; i < publishMe[0].numMPs ; i++)
     {
         // re-incorporate this ... don't publish invalid MP conditions.  TODO
 //      if ( false == subscribeMP[i].valid )
@@ -932,22 +935,22 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
 //      {
 //          cnt_true++;
             // logicals ...
-            if (true == subscribeMP[i].logical)
+            if (true == publishMe[0].topicSubscription[i].logical)
             {
-                remote_set32( ptr , subscribeMP[i].mp);
+                remote_set32( ptr , publishMe[0].topicSubscription[i].mp);
                 ptr += MP;
                 cntBytes += MP;
-                remote_set32( ptr , ( LogMPs[ subscribeMP[i].mp - 1000 ] ));
+                remote_set32( ptr , ( LogMPs[ publishMe[0].topicSubscription[i].mp - 1000 ] ));
                 ptr += MP_VAL;
                 cntBytes += MP_VAL;
             }
             // time stamps ...
             else
             {
-                remote_set32( ptr , subscribeMP[i].mp );
+                remote_set32( ptr , publishMe[0].topicSubscription[i].mp );
                 ptr += MP;
                 cntBytes += MP;
-                if ( MP_CAM_SEC_1 == subscribeMP[i].mp )
+                if ( MP_CAM_SEC_1 == publishMe[0].topicSubscription[i].mp )
                 {
                     for (k = 0; (k < 9) && (time_secMP[k] != 0); k++)
                     {
@@ -956,7 +959,7 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
                         cntBytes += MP_VAL;
                     }
                 }
-                else if ( MP_CAM_NSEC_1 == subscribeMP[i].mp )
+                else if ( MP_CAM_NSEC_1 == publishMe[0].topicSubscription[i].mp )
                 {
                     for(k = 0; (k < 9) && (time_nsecMP[k] != 0); k++)
                     {
@@ -1096,7 +1099,8 @@ bool process_subscribe( int32_t csocket )
 
     uint8_t host_os;
     uint16_t seq_num;
-    uint32_t src_proc_id, src_app_name, cnt_retBytes, cntLogical_t, cntLogical_f;
+    // uint32_t src_proc_id, src_app_name, cnt_retBytes, cntLogical_t, cntLogical_f;
+    uint32_t src_proc_id, cnt_retBytes, cntLogical_t, cntLogical_f;
 
     cnt_retBytes = 0;
 
@@ -1174,21 +1178,27 @@ bool process_subscribe( int32_t csocket )
         //      free(mp_num_samples);
         //  }
 
-            
-            printf("NUMBER OF MPs: %d\n", num_mps);
-            subscribeMP = (MPinfo*) malloc( sizeof(MPinfo) );
-            if ( subscribeMP == NULL )
-            {
-                printf("BAD MALLOC\n");
-            }
+            publishMe[0].topic_id = 1000;
+            //publishMe[0].period = PERIOD;
+            publishMe[0].numMPs = num_mps;
+            publishMe[0].topicSubscription = malloc(sizeof(MPinfo));
+            publishMe[0].topicSubscription = realloc(publishMe[0].topicSubscription, sizeof(MPinfo)*publishMe[0].numMPs);
+
+            printf("publishMe[0].numMPs: %d\n", publishMe[0].numMPs);
+//          subscribeMP = (MPinfo*) malloc( sizeof(MPinfo) );
+//          if ( subscribeMP == NULL )
+//          {
+//              printf("BAD MALLOC\n");
+//          }
         //  printf("SIZE OF MALLOC subscribeMP: %lu\n", sizeof(subscribeMP));
         //  printf("SIZE OF MPinfo: %lu\n", sizeof(MPinfo));
 
-            subscribeMP = (MPinfo *)realloc( subscribeMP , sizeof(MPinfo)*num_mps );
-            if ( subscribeMP == NULL )
-            {
-                printf("BAD REALLOC\n");
-            }
+//          subscribeMP = (MPinfo *)realloc( subscribeMP , sizeof(MPinfo)*num_mps );
+//          if ( subscribeMP == NULL )
+//          {
+//              printf("BAD REALLOC\n");
+//          }
+
             //subscribeMP = realloc( subscribeMP , num_mps * sizeof(MPinfo) );
         //  printf("SUBSCRIBE - REALLOC\n");
         //  printf("SIZE OF REALLOC subscribeMP: %lu\n", sizeof(subscribeMP));
@@ -1198,34 +1208,35 @@ bool process_subscribe( int32_t csocket )
         //  mp_per = realloc( mp_per , num_mps*sizeof(uint32_t) );
         //  mp_num_samples = realloc( mp_num_samples , num_mps*sizeof(uint32_t) );
 
-            for ( i = 0 ; i < num_mps ; i++ )
+            for ( i = 0 ; i < publishMe[0].numMPs ; i++ )
             {
-                subscribeMP[i].mp = remote_get32(ptr);
+                publishMe[0].topicSubscription[i].mp = remote_get32(ptr);
                 ptr += MP;
                 cnt_retBytes += MP;
 
-                if ( (subscribeMP[i].mp == MP_PFP_VALUE ) || 
-                     (subscribeMP[i].mp == MP_PTLT_TEMPERATURE ) || 
-                     (subscribeMP[i].mp == MP_PTRT_TEMPERATURE ) || 
-                     (subscribeMP[i].mp == MP_TCMP ) || 
-                     (subscribeMP[i].mp == MP_COP_PRESSURE ) ) 
+                if ( (publishMe[0].topicSubscription[i].mp == MP_PFP_VALUE ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_PTLT_TEMPERATURE ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_PTRT_TEMPERATURE ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_TCMP ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_COP_PRESSURE ) ) 
                 {
-                    subscribeMP[i].logical = true;
+                    publishMe[0].topicSubscription[i].logical = true;
                     cntLogical_t++;
                 }
                 else
                 {
-                    subscribeMP[i].logical = false;
+                    publishMe[0].topicSubscription[i].logical = false;
                     cntLogical_f++;
                 }
 
-                subscribeMP[i].period = remote_get32(ptr);
+                publishMe[0].topicSubscription[i].period = remote_get32(ptr);
                 ptr += MP_PER;
                 cnt_retBytes += MP_PER;
 
-                subscribeMP[i].numSamples = remote_get32(ptr);
+                publishMe[0].topicSubscription[i].numSamples = remote_get32(ptr);
                 ptr += MP_NUM_SAMPLES;
                 cnt_retBytes += MP_NUM_SAMPLES;
+
             }
             printf("TRUE LOG: %d\n", cntLogical_t);
             printf("FALSE LOG: %d\n", cntLogical_f);
@@ -1303,7 +1314,7 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
     cntBytes = 0;
 
     ptr = sendData;
-    remote_set16( ptr , CMD_SUBSCRIBE_ACK);
+    remote_set16( ptr , CMD_SUBSCRIBE_ACK );
     ptr += CMD_ID;
     cntBytes += CMD_ID;
 
@@ -1311,7 +1322,7 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
     ptr += LENGTH;
     cntBytes += LENGTH;
 
-    *ptr = getpid();
+    remote_set32( ptr , APP_FDL_ID );
     ptr += TOPIC_ID;
     cntBytes += TOPIC_ID;
 
@@ -1319,27 +1330,41 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
     ptr += ERROR;
     cntBytes += ERROR;
 
-
-    printf("NUM OF MPs from ACK: %d\n",num_mps);
-
-    for ( i = 0 ; i < num_mps ; i++ ) 
+    subPeriodToChk = publishMe[0].topicSubscription[0].period;
+    for ( i = 0 ; i < publishMe[0].numMPs ; i++ ) 
     {
-        if (true == check_validMP(i) )
+        if ( subPeriodToChk == publishMe[0].topicSubscription[i].period )
         {
-            remote_set16( ptr , GE_SUCCESS);
-            genErr = genErr;
+            publishPeriod = subPeriodToChk;
+            if (true == check_validMP(i))
+            {
+                remote_set16( ptr , GE_SUCCESS);
+                genErr = genErr;
+            }
+            else
+            {
+                remote_set16( ptr , GE_INVALID_MP_NUMBER);
+                genErr = GE_INVALID_MP_NUMBER;
+                success = false;
+            }
+            ptr += ERROR_MP;
+            goPublish = true;
         }
         else
         {
+            publishPeriod = -1;
+            printf("MP PERIODS NOT THE SAME\n");
+            publishMe[0].topicSubscription[i].valid = false;
             remote_set16( ptr , GE_INVALID_MP_NUMBER);
             genErr = GE_INVALID_MP_NUMBER;
             success = false;
+            goPublish = false;
+            break;
         }
-        ptr += ERROR_MP;
         cntBytes += ERROR_MP;
     }
+    publishMe[0].period = publishPeriod;
 
-    //printf("CNT BYTES: %d\n",cntBytes);
 
     *ptr = MSG_SIZE;
     ptr += MSG_SIZE;
@@ -1398,23 +1423,23 @@ bool check_validMP( int32_t fromLoop )
 
     for ( i = 0 ; i < MAX_SIMM_SUBSCRIPTION ; i++ ) 
     {
-        if ( ( SIMMsubscriptionMP[i] == subscribeMP[fromLoop].mp ) && ( ( SIMMsubscriptionPeriod[i] % subscribeMP[fromLoop].period ) == 0 ) )
+        if ( ( SIMMsubscriptionMP[i] == publishMe[0].topicSubscription[fromLoop].mp ) && ( ( SIMMsubscriptionPeriod[i] % publishMe[0].topicSubscription[fromLoop].period ) == 0 ) )
         {
-            subscribeMP[i].valid = true;
+            publishMe[0].topicSubscription[i].valid = true;
             // valid MP and valid MP period
             break;
         }
-        else if ( ( SIMMsubscriptionMP[i] == subscribeMP[fromLoop].mp ) && ( ( SIMMsubscriptionPeriod[i] % subscribeMP[fromLoop].period ) != 0 ) ) 
+        else if ( ( SIMMsubscriptionMP[i] == publishMe[0].topicSubscription[fromLoop].mp ) && ( ( SIMMsubscriptionPeriod[i] % publishMe[0].topicSubscription[fromLoop].period ) != 0 ) ) 
         {
             // valid MP period and invalid MP period
-            subscribeMP[i].valid = true;
+            publishMe[0].topicSubscription[i].valid = true;
             success = false;
             break;
         }
         else
         {
             // keeping track of instanaces that don't meet above conditions
-            subscribeMP[i].valid = false;
+            publishMe[0].topicSubscription[i].valid = false;
             cnt++;
         }
     }

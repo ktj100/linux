@@ -89,7 +89,7 @@ void fpga_sim_timestamps(int64_t *timestamps)
         }
         else
         {
-            //printf("Scanned Value: %ld\n", timestamps[i]);
+            printf("Scanned Value: %ld\n", timestamps[i]);
         }
     }
     fclose(camfp);
