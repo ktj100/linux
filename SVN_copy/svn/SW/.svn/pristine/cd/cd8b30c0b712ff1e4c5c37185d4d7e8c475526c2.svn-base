@@ -31,33 +31,21 @@ typedef struct
 typedef struct
 {
     uint32_t topic_id;
-    uint32_t app_name;
     uint32_t period;
     uint32_t numMPs;
     MPinfo *topicSubscription;
-    bool publishReady;
 } topicToPublish;
 
 
 //MPinfo *subscribeMP;
 topicToPublish *publishMe;
 
-// between SUBSCRIBE and publishMe.  
-int32_t num_mps;
-int32_t *sub_mp;
-int32_t *sub_mpPer;
-int32_t *sub_mpNumSamples;
-int32_t src_app_name;
-
-
-uint32_t *src_apps; // index will be offset? need to sort through list to determine if ID already exists.  
-uint32_t num_topics_total;
-uint32_t num_topics_atCurrentRate;
+uint32_t num_mps;
+uint32_t num_topics;
 uint32_t currentTopic;
-int32_t subPeriodToChk, prevSubPeriodToChk;
+uint32_t src_app_name;
+int32_t subPeriodToChk;
 int32_t publishPeriod;
-int32_t maxPublishPeriod;
-int32_t nextPublishPeriod;
 int32_t *periodTrack;
 bool goPublish;
 
@@ -81,10 +69,7 @@ bool process_subscribe( int32_t csocket );
 bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in );
 //int32_t process_subscribe_send_DEBUG(int32_t csocket);
 bool check_elapsedTime( struct timespec startTime , struct timespec stopTime , int32_t timeToChk );
-//bool check_validMP( int32_t fromLoop );
-void buildPublishData();
-int32_t getTopicId(uint32_t subAppName);
-int32_t publishManager();
+bool check_validMP( int32_t fromLoop );
 
 
 // API COMMANDS

@@ -10,8 +10,7 @@
 #include "sensor.h"
 #include "fpga_sim.h"
 
-#define DEBUG_PRINT 9
-#define CLOCK_OFFSET_TOLERANCE 2    // in seconds
+#define DEBUG_PRINT 0
 
 ;
 
@@ -20,7 +19,6 @@ int32_t tot_stamps[2] = {0,0};
 int32_t ts_reads[2] = {0,0};
 int64_t last_ts = 0;
 int64_t rollover = 0;
-int64_t offset = 0;
 
 int32_t subscribe_config(void)
 {
@@ -30,7 +28,7 @@ int32_t subscribe_config(void)
     // GET PERIOD REQUIRED FOR PUBLISH MESSAGES FOR TIMESTAMP VALUES
     // (done in fpga_sim.h)
 
-    // ALLOCATE SPACE FOR THE STORAGE OF THE LOGICAL VALUES
+    // ALLOCATE SPACE FOR THE STORAGE OF THE LOGICAL VALUES 
     // = period of collection time in seconds
     pfp_values = (int32_t*)malloc(data_period[0] * sizeof(int32_t));
     ptlt_values = (int32_t*)malloc(data_period[1] * sizeof(int32_t));
@@ -44,41 +42,6 @@ int32_t subscribe_config(void)
     cam_nsecs = (int32_t*)malloc(timestamps_period[1] * sizeof(int32_t));
 
     return(0);
-}
-
-void clock_config(void)
-{
-    struct timespec real_time;
-    struct timespec time_from_launch;
-
-    int64_t full_real_time;
-    int64_t full_time_from_launch;
-
-    clock_gettime(CLOCK_REALTIME, &real_time);
-    clock_gettime(CLOCK_MONOTONIC, &time_from_launch);
-
-    // int32_t result;
-    // result = (full_real_time = ((real_time.tv_sec << 32) | real_time.tv_nsec));
-    // printf("Success = %d\n", result);
-    // result = (full_time_from_launch = ((time_from_launch.tv_sec << 32) | time_from_launch.tv_nsec));
-    // printf("Success = %d\n", result);
-
-    // int32_t temp;
-    // full_real_time = real_time.tv_sec << 32;
-    // temp = real_time.tv_nsec;
-    // printf("Original: %lu\nCopied: %d\n", real_time.tv_nsec, temp);
-    // full_real_time = full_real_time & temp;
-    // printf("Not shifted: %lu\nShifted: %lu\n", real_time.tv_sec, full_real_time);
-
-    full_real_time = ((real_time.tv_sec * 1000000000L) + real_time.tv_nsec);
-    full_time_from_launch = ((time_from_launch.tv_sec * 1000000000L) + time_from_launch.tv_nsec);
-
-    // // DEBUGGING
-    // printf("Clock Seconds: %lu\nClock NSeconds: %lu\n", real_time.tv_sec, real_time.tv_nsec);
-    // printf("Launch Seconds: %lu\nLaunch NSeconds: %lu\n", time_from_launch.tv_sec, time_from_launch.tv_nsec);
-    // printf("Clock Time: %lu\nStartup Time: %lu\n", full_real_time, full_time_from_launch);
-
-    offset = full_real_time - full_time_from_launch;
 }
 
 int32_t get_logicals(int32_t *reset)
@@ -95,20 +58,12 @@ int32_t get_logicals(int32_t *reset)
     tcmp_values[tot_logicals[3]] = convert_tcmp(voltages[3]);
     cop_values[tot_logicals[4]] = convert_cop(voltages[4]);
 
-    // // DEBUGGING
-    // pfp_values[tot_logicals[0]] = voltages[0];
-    // ptlt_values[tot_logicals[1]] = voltages[1];
-    // ptrt_values[tot_logicals[2]] = voltages[2];
-    // tcmp_values[tot_logicals[3]] = voltages[3];
-    // cop_values[tot_logicals[4]] = voltages[4];
-
     // INCREMENT TOTAL TRACKER
     for (i = 0; i < 5; i++)
         tot_logicals[i]++;
 
     /* DEBUGGING */
     // print out the last three stored values
-    // this chunk of code results in many VALGRIND errors !!!!
     for (i = 2; i >= 0; i--)
     {
         printf("\nPFP %d: %d\n", tot_logicals[0]-i, pfp_values[tot_logicals[0]-i-1]);
@@ -145,12 +100,6 @@ int32_t get_timestamps(int32_t *reset)
     // READ IN TIMESTAMPS
     fpga_sim_timestamps(&timestamps[0]);
 
-    // ADD IN REAL TIME OFFSET VALUE
-    for (i = 0; i < 9 && timestamps[i] != 0; i++)
-    {
-        timestamps[i] = timestamps[i] + offset / 10;
-    }
-
     // STORE TIMESTAMPS SEPARATELY AS SECONDS AND NANOSECONDS
     split_timestamps(&timestamps[0]);
 
@@ -166,22 +115,22 @@ int32_t get_timestamps(int32_t *reset)
     return(0);
 }
 
-// void rollover_timestamps(int64_t *timestamps)
-// {   
-//     bool roll_found = false;
-//     int32_t i;
-//     for (i = 0; i < 9 && timestamps[i] != 0; i++)
-//     {
-//         if (timestamps[i] < last_ts && !roll_found)
-//         {
-//             rollover += 4294967295;
-//             printf("Rollover occurred at i = %d! \n", i);
-//         }
-//         last_ts = timestamps[i];
-//         timestamps[i] += rollover;
-//         // printf("Rollover added at i = %d! \n", i);
-//     }
-// }
+void rollover_timestamps(int64_t *timestamps)
+{   
+    bool roll_found = false;
+    int32_t i;
+    for (i = 0; i < 9 && timestamps[i] != 0; i++)
+    {
+        if (timestamps[i] < last_ts && !roll_found)
+        {
+            rollover += 4294967295;
+            // printf("Rollover occurred at i = %d! \n", i);
+        }
+        last_ts = timestamps[i];
+        timestamps[i] += rollover;
+        // printf("Rollover added at i = %d! \n", i);
+    }
+}
 
 int32_t convert_pfp (int32_t voltage)
 {
@@ -225,11 +174,7 @@ int32_t convert_cop (int32_t voltage)
 
 void split_timestamps(int64_t *timestamps)
 {
-    int32_t i, dif;
-    struct timespec real_time;
-    int64_t full_stamp[tot_stamps[0] + 9];
-    int32_t new_stamps;
-
+    int32_t i;
     for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
     {
         // these formulas will be replaced by the actual formulas
@@ -238,11 +183,9 @@ void split_timestamps(int64_t *timestamps)
         cam_nsecs[tot_stamps[1] + i] = (timestamps[i] - cam_secs[tot_stamps[0] + i] * 100000000L) * 10;
         // printf("Nano Stamps: %d\n", cam_nsecs[tot_stamps[1] + i]);
     }
-    new_stamps = i;
-
     // INCREMENT TOTAL TRACKER
-    tot_stamps[0] += new_stamps;
-    tot_stamps[1] += new_stamps;
+    tot_stamps[0] += i;
+    tot_stamps[1] += i;
     ts_reads[0] += 9;
     ts_reads[1] += 9;
 
@@ -264,48 +207,8 @@ void split_timestamps(int64_t *timestamps)
     {
         printf("Nano Stamp   %d: %9d\n", i + 1, cam_nsecs[i]);
     }
-    printf("\nTotal Logicals: %d, %d, %d, %d, %d\n", tot_logicals[0], \
-        tot_logicals[1], tot_logicals[2], tot_logicals[3], tot_logicals[4]);
+    printf("\nTotal Logicals: %d, %d, %d, %d, %d\n", tot_logicals[0], tot_logicals[1], tot_logicals[2], tot_logicals[3], tot_logicals[4]);
     printf("Total Timestamps: %d, %d\n", tot_stamps[0], tot_stamps[1]);
-
-    // CHECK IF TIMESTAMP OFFSET ADJUSTMENT IS WORKING PROPERLY
-    clock_gettime(CLOCK_REALTIME, &real_time);
-    dif = real_time.tv_sec - cam_secs[tot_stamps[0]-1];
-
-    // // DEBUGGING
-    // printf("Current time: %lu\n", real_time.tv_sec);
-    // printf("Last stamp:   %d\n", cam_secs[tot_stamps[0]-1]);
-    // printf("Difference:   %d\n", dif);
-    
-    if( abs(dif) > CLOCK_OFFSET_TOLERANCE )
-    {
-        printf("\nERROR: Clock offset correction unsuccessful!\n");
-        printf("ERROR may have been caused by the FPGA starting its timestamp values more ");
-        printf("than %d second(s) after startup.\nOffset: %d\n\n", CLOCK_OFFSET_TOLERANCE, dif);
-    }
-
-    // CHECK FOR ERRORS IN THE TIMESTAMPS
-    for (i = 0; i < tot_stamps[0]; i++)
-    {
-        if (timestamps_period[0] == timestamps_period[1])
-        {
-            // reconstruct full timestamp
-            full_stamp[i] = cam_secs[i]*1000000000L + cam_nsecs[i];
-        }
-        else
-        {
-            full_stamp[i] = cam_secs[i];
-        }
-
-        // check that it is greater than the previous one
-        if (0 != i)
-        {
-            if (full_stamp[i] < full_stamp[i-1])
-            {
-                printf("\nERROR: Timestamp %d is samller than timestamp %d!\n\n", i, i-1);
-            }
-        }
-    }
 }
 
 void clear_logicals(int32_t mp)

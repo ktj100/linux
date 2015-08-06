@@ -16,7 +16,7 @@
 void main(void)
 {
     // time tracking structs
-    struct timespec real_clock, start_time, mono_offset;
+    struct timespec real_clock, start_time;
 
     // temporary variables
     int delay_finished = 0, i;
@@ -24,7 +24,7 @@ void main(void)
     int64_t timestamps[9] = {0,0,0,0,0,0,0,0,0};
 
     // long term tracking variables
-    time_t run_time_s, run_time_ns;
+    time_t run_time_s = 0, run_time_ns = 0;
     double delta_time = 800000000;
     double pfp_voltage = 0.4;
     double ptlt_voltage = 1.0;
@@ -49,10 +49,7 @@ void main(void)
     printf("fpga_regs = %p\n", fpga_regs);
 
     // using a clock to simulate the interrupt
-    // set initial time values using CLOCK_MONOTONIC
-    clock_gettime(CLOCK_MONOTONIC, &start_time);
-    run_time_s = start_time.tv_sec;
-    run_time_ns = 0;
+    clock_gettime(CLOCK_REALTIME, &start_time);
 
     // set initial delta time value
 
@@ -63,8 +60,8 @@ void main(void)
         for(delay_finished = 0; 1 != delay_finished;)
         {
             // read in the current time to see if it is a second multiple of the start time
-            clock_gettime(CLOCK_MONOTONIC, &real_clock);
-            if(run_time_s <= real_clock.tv_sec)
+            clock_gettime(CLOCK_REALTIME, &real_clock);
+            if(start_time.tv_sec + run_time_s <= real_clock.tv_sec)
             {
                 // exit the while loop and read in the values
                 delay_finished = 1;
@@ -100,7 +97,7 @@ void main(void)
         // printf("Address 8: %p\n", &fpga_regs[CAM_TS_VAL_7]);
         // printf("Address 9: %p\n", &fpga_regs[CAM_TS_VAL_8]);
 
-        fpga_regs[CAM_TS_VAL_0] = timestamps[0];
+        fpga_regs[CAM_TS_VAL_0] = timestamps[0];                                                                       
         fpga_regs[CAM_TS_VAL_1] = timestamps[1];
         fpga_regs[CAM_TS_VAL_2] = timestamps[2];
         fpga_regs[CAM_TS_VAL_3] = timestamps[3];
@@ -137,11 +134,11 @@ void main(void)
         cop_voltage  = cop_voltage + 0.2 * cop_voltage* (1 - cop_voltage / 3.345);
 
         // DEBUGGING
-        printf("PFP:  %d\n", (unsigned int)(pfp_voltage*1000));
-        printf("PTLT: %d\n", (unsigned int)(ptlt_voltage*1000));
-        printf("PTRT: %d\n", (unsigned int)(ptrt_voltage*1000));
-        printf("TCMP: %d\n", (unsigned int)(tcmp_voltage*1000));
-        printf("COP:  %d\n", (unsigned int)(cop_voltage*1000));
+        printf("PFP:  %lf\n", pfp_voltage);
+        printf("PTLT: %lf\n", ptlt_voltage);
+        printf("PTRT: %lf\n", ptrt_voltage);
+        printf("TCMP: %lf\n", tcmp_voltage);
+        printf("COP:  %lf\n", cop_voltage);
 
         // printf("Address 10: %p\n", &fpga_regs[PFP_VAL]);
         // printf("Address 11: %p\n", &fpga_regs[PTLT_VAL]);
@@ -149,11 +146,11 @@ void main(void)
         // printf("Address 13: %p\n", &fpga_regs[TCMP_VAL]);
         // printf("Address 14: %p\n", &fpga_regs[COP_VAL]);
 
-        fpga_regs[PFP_VAL] = (unsigned int)(pfp_voltage*1000) | 0xFF000000;
-        fpga_regs[PTLT_VAL] = (unsigned int)(ptlt_voltage*1000) | 0xFF000000;
-        fpga_regs[PTRT_VAL] = (unsigned int)(ptrt_voltage*1000) | 0xFF000000;
-        fpga_regs[TCMP_VAL] = (unsigned int)(tcmp_voltage*1000) | 0xFF000000;
-        fpga_regs[COP_VAL] = (unsigned int)(cop_voltage*1000) | 0xFF000000;
+        fpga_regs[PFP_VAL] = (unsigned int)pfp_voltage*1000;
+        fpga_regs[PTLT_VAL] = (unsigned int)ptlt_voltage*1000;
+        fpga_regs[PTRT_VAL] = (unsigned int)ptrt_voltage*1000;
+        fpga_regs[TCMP_VAL] = (unsigned int)tcmp_voltage*1000;
+        fpga_regs[COP_VAL] = (unsigned int)cop_voltage*1000l;
 
         /* Send Boolean Signal --------------------------------------------------------------------- */
 

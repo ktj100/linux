@@ -17,30 +17,23 @@ void *read_sensors(void *arg);
 
 int32_t main(void)
 {
-    // SET MONOTONIC CLOCK TO ZERO TO SIGNIFY STARTUP
-    // int32_t success;
-    // success = clock_settime(CLOCK_MONOTONIC, &zero);
-    // printf("Clock reset result: %d (%d: %s)\n", success, errno, strerror(errno));
-    // struct timespec test;
-    // clock_gettime(CLOCK_MONOTONIC, &test);
-    // printf("Monotonic Seconds: %lu\n", test.tv_sec);
-
     // DECLARE VARIABLES
     int32_t config_status;
 
     // SET UP EXPORT FREQUENCY FOR AACM
     // these formulas will be replaced by reading SUBSCRIBE messages -------------------------------------------------
     data_period[0] = 1;
-    data_period[1] = 1;
-    data_period[2] = 1;
-    data_period[3] = 1;
-    data_period[4] = 1;
-    timestamps_period[0] = 9;
-    timestamps_period[1] = 9;
+    data_period[1] = 2;
+    data_period[2] = 3;
+    data_period[3] = 4;
+    data_period[4] = 5;
+    timestamps_period[0] = 90;
+    timestamps_period[1] = 180;
     // ---------------------------------------------------------------------------------------------------------------
 
     // CONFIGURE SENSOR READING VALUES
     config_status = subscribe_config();
+    setup_registers();
 
     printf("Config Complete!\n");
     // ADD ERROR HANDLING FOR CONFIGURATION ERRORS
@@ -71,6 +64,7 @@ int32_t main(void)
     }
 }
 
+
 void *read_sensors(void *arg)
 /* DEBUGGING
 void read_sensors() */
@@ -89,17 +83,10 @@ void read_sensors() */
         printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
     }
 
-    // ADJUST INTERRUPT REGISTERS
-    setup_registers();
-    fpga_config();
-
-    // CALCULATE TIMEBASE OFFSET
-    clock_config();
-
     // LOOP FOREVER, BULDING X SECONDS WORTH OF DATA AND EXPORTING
     while(1)
     {
-        // printf("Loop Started!\n");
+        printf("Loop Started!\n");
         // WAIT FOR SIGNAL FROM FPGA
         // ADD ERROR FOR >1 SEC TIMEOUT
         for(fpga_ready = 0; 1 != fpga_ready;)

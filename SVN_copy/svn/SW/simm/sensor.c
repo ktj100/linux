@@ -175,7 +175,7 @@ void split_timestamps(int64_t *timestamps)
         // these formulas will be replaced by the actual formulas
         // they currently use the tens place for the seconds and the ones for the nsecs.
         cam_secs[tot_stamps[0] + i] = timestamps[i] / 1000000000L;
-        cam_nsecs[tot_stamps[1] + i] = timestamps[i] - cam_secs[tot_stamps[0] + i] * 1000000000L;
+        cam_nsecs[tot_stamps[1] + i] = (timestamps[i] - cam_secs[tot_stamps[0] + i] * 1000000000L) * 10;
         printf("Nano Stamps: %d\n", cam_nsecs[tot_stamps[1] + i]);
     }
     // INCREMENT TOTAL TRACKER

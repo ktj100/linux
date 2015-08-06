@@ -25,8 +25,6 @@ struct sockaddr_storage serverStorage_UDP;
 struct sockaddr_storage toRcvUDP;
 struct sockaddr_storage toSendUDP;
 
-pthread_mutex_t waitforPubWrite_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 //typedef struct
 //{
 //    uint32_t mp;
@@ -105,9 +103,8 @@ void process_registerApp( int32_t csocket , struct timespec goTime )
     // used to check "within 1 second" requirement between server connect and REGISTER_APP
     clock_gettime(CLOCK_REALTIME, &endTime);
 
-    if (false == check_elapsedTime( goTime , endTime , secToChk ) )
+    if (true == check_elapsedTime( goTime , endTime , secToChk ) )
     {
-        // time did not elapse, so send
         sendBytes = send(csocket, sendData, MSG_SIZE, 0);
     }
     else
@@ -915,7 +912,7 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
     cntBytes += TOPIC_ID;
 
     // this will change ...
-    remote_set32( ptr , publishMe[ currentTopic ].numMPs);
+    remote_set32( ptr , publishMe[0].numMPs);
     ptr += NUM_MPS;
     cntBytes += NUM_MPS;
 
@@ -925,7 +922,7 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
     cntBytes += SEQ_NUM;
 
     // published based on subscription (to include valid/invalid mps) 
-    for (i = 0 ; i < publishMe[ currentTopic ].numMPs ; i++)
+    for (i = 0 ; i < publishMe[0].numMPs ; i++)
     {
         // re-incorporate this ... don't publish invalid MP conditions.  TODO
 //      if ( false == subscribeMP[i].valid )
@@ -938,22 +935,22 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
 //      {
 //          cnt_true++;
             // logicals ...
-            if (true == publishMe[ currentTopic ].topicSubscription[i].logical)
+            if (true == publishMe[0].topicSubscription[i].logical)
             {
-                remote_set32( ptr , publishMe[ currentTopic ].topicSubscription[i].mp);
+                remote_set32( ptr , publishMe[0].topicSubscription[i].mp);
                 ptr += MP;
                 cntBytes += MP;
-                remote_set32( ptr , ( LogMPs[ publishMe[ currentTopic ].topicSubscription[i].mp - 1000 ] ));
+                remote_set32( ptr , ( LogMPs[ publishMe[0].topicSubscription[i].mp - 1000 ] ));
                 ptr += MP_VAL;
                 cntBytes += MP_VAL;
             }
             // time stamps ...
             else
             {
-                remote_set32( ptr , publishMe[ currentTopic ].topicSubscription[i].mp );
+                remote_set32( ptr , publishMe[0].topicSubscription[i].mp );
                 ptr += MP;
                 cntBytes += MP;
-                if ( MP_CAM_SEC_1 == publishMe[ currentTopic ].topicSubscription[i].mp )
+                if ( MP_CAM_SEC_1 == publishMe[0].topicSubscription[i].mp )
                 {
                     for (k = 0; (k < 9) && (time_secMP[k] != 0); k++)
                     {
@@ -962,7 +959,7 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t Log
                         cntBytes += MP_VAL;
                     }
                 }
-                else if ( MP_CAM_NSEC_1 == publishMe[ currentTopic ].topicSubscription[i].mp )
+                else if ( MP_CAM_NSEC_1 == publishMe[0].topicSubscription[i].mp )
                 {
                     for(k = 0; (k < 9) && (time_nsecMP[k] != 0); k++)
                     {
@@ -1102,6 +1099,7 @@ bool process_subscribe( int32_t csocket )
 
     uint8_t host_os;
     uint16_t seq_num;
+    // uint32_t src_proc_id, src_app_name, cnt_retBytes, cntLogical_t, cntLogical_f;
     uint32_t src_proc_id, cnt_retBytes, cntLogical_t, cntLogical_f;
 
     cnt_retBytes = 0;
@@ -1133,8 +1131,8 @@ bool process_subscribe( int32_t csocket )
     {
         if (myPoll[0].revents & POLLIN)
         {
-            //cntLogical_t = 0;
-            //cntLogical_f = 0;
+            cntLogical_t = 0;
+            cntLogical_f = 0;
             // don't know what exactly to get, so MAXBUFSIZE is used instead of MSG_SIZE like others
             //UDPaddr_size = sizeof(serverStorage_UDP);
             toRcvUDP_size = sizeof(toRcvUDP);
@@ -1159,11 +1157,11 @@ bool process_subscribe( int32_t csocket )
             ptr += SRC_PROC_ID;
             cnt_retBytes += SRC_PROC_ID;
 
-            src_app_name = remote_get32(ptr);   // need it
+            src_app_name = remote_get32(ptr);
             ptr += SRC_APP_NAME;
             cnt_retBytes += SRC_APP_NAME;
 
-            num_mps = remote_get32(ptr);        // need it
+            num_mps = remote_get32(ptr);
             ptr += NUM_MPS;
             cnt_retBytes += NUM_MPS;
 
@@ -1171,25 +1169,77 @@ bool process_subscribe( int32_t csocket )
             ptr += SEQ_NUM;
             cnt_retBytes += SEQ_NUM;
 
-            // to grab mp data from subscribe.
-            sub_mp = realloc(sub_mp, sizeof(sub_mp)*num_mps);
-            sub_mpPer = realloc(sub_mpPer, sizeof(sub_mpPer)*num_mps);
-            sub_mpNumSamples = realloc(sub_mpNumSamples, sizeof(sub_mpNumSamples)*num_mps);
+            // realloc based on number of MPs ...
+            // I know realloc will append if greater, but will it free if less?
+        //  if ( new_num_mps < old_num_mps )
+        //  {
+        //      free(mp);
+        //      free(mp_per);
+        //      free(mp_num_samples);
+        //  }
 
-            for ( i = 0 ; i < num_mps ; i++ )
+            publishMe[0].topic_id = 1000;
+            //publishMe[0].period = PERIOD;
+            publishMe[0].numMPs = num_mps;
+            publishMe[0].topicSubscription = malloc(sizeof(MPinfo));
+            publishMe[0].topicSubscription = realloc(publishMe[0].topicSubscription, sizeof(MPinfo)*publishMe[0].numMPs);
+
+            printf("publishMe[0].numMPs: %d\n", publishMe[0].numMPs);
+//          subscribeMP = (MPinfo*) malloc( sizeof(MPinfo) );
+//          if ( subscribeMP == NULL )
+//          {
+//              printf("BAD MALLOC\n");
+//          }
+        //  printf("SIZE OF MALLOC subscribeMP: %lu\n", sizeof(subscribeMP));
+        //  printf("SIZE OF MPinfo: %lu\n", sizeof(MPinfo));
+
+//          subscribeMP = (MPinfo *)realloc( subscribeMP , sizeof(MPinfo)*num_mps );
+//          if ( subscribeMP == NULL )
+//          {
+//              printf("BAD REALLOC\n");
+//          }
+
+            //subscribeMP = realloc( subscribeMP , num_mps * sizeof(MPinfo) );
+        //  printf("SUBSCRIBE - REALLOC\n");
+        //  printf("SIZE OF REALLOC subscribeMP: %lu\n", sizeof(subscribeMP));
+        //  printf("SIZE OF MPinfo: %lu\n", sizeof(MPinfo));
+
+        //  mp = realloc(mp, num_mps * sizeof(uint32_t));
+        //  mp_per = realloc( mp_per , num_mps*sizeof(uint32_t) );
+        //  mp_num_samples = realloc( mp_num_samples , num_mps*sizeof(uint32_t) );
+
+            for ( i = 0 ; i < publishMe[0].numMPs ; i++ )
             {
-                sub_mp[i] = remote_get32(ptr);
+                publishMe[0].topicSubscription[i].mp = remote_get32(ptr);
                 ptr += MP;
                 cnt_retBytes += MP;
 
-                sub_mpPer[i] = remote_get32(ptr);
+                if ( (publishMe[0].topicSubscription[i].mp == MP_PFP_VALUE ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_PTLT_TEMPERATURE ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_PTRT_TEMPERATURE ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_TCMP ) || 
+                     (publishMe[0].topicSubscription[i].mp == MP_COP_PRESSURE ) ) 
+                {
+                    publishMe[0].topicSubscription[i].logical = true;
+                    cntLogical_t++;
+                }
+                else
+                {
+                    publishMe[0].topicSubscription[i].logical = false;
+                    cntLogical_f++;
+                }
+
+                publishMe[0].topicSubscription[i].period = remote_get32(ptr);
                 ptr += MP_PER;
                 cnt_retBytes += MP_PER;
 
-                sub_mpNumSamples[i] = remote_get32(ptr);
+                publishMe[0].topicSubscription[i].numSamples = remote_get32(ptr);
                 ptr += MP_NUM_SAMPLES;
                 cnt_retBytes += MP_NUM_SAMPLES;
+
             }
+            printf("TRUE LOG: %d\n", cntLogical_t);
+            printf("FALSE LOG: %d\n", cntLogical_f);
             calcLength = cnt_retBytes - CMD_ID - LENGTH;
         }
     }
@@ -1225,6 +1275,9 @@ bool process_subscribe( int32_t csocket )
         printf("SUBSCRIBE TRUE\n");
     }
     printf("SUBSCRIBE SIZE: %d\n\n", retBytes);
+//  printf("CALC LENGTH: %d\n",calcLength);
+//  printf("ACTUAL LENGTH: %d\n",actualLength);
+//  printf("CNT BYTES: %d\n",cnt_retBytes);
     return success;
 }
 
@@ -1249,17 +1302,17 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
 
     bool success = true;
     int32_t sendBytes = 0;
-    uint8_t *ptr , *msgLenPtr, *msgErrPtr, *topicIDptr;
+    uint8_t *ptr , *msgLenPtr, *msgErrPtr;
     uint32_t i = 0;
     uint32_t actualLength;
     uint8_t sendData[ MAXBUFSIZE ];
     int32_t cntBytes;
     int32_t genErr = 0;
+
     socklen_t toSendUDP_size;
 
     cntBytes = 0;
 
-    
     ptr = sendData;
     remote_set16( ptr , CMD_SUBSCRIBE_ACK );
     ptr += CMD_ID;
@@ -1269,9 +1322,7 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
     ptr += LENGTH;
     cntBytes += LENGTH;
 
-    //remote_set32( ptr , (APP_FDL_ID + ido) );
-    topicIDptr = ptr;
-    //remote_set32( ptr , CMD_SUBSCRIBE_ACK );
+    remote_set32( ptr , APP_FDL_ID );
     ptr += TOPIC_ID;
     cntBytes += TOPIC_ID;
 
@@ -1279,32 +1330,47 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
     ptr += ERROR;
     cntBytes += ERROR;
 
-    for ( i = 0 ; i < publishMe[ currentTopic ].numMPs ; i++ ) 
+    subPeriodToChk = publishMe[0].topicSubscription[0].period;
+    for ( i = 0 ; i < publishMe[0].numMPs ; i++ ) 
     {
-        
-        if ( true == publishMe[ currentTopic ].topicSubscription[ i ].valid )
+        if ( subPeriodToChk == publishMe[0].topicSubscription[i].period )
         {
-            remote_set16( ptr , GE_SUCCESS);
-            genErr = genErr;
-            success = success;
+            publishPeriod = subPeriodToChk;
+            if (true == check_validMP(i))
+            {
+                remote_set16( ptr , GE_SUCCESS);
+                genErr = genErr;
+            }
+            else
+            {
+                remote_set16( ptr , GE_INVALID_MP_NUMBER);
+                genErr = GE_INVALID_MP_NUMBER;
+                success = false;
+            }
+            ptr += ERROR_MP;
+            goPublish = true;
         }
         else
         {
+            publishPeriod = -1;
+            printf("MP PERIODS NOT THE SAME\n");
+            publishMe[0].topicSubscription[i].valid = false;
             remote_set16( ptr , GE_INVALID_MP_NUMBER);
             genErr = GE_INVALID_MP_NUMBER;
             success = false;
+            goPublish = false;
+            break;
         }
-        ptr += ERROR_MP;
         cntBytes += ERROR_MP;
-        
     }
+    publishMe[0].period = publishPeriod;
+
 
     *ptr = MSG_SIZE;
     ptr += MSG_SIZE;
 
     actualLength = cntBytes - CMD_ID - LENGTH;
 
-    memcpy(topicIDptr, &publishMe[ currentTopic ].topic_id, sizeof(publishMe[ currentTopic ].topic_id));
     memcpy(msgLenPtr, &actualLength, sizeof(cntBytes));
     memcpy(msgErrPtr, &genErr, sizeof(genErr));
 
@@ -1328,12 +1394,12 @@ bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in )
 }
 
 
-void buildPublishData()
+bool check_validMP( int32_t fromLoop )
 {
     bool success = true;
-    int32_t i, k, cnt, perTrack;
+    int32_t i, cnt;
 
-    int32_t SIMMsubscriptionMP[ MAX_SIMM_SUBSCRIPTION ] = 
+    int32_t SIMMsubscriptionMP[MAX_SIMM_SUBSCRIPTION] = 
     {
         MP_PFP_VALUE,
         MP_PTLT_TEMPERATURE,
@@ -1355,90 +1421,34 @@ void buildPublishData()
         MINPER_COP_PRESSURE
     };
 
-    // PUBLISH app name
-    publishMe[ currentTopic ].app_name  = src_app_name;
-
-    // PUBLISH number mps
-    publishMe[ currentTopic ].numMPs   = num_mps;
-
-    // for period
-    prevSubPeriodToChk  = subPeriodToChk;
-
-    publishMe[ currentTopic ].topicSubscription = realloc(publishMe[ currentTopic ].topicSubscription, sizeof(MPinfo)*publishMe[ currentTopic ].numMPs);
-    if (NULL == publishMe[ currentTopic ].topicSubscription)
+    for ( i = 0 ; i < MAX_SIMM_SUBSCRIPTION ; i++ ) 
     {
-        printf("BAD REALLOC: publishMe[ currentTopic ].topicSubscription in buildPublishData\n");
-    }
-
-    perTrack = 0;
-    for ( k = 0 ; k < num_mps ; k++ )
-    {
-        publishMe[ currentTopic ].topicSubscription[ k ].mp             = sub_mp[ k ];
-        publishMe[ currentTopic ].topicSubscription[ k ].period         = sub_mpPer[ k ];
-        publishMe[ currentTopic ].topicSubscription[ k ].numSamples     = sub_mpNumSamples[ k ];
-
-        // keeping up with period
-        perTrack = perTrack + publishMe[ currentTopic ].topicSubscription[ k ].period;
-
-        subPeriodToChk = publishMe[ currentTopic ].topicSubscription[ 0 ].period;
-
-        // determine if MP is logical or timestamp
-        if ( (publishMe[ currentTopic ].topicSubscription[ k ].mp == MP_PFP_VALUE ) ||
-             (publishMe[ currentTopic ].topicSubscription[ k ].mp == MP_PTLT_TEMPERATURE ) ||
-             (publishMe[ currentTopic ].topicSubscription[ k ].mp == MP_PTRT_TEMPERATURE ) ||
-             (publishMe[ currentTopic ].topicSubscription[ k ].mp == MP_TCMP ) ||
-             (publishMe[ currentTopic ].topicSubscription[ k ].mp == MP_COP_PRESSURE ) )
+        if ( ( SIMMsubscriptionMP[i] == publishMe[0].topicSubscription[fromLoop].mp ) && ( ( SIMMsubscriptionPeriod[i] % publishMe[0].topicSubscription[fromLoop].period ) == 0 ) )
         {
-            publishMe[ currentTopic ].topicSubscription[ k ].logical = true;
+            publishMe[0].topicSubscription[i].valid = true;
+            // valid MP and valid MP period
+            break;
+        }
+        else if ( ( SIMMsubscriptionMP[i] == publishMe[0].topicSubscription[fromLoop].mp ) && ( ( SIMMsubscriptionPeriod[i] % publishMe[0].topicSubscription[fromLoop].period ) != 0 ) ) 
+        {
+            // valid MP period and invalid MP period
+            publishMe[0].topicSubscription[i].valid = true;
+            success = false;
+            break;
         }
         else
         {
-            publishMe[ currentTopic ].topicSubscription[ k ].logical = false;
-        }
-
-        for ( i = 0 ; i < MAX_SIMM_SUBSCRIPTION ; i++ )
-        {
-            if( ( subPeriodToChk == publishMe[ currentTopic ].topicSubscription[ k ].period ) && 
-                ( SIMMsubscriptionMP[ i ] == publishMe[ currentTopic ].topicSubscription[ k ].mp ) && 
-                ( publishMe[ currentTopic ].topicSubscription[ k ].period % SIMMsubscriptionPeriod[ i ] ) == 0 )
-            {
-                publishMe[ currentTopic ].topicSubscription[ k ].valid = true;
-            }
-            else
-            {
-                publishMe[ currentTopic ].topicSubscription[ k ].valid = false;
-            }
+            // keeping track of instanaces that don't meet above conditions
+            publishMe[0].topicSubscription[i].valid = false;
+            cnt++;
         }
     }
-
-    perTrack = perTrack / num_mps;
-
-    if ( subPeriodToChk == perTrack )
+            if ( cnt == MAX_SIMM_SUBSCRIPTION ) 
     {
-        publishMe[ currentTopic ].period    = subPeriodToChk;
-        publishMe[ currentTopic ].topic_id  = 1000 + getTopicId( publishMe[ currentTopic ].app_name );
-
-        // determine max publish period
-        if (subPeriodToChk > prevSubPeriodToChk)
-        {
-            maxPublishPeriod = subPeriodToChk;
-        }
-
-        // set all 1 sec publish periods to true for "ready to publish"
-        if (1000 == subPeriodToChk )
-        {
-            publishMe[ currentTopic ].publishReady = true;
-        }
-        else
-        {
-            publishMe[ currentTopic ].publishReady = false;
-        }
+        // if MAX_SIMM_SUBSCRIPTION instances are reached, no valid MPs were sent
+        success = false;
     }
-    else
-    {
-        publishMe[ currentTopic ].period    = 0;
-        publishMe[ currentTopic ].topic_id  = -1;
-    }
+    return success;
 }
 
 void remote_set16(uint8_t *ptr, uint16_t val) 
@@ -1570,94 +1580,31 @@ uint32_t remote_get32(uint8_t *ptr)
 // return: true = time has not elapsed, false = time has elapsed
 bool check_elapsedTime( struct timespec startTime , struct timespec stopTime , int32_t timeToChk )
 {
-    bool success = false;
+    bool success = true;
 
     if ( (stopTime.tv_sec - startTime.tv_sec) < timeToChk )              
     {
-        success = false;
+        success = true;
     }
     else if ((stopTime.tv_sec - startTime.tv_sec) == timeToChk ) 
     {
         if (stopTime.tv_nsec < startTime.tv_nsec)  
         {
-            success = false;
+            success = true;
         }
         else
         {
-            success = true;
+            success = false;
         }
     }
     else
     {
-        success = true;
+        success = false;
     }
 
     return success;
 }
 
-int32_t getTopicId(uint32_t subAppName)
-{
-    // for this phase, there's just one topic.  
-    int32_t i, new_offset;
-    bool chkApp = false;
-
-    // check if app name exists
-    for ( i = 0 ; i < num_topics_total ; i++ ) 
-    {
-        if ( subAppName == publishMe[i].app_name )
-        {
-            chkApp = true;
-            new_offset = i;
-            break;
-        }
-        else
-        {
-            chkApp = false;
-        }
-    }
-
-    // if the app does not exist, realloc space for new id
-    if (false == chkApp)
-    {
-        //publishMe[num_topics_total].topic_id = 1000 + num_topics_total;
-        new_offset = num_topics_total - 1;
-    }
-
-    return new_offset;
-} 
 
 
-int32_t publishManager()
-{
-    // determines next group of subscriptions to publish based on next possible time to publish (every second)
-    // publishMe holds the subscription data to publish
 
-    int32_t numToPub = 0;
-    int32_t i;
-
-    // only happens once.  
-    if ( 0 == nextPublishPeriod )
-    {
-        nextPublishPeriod == 1000;
-    }
-
-    for (i = 0 ; i < num_topics_total ; i++)
-    {
-        if ( ( nextPublishPeriod % publishMe[i].period ) == 0 )
-        {
-            publishMe[i].publishReady = true;
-            numToPub++;
-        }
-        else
-        {
-            publishMe[i].publishReady = false;
-        }
-    }
-
-    if (maxPublishPeriod == nextPublishPeriod)
-    {
-        nextPublishPeriod = 1000;
-    }
-
-    return numToPub;
-}

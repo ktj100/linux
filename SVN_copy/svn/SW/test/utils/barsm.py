@@ -119,11 +119,11 @@ def norm_launch():
 
 def launch_bad():
     # place items in directories
-    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/system/aacm', shell=True)
-    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/modules/GE/bad_gemod', shell=True)
-    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/modules/TPA/bad_tpamod', shell=True)
-    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/apps/GE/bad_geapp', shell=True)
-    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/apps/TPA/bad_tpaapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/system/thirty_aacm', shell=True)
+    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/modules/GE/thirty_gemod', shell=True)
+    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/modules/TPA/thirty_tpamod', shell=True)
+    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/apps/GE/thirty_geapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'thirty_sec.c -o /opt/rc360/apps/TPA/thirty_tpaapp', shell=True)
     subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
     subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
     subprocess.call('gcc '+apps_loc+'infinite_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)

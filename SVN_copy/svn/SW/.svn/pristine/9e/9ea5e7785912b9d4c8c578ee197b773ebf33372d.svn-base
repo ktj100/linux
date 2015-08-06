@@ -10,7 +10,6 @@ int32_t data_period[5];
 int32_t timestamps_period[2];
 
 int32_t subscribe_config(void);
-void clock_config(void);
 int32_t get_logicals(int32_t *reset);
 int32_t get_timestamps (int32_t *reset);
 int32_t convert_pfp    (int32_t voltage);
