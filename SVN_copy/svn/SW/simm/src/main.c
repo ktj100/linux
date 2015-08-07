@@ -17,14 +17,6 @@ void *read_sensors(void *arg);
 
 int32_t main(void)
 {
-    // SET MONOTONIC CLOCK TO ZERO TO SIGNIFY STARTUP
-    // int32_t success;
-    // success = clock_settime(CLOCK_MONOTONIC, &zero);
-    // printf("Clock reset result: %d (%d: %s)\n", success, errno, strerror(errno));
-    // struct timespec test;
-    // clock_gettime(CLOCK_MONOTONIC, &test);
-    // printf("Monotonic Seconds: %lu\n", test.tv_sec);
-
     // DECLARE VARIABLES
     int32_t config_status;
 
