@@ -17,7 +17,6 @@
 
 int32_t tot_logicals[5] = {0,0,0,0,0};
 int32_t tot_stamps[2] = {0,0};
-int32_t ts_reads[2] = {0,0};
 int64_t last_ts = 0;
 int64_t rollover = 0;
 int64_t offset = 0;
@@ -159,7 +158,7 @@ int32_t get_timestamps(int32_t *reset)
     // CHECK IF RESET VALUE NEEDS TO BE SET
     for (i = 0; i < 2; i++)
     {
-        if(ts_reads[i] == timestamps_period[i])
+        if(tot_stamps[i] == timestamps_period[i])
         {
             reset[i+5] = 1;
         }
@@ -243,10 +242,8 @@ void split_timestamps(int64_t *timestamps)
     new_stamps = i;
 
     // INCREMENT TOTAL TRACKER
-    tot_stamps[0] += new_stamps;
-    tot_stamps[1] += new_stamps;
-    ts_reads[0] += 9;
-    ts_reads[1] += 9;
+    tot_stamps[0] += 9;
+    tot_stamps[1] += 9;
 
     /* DEBUGGING */
     // print out all stored values
@@ -336,7 +333,6 @@ void clear_timestamps(int32_t mp)
     int32_t i;
 
     tot_stamps[mp-5] = 0;
-    ts_reads[mp-5] = 0;
     
     for(i = 0; i < timestamps_period[mp-5]; i++)
     {
