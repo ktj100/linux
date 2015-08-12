@@ -81,14 +81,27 @@ void read_sensors() */
     // LOOP FOREVER, BULDING X SECONDS WORTH OF DATA AND EXPORTING
     while(1)
     {
-        // CONTAINS A BLOCKING READ FOR THE FPGA INTERRUPT REGISTERS
-        fpga_ready = wait_for_fpga();
-        // ADD ERROR SCENARIOS
-        if(0 == fpga_ready)
+        // CHECK IF STORAGE ARRAYS NEED TO BE RESIZED
+        if(0)
         {
 
         }
-        printf("\nFPGA Ready!\n");
+
+        // printf("Loop Started!\n");
+        // WAIT FOR SIGNAL FROM FPGA
+        // ADD ERROR FOR >1 SEC TIMEOUT
+        for(fpga_ready = 0; 1 != fpga_ready;)
+        {
+            // printf("Waiting on FPGA!\n");
+            // "fpga_ready" WILL BE TRIGGERED BY AN INTERRUPT LATER
+            fpga_ready = wait_for_fpga();
+            // ADD ERROR SCENARIOS
+            if(0 == fpga_ready)
+            {
+
+            }
+        }
+        printf("FPGA Ready!\n");
 
         // GET LOGICAL VALUES FROM REGISTERS
         pthread_mutex_lock(&mp_storage_mutex);

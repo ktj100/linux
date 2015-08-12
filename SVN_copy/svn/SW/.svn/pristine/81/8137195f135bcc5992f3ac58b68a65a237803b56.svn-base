@@ -184,7 +184,7 @@ void split_timestamps(int64_t *timestamps)
 {
     int32_t dif;
     struct timespec real_time;
-    
+
     int32_t i;
     for(i = 0; i < 9; i++)
     {

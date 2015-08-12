@@ -10,8 +10,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdint.h>
-#include <sys/timerfd.h>
-#include <unistd.h>
 
 #include "sensor.h"
 #include "fpga_read.h"
@@ -24,47 +22,13 @@
 
 int32_t dev = 0;
 uint32_t *fpga_regs;
-int32_t fpga_timer_fd;
 
 void setup_registers(void)
 {
-    struct timespec start, interval;
-    struct itimerspec fpga_timer_setup;
-    int32_t delay_finished = 1, success;
-
     // The two following functions will be replaced for the actual FPGA interface.
     dev = open("simulation_file.bin", O_RDWR);
     fpga_regs = (uint32_t*) mmap(0, 512, PROT_READ | PROT_WRITE, MAP_SHARED, dev ,0);
-    // printf("fpga_regs = %p\n", fpga_regs);
-
-    // create timer
-    fpga_timer_fd = timerfd_create(CLOCK_REALTIME, 0);
-    if ( -1 == fpga_timer_fd )
-    {
-        printf("ERROR: Timer file descriptor creation failed! (%d: %s)\n", errno, strerror(errno));
-    }
-
-    // align timer with FPGA output
-    // initial timer expiration will occur 1 second from FPGA's first output
-    start.tv_sec = 1;
-    start.tv_nsec = 0;
-
-    // 1 second interval for fd timer
-    interval.tv_sec = 1;
-    interval.tv_nsec = 0;
-
-    // start and interval structs will be used for the timerfd_settime setup
-    fpga_timer_setup.it_interval = interval;
-    fpga_timer_setup.it_value = start;
-
-    // timer will be set up to start immediately after FPGA sets up, then at 1 sec intervals
-    while ( delay_finished != 0 )
-    {
-        delay_finished = fpga_regs[IAR];
-    }
-    success = timerfd_settime(fpga_timer_fd, 0, &fpga_timer_setup, NULL);
-    fpga_regs[IAR] = 1;
-    // printf("Timerfd_settime result: %d\n", success);
+    printf("fpga_regs = %p\n", fpga_regs);
 }
 
 void fpga_config(void)
@@ -76,24 +40,23 @@ void fpga_config(void)
 
 int32_t wait_for_fpga(void)
 {
-    int32_t success;
-    int64_t num_interrupts, missed;
+    int32_t delay_finished;
 
-    // read timer
-    // printf("Started blocking read...\n");
-    errno = 0;
-    success = read(fpga_timer_fd, &num_interrupts, sizeof(num_interrupts));
-    // printf("Blocking read finished!\n");
-    if ( -1 == success )
-    {
-        printf("ERROR: Read function failed! (%d: %s) \n", errno, strerror(errno));
-    }
-    if ( 1 < num_interrupts )
-    {
-        printf("ERROR: Missed %lu interrupts from FPGA! \n", num_interrupts-1);
-    }
+    // RESET BIT TO '1' WHEN IT BECOMES A '0'
+    delay_finished = fpga_regs[IAR];
+    // printf("delay_finished = %d\n", delay_finished);
     // sleep(1);
-    return(1);
+    if (0 == delay_finished)
+    {
+        // printf("Address 15: %p\n", &fpga_regs[IAR]);
+        // printf("Contents of 15: %u\n", fpga_regs[IAR]);
+        fpga_regs[IAR] = 1;
+        return(1);
+    }
+    else
+    {
+        return(0);
+    }
 }
 
 void fpga_sim_voltages(int *voltage)
