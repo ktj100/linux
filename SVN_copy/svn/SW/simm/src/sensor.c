@@ -242,7 +242,7 @@ void split_timestamps(int64_t *timestamps)
 {
     int32_t i, dif;
     struct timespec real_time;
-    int64_t full_stamp[tot_stamps[0] + 9];
+    int64_t full_stamp[10];
 
     // for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
     // {
@@ -355,10 +355,19 @@ void split_timestamps(int64_t *timestamps)
     //     }
     // }
 
+
     // CHECK FOR ERRORS IN THE TIMESTAMPS
-    for(non_zero_ts = 0, temp_index = timestamp_index; 
-        cycle >= 0; 
-        temp_index--)
+    if ( 0 > timestamp_index - 9 )
+    {
+        min = timestamp_index + MAX_DATA_PERIOD*9 - 9;
+    }
+    else
+    {
+        min = timestamp_indexl - 9;
+    }
+    non_zero_ts = 0;
+    temp_index = timestamp_index;
+    while ( min < temp_index )
     {
         // create full timestamp
         full_stamp[non_zero_ts] = cam_secs[temp_index]*1000000000L + cam_nsecs[temp_index];
@@ -372,13 +381,13 @@ void split_timestamps(int64_t *timestamps)
          * the array that needs to be checked for correctness. */
         if ( 0 != full_stamp[non_zero_ts] )
         {
-            if ( non_zero_ts != 0 )
+            if ( 0 != non_zero_ts )
             {
                 if ( full_stamp[non_zero_ts] > full_stamp[non_zero_ts-1] )
                 {
                     printf("\nERROR: Timestamps are out of order!\n\n");
                 }
-
+                non_zero_ts++;
             }
         }
 
@@ -398,6 +407,15 @@ void split_timestamps(int64_t *timestamps)
         //         printf("\nERROR: Timestamp %lu (taken later) is smaller than timestamp %lu (taken earlier)!\n\n", full_stamp[j], full_stamp[j-1]);
         //     }
         // }
+
+        if ( 0 > temp_index-- )
+        {
+            temp_index = temp_index + MAX_DATA_PERIOD*9 - 1;
+        }
+        else
+        {
+            temp_index--;
+        }
     }
 }
 
