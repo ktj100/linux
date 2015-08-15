@@ -27,6 +27,7 @@ int32_t convert_tcmp (uint32_t voltage);
 int32_t convert_cop (uint32_t voltage);
 int32_t calculate_timestamps(uint32_t *timestamps, uint32_t *ts_HiLoCnt);
 void split_timestamps(uint64_t *timestamps);
+// void check_ts_values(uint64_t *new_stamps);
 void check_ts_values(void);
 
 bool fpga_init(void);
