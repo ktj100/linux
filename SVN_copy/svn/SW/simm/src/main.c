@@ -1,3 +1,6 @@
+// gcc main.c sensor.c fpga_read.c -o fpga -g -lpthread
+// valgrind ./smm --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>

@@ -170,12 +170,14 @@ bool wait_for_fpga(void)
     errno = 0;
 
     // TESTING ONLY -------------------------------------------------------------------------------------------------------
+    printf("Starting blocking read()...");
     if ( -1 == read(fpga_timer_fd, &num_interrupts, sizeof(num_interrupts)) )
     {
         printf("\nERROR: Read function failed! (%d: %s) \n\n", errno, strerror(errno));
         syslog(LOG_ERR, "%s:%d ERROR: Read function failed! (%d: %s)", __FUNCTION__, __LINE__, errno, strerror(errno));
         success = false;
     }
+    printf("Blocking read() finished...");
     fpga_regs[IAR] = 1;
     // ACTUAL FPGA CODE ---------------------------------------------------------------------------------------------------
 

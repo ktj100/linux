@@ -17,9 +17,9 @@
 #include "sensor.h"
 #include "fpga_read.h"
 
-#define LOG_DEBUG_PRINT 0
-#define TS_DEBUG_PRINT 0
-#define FULL_DEBUG_PRINT 0
+#define LOG_DEBUG_PRINT 2
+#define TS_DEBUG_PRINT 2
+#define FULL_DEBUG_PRINT 2
 #define CLOCK_OFFSET_TOLERANCE 2    // in seconds
 #define MAX_DATA_PERIOD 60          // in seconds
 
