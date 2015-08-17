@@ -1,10 +1,14 @@
-// ======================================
-// GET
-// ASSIMILATOR 
-// BARSM
-// 
-// valgrind: --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --malloc-fill=B5 --free-fill=4A
-// ======================================
+/*
+ * File: barsm.c
+ * Copyright (c) 2015, DornerWorks, Ltd.
+ *
+ * Description:
+ *   This application handles the startup, health monitoring, and upkeep
+ *   of the all the software applications and modules in the GE RC360
+ *   Assimilator.
+ */
+
+/* valgrind: --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --malloc-fill=B5 --free-fill=4A */
 
 #include <sys/types.h>
 #include <dirent.h>
@@ -36,9 +40,9 @@
 // DIRECTORIES TO OPEN/READ 
 const char *dirs[] = 
 {
-    "/opt/rc360/system/",       // AACMl
+    "/opt/rc360/system/",       // AACM
     "/opt/rc360/modules/GE/",   // GE MODULES
-    "/opt/rc360/modules/TPA/",  // TP MODULESl
+    "/opt/rc360/modules/TPA/",  // TP MODULES
     "/opt/rc360/apps/GE/",      // GE APPS
     "/opt/rc360/apps/TPA/"      // TP APPS
 };
@@ -100,16 +104,6 @@ int32_t main( int argc , char *argv[] )
         launch_status = launch_item(dirs[dir_index]);
         if ( -1 == launch_status )
         {
-            // // free all the memory for Valgrind stuff
-            // nth_node = first_node;
-            // while( NULL != nth_node->next )
-            // { 
-            //     tmp_toFree = nth_node;
-            //     nth_node = nth_node->next;
-            //     free(tmp_toFree);
-            // }
-            // free(first_node);
-
             // AACM was not able to start
             sleep(1);   // this is to give the test scripts time to confirm that there were no lasting children
             syslog(LOG_ERR, "ERROR: AACM Cannot be started! (%d:%s)", errno, strerror(errno));
@@ -134,17 +128,6 @@ int32_t main( int argc , char *argv[] )
     // all done, so last node is NULL
     nth_node->next = NULL;
     
-    
-    // print list ... similar usage to traverse and check pids ...
-    
-//  while( NULL != nth_node->next )
-//  {
-//      PRINT_F(( "PID: %d \n"   , nth_node->child_pid ));
-//      PRINT_F(( "DIR: %s \n"    , nth_node->dir ));
-//      PRINT_F(( "NAME: %s \n\n" , nth_node->item_name ));
-//      nth_node = nth_node->next;l
-//  }
-
     while(1)
     {
         sleep(60);
@@ -181,7 +164,6 @@ int32_t main( int argc , char *argv[] )
     //          SEND:   AACM_TO_BARSM_MSG_ACK ... Ok, restart modules/apps
     //      }
     // }
-    //
 }
 
 
