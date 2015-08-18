@@ -152,7 +152,7 @@ int32_t main(void)
             /* list back to first node */
             nth_node = first_node;
             PRINT_F((" in while before checking \n"));
-            check_modules( );
+            success = check_modules( );
         }
     }
     /* Won't get here with the above while(1) loop.  But, if this main ever 
@@ -188,19 +188,25 @@ int32_t main(void)
 int32_t launch_item( const char *directory )
 {
     int32_t rc = 0;
+    int32_t i = 0, run_time = 0;
+
     struct dirent *dp;
+
     bool success = true;
     bool empty_dir = true;
-    int32_t i = 0, run_time = 0;
+
     size_t len1, len2; 
+
     char *concat;
+
     pid_t pid;  
 
     DIR *dir;
     errno = 0;
     dir = opendir(directory);
     
-    while ( NULL != ( dp = readdir(dir) ) )
+    dp = readdir(dir);
+    while ( NULL != dp )
     {
         if ( '.' != dp->d_name[0] ) 
         {
@@ -236,6 +242,9 @@ int32_t launch_item( const char *directory )
                     dp->d_name, directory, errno, strerror(errno));
                 PRINT_F(("ERROR: Failed to fork child process for %s in %s! (%d:%s) \n", \
                     dp->d_name, directory, errno, strerror(errno)));
+
+                success = false;
+                break;
             } 
             else
             {
@@ -330,6 +339,7 @@ int32_t launch_item( const char *directory )
             }
             sleep(1);
         }
+        dp = readdir(dir);
     }
     closedir(dir);
     if ( ! success )
@@ -362,8 +372,9 @@ int32_t launch_item( const char *directory )
  * 
  * ... this will go in a .h
  * ============================================================================================= */
-int32_t check_modules(void)
+bool check_modules(void)
 {
+    bool success = true;
     int32_t rc; 
     int32_t waitreturn;
 
@@ -401,12 +412,12 @@ int32_t check_modules(void)
         {
             syslog(LOG_NOTICE, "NOTICE: Restarting %s...", nth_node->item_name);
             PRINT_F(("NOTICE: Restarting %s...", nth_node->item_name));
-            restart_process();
+            success = restart_process();
         }
 
         nth_node = nth_node->next;
     }
-    return(0);
+    return(success);
 }
 
 
@@ -429,12 +440,13 @@ int32_t check_modules(void)
  * 
  *  ... this will go in a .h
  * ============================================================================================= */
-void restart_process(void)
+bool restart_process(void)
 {
+    bool success = true;
     /* fork a new process to start the module back up */
     pid_t new_pid;  
     new_pid = fork();
-    if (0 == new_pid) 
+    if (0 == new_pid)
     {
         /* execute the file again in the new child process */
         errno = 0;
@@ -452,6 +464,8 @@ void restart_process(void)
     {
         syslog(LOG_ERR, "ERROR: Failed to fork child process for %s! (%d:%s)", \
             nth_node->dir, errno, strerror(errno));
+
+        success = false;
     } 
     else
     {
@@ -459,4 +473,5 @@ void restart_process(void)
         /* alive == 0 indicates that the process has been restarted and should be good */
         nth_node->alive = 0;
     }
+    return (success);
 }
