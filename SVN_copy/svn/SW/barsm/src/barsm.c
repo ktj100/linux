@@ -188,7 +188,7 @@ int32_t main(void)
 int32_t launch_item( const char *directory )
 {
     int32_t rc = 0;
-    int32_t i = 0, run_time = 0;
+    int32_t launch_attempts = 0, run_time = 0;
 
     struct dirent *dp;
 
@@ -198,8 +198,6 @@ int32_t launch_item( const char *directory )
     size_t len1, len2; 
 
     char *concat, *temp;
-
-    pid_t pid;  
 
     DIR *dir;
     errno = 0;
@@ -230,63 +228,72 @@ int32_t launch_item( const char *directory )
 
             PRINT_F(("\nLaunching ... %s \n", concat));
 
-            pid = fork();
-            if (0 == pid) 
-            {
-                errno = 0;
-                if ( (0 != execl( concat, dp->d_name, (char *)NULL)) )
-                {
-                    syslog(LOG_ERR, "ERROR: 'execl()' failed for %s! (%d:%s)", \
-                        concat, errno, strerror(errno));
-                    PRINT_F(("ERROR: 'execl()' failed for %s! (%d:%s) \n", \
-                        concat, errno, strerror(errno)));
-                    /* force the spawned process to exit */
-                    exit(-errno);
-                }
-            }
-            else if (-1 == pid)
-            {
-                /* failed to fork a child process */
-                syslog(LOG_ERR, "ERROR: Failed to fork child process for %s in %s! (%d:%s)", \
-                    dp->d_name, directory, errno, strerror(errno));
-                PRINT_F(("ERROR: Failed to fork child process for %s in %s! (%d:%s) \n", \
-                    dp->d_name, directory, errno, strerror(errno)));
+            // pid = fork();
+            // if (0 == pid) 
+            // {
+            //     errno = 0;
+            //     if ( (0 != execl( concat, dp->d_name, (char *)NULL)) )
+            //     {
+            //         syslog(LOG_ERR, "ERROR: 'execl()' failed for %s! (%d:%s)",
+            //             concat, errno, strerror(errno));
+            //         PRINT_F(("ERROR: 'execl()' failed for %s! (%d:%s) \n",
+            //             concat, errno, strerror(errno)));
+            //         /* force the spawned process to exit */
+            //         exit(-errno);
+            //     }
+            // }
+            // else if (-1 == pid)
+            // {
+            //     /* failed to fork a child process */
+            //     syslog(LOG_ERR, "ERROR: Failed to fork child process for %s in %s! (%d:%s)", 
+            //         dp->d_name, directory, errno, strerror(errno));
+            //     PRINT_F(("ERROR: Failed to fork child process for %s in %s! (%d:%s) \n", 
+            //         dp->d_name, directory, errno, strerror(errno)));
 
+            //     success = false;
+            //     break;
+            // } 
+            // else
+            // {
+            //     nth_node->child_pid = pid;                
+            // }
+
+            nth_node->dir = concat;
+            errno = 0;
+            temp = (char *) malloc(len2 + 1);
+            if ( 0 != errno )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' for temporary string storage! (%d: %s)", \
+                    __FUNCTION__, __LINE__, errno, strerror(errno));
+                PRINT_F(("ERROR: In 'malloc()' for temporary string storage! (%d: %s) \n", \
+                    errno, strerror(errno)));
+                success = false;
+            }
+            temp = strdup(dp->d_name);
+            nth_node->item_name = temp;
+            errno = 0;
+            nth_node->next = (child_pid_list *)malloc(sizeof(child_pid_list));
+            if ( 0 != errno )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' when creating a new node! (%d: %s)", \
+                    __FUNCTION__, __LINE__, errno, strerror(errno));
+                PRINT_F(("ERROR: In 'malloc()' when creating a new node! (%d: %s) \n", \
+                    errno, strerror(errno)));
+                success = false;
+            }
+
+            if ( ! restart_process() )
+            {
                 success = false;
                 break;
-            } 
+            }
             else
             {
-                launch_attempts = 1;
-                nth_node->child_pid = pid;
-                nth_node->dir = concat;
-                errno = 0;
-                temp = (char *) malloc(len2 + 1);
-                if ( 0 != errno )
-                {
-                    syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' for temporary string storage! (%d: %s)", \
-                        __FUNCTION__, __LINE__, errno, strerror(errno));
-                    PRINT_F(("ERROR: In 'malloc()' for temporary string storage! (%d: %s) \n", \
-                        errno, strerror(errno)));
-                    success = false;
-                }
-                temp = strdup(dp->d_name);
-                nth_node->item_name = temp;
-                errno = 0;
-                nth_node->next = (child_pid_list *)malloc(sizeof(child_pid_list));
-                if ( 0 != errno )
-                {
-                    syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' when creating a new node! (%d: %s)", \
-                        __FUNCTION__, __LINE__, errno, strerror(errno));
-                    PRINT_F(("ERROR: In 'malloc()' when creating a new node! (%d: %s) \n", \
-                        errno, strerror(errno)));
-                    success = false;
-                }
-
                 /* Check if the process just launched was successful, if not, try up to four times
                  * to restart it. The waitpid() function will return a false positive if the child 
                  * process has not yet tried to execl(). The run_time value is used to make sure 
                  * that enough time has been given to make sure that execl() was called. */
+                launch_attempts = 1;
                 run_time = 0;
                 while ( launch_attempts < MAX_LAUNCH_ATTEMPTS && run_time <= START_ENSURE_DELAY )
                 {
@@ -297,7 +304,7 @@ int32_t launch_item( const char *directory )
                     if ( 0 != nth_node->alive )
                     {
                         syslog(LOG_ERR, "ERROR: File launch failed! (%s in %s) (try #%d) (%d:%s)", \
-                            dp->d_name, directory, i, errno, strerror(errno));
+                            dp->d_name, directory, launch_attempts, errno, strerror(errno));
                         PRINT_F(("ERROR: File %s not launched properly! (%d:%s) \n", \
                             dp->d_name, errno, strerror(errno)));
 
@@ -320,7 +327,7 @@ int32_t launch_item( const char *directory )
                     /* This last launch error needs to be outside the previous for loop in order to
                      * log the error for a fifth launch error. */
                     syslog(LOG_ERR, "ERROR: File launch failed! (%s in %s) (try #%d) (%d:%s)", \
-                        dp->d_name, directory, i, errno, strerror(errno));
+                        dp->d_name, directory, launch_attempts, errno, strerror(errno));
                     PRINT_F(("ERROR: File %s not launched properly! (%d:%s) \n", \
                         dp->d_name, errno, strerror(errno)));
 

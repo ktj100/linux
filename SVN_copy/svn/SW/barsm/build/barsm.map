@@ -158,7 +158,7 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(.iplt)
  .iplt          0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.text           0x0000000000400a50      0xd72
+.text           0x0000000000400a50      0xc82
  *(.text.unlikely .text.*_unlikely .text.unlikely.*)
  *(.text.exit .text.exit.*)
  *(.text.startup .text.startup.*)
@@ -172,62 +172,62 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *fill*         0x0000000000400d76        0xa 
  .text          0x0000000000400d80       0xbd /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
  *fill*         0x0000000000400e3d        0x3 
- .text          0x0000000000400e40      0x90e build/barsm.o
+ .text          0x0000000000400e40      0x81e build/barsm.o
                 0x0000000000400e40                restart_process
                 0x0000000000400f60                launch_item
-                0x0000000000401590                check_modules
- *fill*         0x000000000040174e        0x2 
- .text          0x0000000000401750       0x72 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
-                0x0000000000401750                __libc_csu_init
-                0x00000000004017c0                __libc_csu_fini
- .text          0x00000000004017c2        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
- .text          0x00000000004017c2        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
+                0x00000000004014a0                check_modules
+ *fill*         0x000000000040165e        0x2 
+ .text          0x0000000000401660       0x72 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                0x0000000000401660                __libc_csu_init
+                0x00000000004016d0                __libc_csu_fini
+ .text          0x00000000004016d2        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .text          0x00000000004016d2        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(.gnu.warning)
 
-.fini           0x00000000004017c4        0x9
+.fini           0x00000000004016d4        0x9
  *(SORT(.fini))
- .fini          0x00000000004017c4        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
-                0x00000000004017c4                _fini
- .fini          0x00000000004017c8        0x5 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
-                0x00000000004017cd                PROVIDE (__etext, .)
-                0x00000000004017cd                PROVIDE (_etext, .)
-                0x00000000004017cd                PROVIDE (etext, .)
+ .fini          0x00000000004016d4        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
+                0x00000000004016d4                _fini
+ .fini          0x00000000004016d8        0x5 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
+                0x00000000004016dd                PROVIDE (__etext, .)
+                0x00000000004016dd                PROVIDE (_etext, .)
+                0x00000000004016dd                PROVIDE (etext, .)
 
-.rodata         0x00000000004017d0      0x82d
+.rodata         0x00000000004016e0      0x7ad
  *(.rodata .rodata.* .gnu.linkonce.r.*)
- .rodata.cst4   0x00000000004017d0        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
-                0x00000000004017d0                _IO_stdin_used
- *fill*         0x00000000004017d4        0x4 
+ .rodata.cst4   0x00000000004016e0        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+                0x00000000004016e0                _IO_stdin_used
+ *fill*         0x00000000004016e4        0x4 
  .rodata.str1.8
-                0x00000000004017d8      0x680 build/barsm.o
-                                        0x67f (size before relaxing)
+                0x00000000004016e8      0x600 build/barsm.o
+                                        0x5ff (size before relaxing)
  .rodata.str1.1
-                0x0000000000401e58      0x194 build/barsm.o
- .rodata        0x0000000000401fec       0x11 build/barsm.o
+                0x0000000000401ce8      0x194 build/barsm.o
+ .rodata        0x0000000000401e7c       0x11 build/barsm.o
 
 .rodata1
  *(.rodata1)
 
-.eh_frame_hdr   0x0000000000402000       0x4c
+.eh_frame_hdr   0x0000000000401e90       0x4c
  *(.eh_frame_hdr)
- .eh_frame_hdr  0x0000000000402000       0x4c /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .eh_frame_hdr  0x0000000000401e90       0x4c /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.eh_frame       0x0000000000402050      0x204
+.eh_frame       0x0000000000401ee0      0x204
  *(.eh_frame)
- .eh_frame      0x0000000000402050       0x30 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
- .eh_frame      0x0000000000402080       0x40 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
- .eh_frame      0x00000000004020c0      0x130 build/barsm.o
+ .eh_frame      0x0000000000401ee0       0x30 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .eh_frame      0x0000000000401f10       0x40 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .eh_frame      0x0000000000401f50      0x130 build/barsm.o
                                         0x140 (size before relaxing)
- .eh_frame      0x00000000004021f0       0x60 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .eh_frame      0x0000000000402080       0x60 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
                                          0x78 (size before relaxing)
- .eh_frame      0x0000000000402250        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .eh_frame      0x00000000004020e0        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
 
 .gcc_except_table
  *(.gcc_except_table .gcc_except_table.*)
 
 .exception_ranges
  *(.exception_ranges .exception_ranges*)
-                0x0000000000402254                . = (ALIGN (0x200000) - ((0x200000 - .) & 0x1fffff))
+                0x00000000004020e4                . = (ALIGN (0x200000) - ((0x200000 - .) & 0x1fffff))
                 0x0000000000602dfc                . = DATA_SEGMENT_ALIGN (0x200000, 0x1000)
 
 .eh_frame
