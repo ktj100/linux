@@ -250,42 +250,6 @@ int32_t launch_item( const char *directory )
             memcpy(concat+len1, dp->d_name, len2+1);
             nth_node->dir = concat;
 
-<<<<<<< HEAD
-=======
-            PRINT_F(("\nLaunching ... %s \n", concat));
-
-            // pid = fork();
-            // if (0 == pid) 
-            // {
-            //     errno = 0;
-            //     if ( (0 != execl( concat, dp->d_name, (char *)NULL)) )
-            //     {
-            //         syslog(LOG_ERR, "ERROR: 'execl()' failed for %s! (%d:%s)",
-            //             concat, errno, strerror(errno));
-            //         PRINT_F(("ERROR: 'execl()' failed for %s! (%d:%s) \n",
-            //             concat, errno, strerror(errno)));
-            //         /* force the spawned process to exit */
-            //         exit(-errno);
-            //     }
-            // }
-            // else if (-1 == pid)
-            // {
-            //     /* failed to fork a child process */
-            //     syslog(LOG_ERR, "ERROR: Failed to fork child process for %s in %s! (%d:%s)", 
-            //         dp->d_name, directory, errno, strerror(errno));
-            //     PRINT_F(("ERROR: Failed to fork child process for %s in %s! (%d:%s) \n", 
-            //         dp->d_name, directory, errno, strerror(errno)));
-
-            //     success = false;
-            //     break;
-            // } 
-            // else
-            // {
-            //     nth_node->child_pid = pid;                
-            // }
-
-            nth_node->dir = concat;
->>>>>>> 015c4fb5612ca31653138b677ae7ec2f9141abf2
             errno = 0;
             temp = (char *) malloc(len2 + 1);
             if ( 0 != errno )
@@ -298,10 +262,7 @@ int32_t launch_item( const char *directory )
             }
             temp = strdup(dp->d_name);
             nth_node->item_name = temp;
-<<<<<<< HEAD
 
-=======
->>>>>>> 015c4fb5612ca31653138b677ae7ec2f9141abf2
             errno = 0;
             nth_node->next = (child_pid_list *)malloc(sizeof(child_pid_list));
             if ( 0 != errno )
@@ -312,15 +273,10 @@ int32_t launch_item( const char *directory )
                     errno, strerror(errno)));
                 success = false;
             }
-<<<<<<< HEAD
 
             PRINT_F(("\nLaunching ... %s \n", concat));
 
             if ( ! restart_process(nth_node) )
-=======
-
-            if ( ! restart_process() )
->>>>>>> 015c4fb5612ca31653138b677ae7ec2f9141abf2
             {
                 success = false;
                 break;
