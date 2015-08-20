@@ -23,8 +23,6 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 
 #define MAX_LAUNCH_ATTEMPTS    5
 /* LAUNCH_CHECK_PERIOD must equal five to meet system requirements */
@@ -67,10 +65,6 @@ typedef struct child_pid_list_struct child_pid_list;
 child_pid_list *first_node, *nth_node, *tmp_toFree;
 int32_t aacm_loop = 0;
 
-static int32_t clientSocket_TCP = -1;
-struct sockaddr_in DestAddr_TCP;
-
-
 /* RETURN VALUE ENUM */
 enum e_return
 {
@@ -83,8 +77,6 @@ enum e_return
 int32_t launch_item( const char *directory );
 bool restart_process(child_pid_list *tmp_node);
 bool check_modules(child_pid_list *tmp_node);
-bool aacmSetup(void);
-bool TCPsetup(void);
 
 /* MAIN */
 int32_t main(void)
@@ -154,17 +146,6 @@ int32_t main(void)
                 syslog(LOG_NOTICE, "COMPLETED: All items in %s launched!", dirs[dir_index] );
                 PRINT_F(("COMPLETED: All items in %s launched! \n", dirs[dir_index] ));
                 PRINT_F(("CLOSE DIRECTORY: %s \n\n", dirs[dir_index] ));
-
-                if ( 0 == dir_index )
-                {
-                    // connect to the AACM TCP server
-                    // send startup message
-                    // receive ack
-                    if ( ! aacmSetup() )
-                    {
-                        success = false;
-                    }
-                }
             }
         }
         syslog(LOG_NOTICE, "COMPLETED: Launch sequence complete!");
@@ -431,7 +412,7 @@ bool check_modules(child_pid_list *tmp_node)
         {
             syslog(LOG_NOTICE, "NOTICE: Restarting %s...", tmp_node->item_name);
             PRINT_F(("NOTICE: Restarting %s...", tmp_node->item_name));
-            success = restart_process(nth_node);
+            success = restart_process(tmp_node);
         }
 
         tmp_node = tmp_node->next;
@@ -491,87 +472,4 @@ bool restart_process(child_pid_list *tmp_node)
         tmp_node->alive = 0;
     }
     return (success);
-}
-
-
-
-/* ================================================================================================
- * FUNCTION: bool aacmSetup(void)
- *      - 
- * 
- * IN:  
- *      - 
- * 
- * OUT: bool
- *      - Signals whether a terminal error has occured.
- * ============================================================================================= */
-bool aacmSetup(void)
-{
-    bool success            = true;
-
-    if ( ! TCPsetup() )
-    {
-        success = false;
-    }
-
-    // send the BARSM_TO_AACM_INIT_MSG to the AACM
-    if ( ! send_barsmToAacmInit( clientSocket_TCP ) )
-    {
-        success = false;
-    }
-
-    // receive ACK message
-    if ( ! recieve_barsmToAacmInitAck() )
-    {
-        success = false;
-    }
-
-    return (success);
-}
-
-
-
-/* ================================================================================================
- * FUNCTION: bool TCPsetup(void) 
- *      - 
- * 
- * IN:  
- *      - 
- * 
- * OUT: bool
- *      - Signals whether a terminal error has occured.
- * ============================================================================================= */
-bool TCPsetup(void) 
-{
-    bool success            = true;
-    char ServerIPAddress[]  = "127.0.0.1";
-    int TCPServerPort       =  8000;
-
-    errno = 0;
-    clientSocket_TCP = socket(AF_INET, SOCK_STREAM, 0);
-    if (0 > clientSocket_TCP)
-    {
-        success = false;
-        syslog(LOG_ERR, "%s:%d ERROR! Failed to create socket %d (%d:%s) ", \
-            __FUNCTION__, __LINE__, clientSocket_TCP, errno, strerror(errno));
-    }
-
-    errno = 0;
-    if ( success )
-    {
-        memset(&DestAddr_TCP,0,sizeof(DestAddr_TCP));               // clear struct
-        DestAddr_TCP.sin_family = AF_INET;                          // must be this
-        DestAddr_TCP.sin_port = htons(TCPServerPort);               // set the port to write to
-        DestAddr_TCP.sin_addr.s_addr = inet_addr(ServerIPAddress);  // set destination IP address
-        memset(&(DestAddr_TCP.sin_zero), '\0', 8);                  // zero the rest of the struct
-
-        if (0 != connect(clientSocket_TCP,(struct sockaddr *)&DestAddr_TCP, sizeof(DestAddr_TCP)))
-        {
-            success = false;
-            syslog(LOG_ERR, "%s:%d ERROR! TCP failed to connect %u (%d:%s) ", \
-                __FUNCTION__, __LINE__, DestAddr_TCP.sin_port, errno, strerror(errno));
-        }
-    }
-
-    return success;
 }
