@@ -26,6 +26,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include "barsm_functions.h"
+
 #define MAX_LAUNCH_ATTEMPTS    5
 /* LAUNCH_CHECK_PERIOD must equal five to meet system requirements */
 #define LAUNCH_CHECK_PERIOD	   5
@@ -65,7 +67,6 @@ struct child_pid_list_struct
 
 typedef struct child_pid_list_struct child_pid_list;
 child_pid_list *first_node, *nth_node, *tmp_toFree;
-int32_t aacm_loop = 0;
 
 static int32_t clientSocket_TCP = -1;
 struct sockaddr_in DestAddr_TCP;
@@ -515,13 +516,13 @@ bool aacmSetup(void)
     }
 
     // send the BARSM_TO_AACM_INIT_MSG to the AACM
-    if ( ! send_barsmToAacmInit( clientSocket_TCP ) )
+    if ( ! send_barsmToAacmInit(clientSocket_TCP) )
     {
         success = false;
     }
 
     // receive ACK message
-    if ( ! recieve_barsmToAacmInitAck() )
+    if ( ! recieve_barsmToAacmInitAck(clientSocket_TCP) )
     {
         success = false;
     }

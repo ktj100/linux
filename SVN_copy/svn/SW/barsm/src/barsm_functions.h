@@ -1,4 +1,4 @@
-
+#define BARSM_TO_AACM_INIT_ACK_MSG 0x00100000
 
 enum WhichMsg 
 {
@@ -8,7 +8,7 @@ enum WhichMsg
     CMD_AACM_TO_BARSM_ACK           = 0x000F,
     CMD_BARSM_TO_AACM_INIT          = 0x0001,
     CMD_BARSM_TO_AACM_INIT_ACK      = 0x0010,
-    CMD BARSM_TO_AACM_PROCESSES     = 0x0011,
+    CMD_BARSM_TO_AACM_PROCESSES     = 0x0011,
 };
 
 enum errorCodes
@@ -27,3 +27,6 @@ enum errorCodes
     GE_BARSM_TO_AACM_ERR,
     GE_AACM_TO_BARSM_ERR, 
 };
+
+bool send_barsmToAacmInit(int32_t csocket);
+bool recieve_barsmToAacmInitAck(int32_t csocket);

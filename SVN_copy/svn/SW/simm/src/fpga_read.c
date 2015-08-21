@@ -251,7 +251,7 @@ bool wait_for_fpga(void)
     if ( 1 < num_interrupts )
     {
         //printf("\nERROR: Missed %lu interrupts from FPGA! \n\n", num_interrupts-1);
-        syslog(LOG_ERR, "%s:%d ERROR: Missed %lu interrupts from FPGA!", __FUNCTION__, __LINE__, num_interrupts-1);
+        syslog(LOG_ERR, "%s:%d ERROR: Missed %lld interrupts from FPGA!", __FUNCTION__, __LINE__, num_interrupts-1);
     }
 
     return(success);

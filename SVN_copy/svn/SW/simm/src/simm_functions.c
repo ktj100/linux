@@ -1326,7 +1326,7 @@ bool process_subscribe( int32_t csocket )
     } 
     else
     {
-        if (myPoll[0].revents & POLLIN)
+        if (myPoll[0].revents && POLLIN)
         {
             //toRcvUDP_size = sizeof(toRcvUDP);
             retBytes = recv(csocket , retData , MAXBUFSIZE , 0 );
