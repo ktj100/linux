@@ -6,14 +6,14 @@
 #  This makefile is used to compile a standalone-testing version of the BARSM 
 #  (Boot and Resource Supervisor Module) RC360 software application.
 
-CC          := gcc
-AR          := ar
-AS          := as
-LINKER      := ld
-RANLIB      := ranlib
-SIZE        := size
-OBJCOPY     := objcopy
-OBJDUMP     := objdump
+CC          := $(PREFIX)gcc
+AR          := $(PREFIX)ar
+AS          := $(PREFIX)as
+LINKER      := $(PREFIX)ld
+RANLIB      := $(PREFIX)ranlib
+SIZE        := $(PREFIX)size
+OBJCOPY     := $(PREFIX)objcopy
+OBJDUMP     := $(PREFIX)objdump
 
 TARGET      := barsm
 SYS         := $(shell $(CC) -dumpmachine)

@@ -23,6 +23,11 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+
+#include "barsm_functions.h"
 
 #define MAX_LAUNCH_ATTEMPTS    5
 /* LAUNCH_CHECK_PERIOD must equal five to meet system requirements */
@@ -63,12 +68,28 @@ struct child_pid_list_struct
 
 typedef struct child_pid_list_struct child_pid_list;
 child_pid_list *first_node, *nth_node, *tmp_toFree;
-int32_t aacm_loop = 0;
+
+static int32_t clientSocket_TCP = -1;
+struct sockaddr_in DestAddr_TCP;
+
+static pthread_t msgRcvThread;
+
+/* RETURN VALUE ENUM */
+enum e_return
+{
+    terminalError = -1,
+    dirIsEmpty    = 1,
+    normal        = 0,
+};
 
 /* FUNCTION DECLARATIONS */
 int32_t launch_item( const char *directory );
-bool restart_process(void);
-bool check_modules(void);
+bool restart_process(child_pid_list *tmp_node);
+bool check_modules(child_pid_list *tmp_node);
+bool aacmSetup(void);
+bool TCPsetup(void);
+
+static void* rcv_errMsgs(void * param);
 
 /* MAIN */
 int32_t main(void)
@@ -77,6 +98,8 @@ int32_t main(void)
     int32_t dir_index;
     int32_t dirs_array_size;
     bool success = true;
+    int32_t rc;
+
 
     /* create linked list ... */
     errno = 0;
@@ -118,7 +141,7 @@ int32_t main(void)
             PRINT_F(("\nOPEN DIRECTORY: %s \n", dirs[dir_index] ));
 
             launch_status = launch_item(dirs[dir_index]);
-            if ( -1 == launch_status )
+            if ( terminalError == launch_status )
             {
                 /* AACM was not able to start. */
                 /* this is to give the test scripts time to confirm that there 
@@ -128,16 +151,40 @@ int32_t main(void)
                 success = false;
                 break;
             }
-            else if (1 == launch_status)
+            else if ( dirIsEmpty == launch_status )
             {
                 syslog(LOG_NOTICE, "WARNING: Directory %s empty!", dirs[dir_index] );
                 PRINT_F(("WARNING: Directory %s empty! \n\n", dirs[dir_index]));
             }
-            else
+            else /* ( normal == launch_status ) */
             {
                 syslog(LOG_NOTICE, "COMPLETED: All items in %s launched!", dirs[dir_index] );
                 PRINT_F(("COMPLETED: All items in %s launched! \n", dirs[dir_index] ));
                 PRINT_F(("CLOSE DIRECTORY: %s \n\n", dirs[dir_index] ));
+
+                if ( 0 == dir_index )
+                {
+                    // connect to the AACM TCP server
+                    // send startup message
+                    // receive ack
+                    if ( ! aacmSetup() )
+                    {
+                        success = false;
+                    }
+
+                    // start thread for recieving AACM messages
+                    if ( success )
+                    {
+                        errno = 0;
+                        rc = pthread_create(&msgRcvThread, NULL, rcv_errMsgs, NULL);
+                        if ( 0 != rc )
+                        {
+                            success = false;
+                            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)", \
+                                __FUNCTION__, __LINE__, errno, strerror(errno));
+                        }
+                    }
+                }
             }
         }
         syslog(LOG_NOTICE, "COMPLETED: Launch sequence complete!");
@@ -152,7 +199,7 @@ int32_t main(void)
             /* list back to first node */
             nth_node = first_node;
             PRINT_F((" in while before checking \n"));
-            success = check_modules( );
+            success = check_modules(nth_node);
         }
     }
     /* Won't get here with the above while(1) loop.  But, if this main ever 
@@ -166,7 +213,7 @@ int32_t main(void)
     }
     free(first_node);
     return(0);
-}
+} /* int32_t main(void) */
 
 
 
@@ -181,9 +228,6 @@ int32_t main(void)
  *
  * OUT: int32_t
  *      - will be used to check status after running
- *      ** I've got some printf usage to help debug for now ... will be sent to syslog() as well
- * 
- *  ... this will go in a .h
  * ============================================================================================= */
 int32_t launch_item( const char *directory )
 {
@@ -222,43 +266,10 @@ int32_t launch_item( const char *directory )
                     errno, strerror(errno)));
                 success = false;
             }
-
             memcpy(concat, directory, len1);
             memcpy(concat+len1, dp->d_name, len2+1);
-
-            PRINT_F(("\nLaunching ... %s \n", concat));
-
-            // pid = fork();
-            // if (0 == pid) 
-            // {
-            //     errno = 0;
-            //     if ( (0 != execl( concat, dp->d_name, (char *)NULL)) )
-            //     {
-            //         syslog(LOG_ERR, "ERROR: 'execl()' failed for %s! (%d:%s)",
-            //             concat, errno, strerror(errno));
-            //         PRINT_F(("ERROR: 'execl()' failed for %s! (%d:%s) \n",
-            //             concat, errno, strerror(errno)));
-            //         /* force the spawned process to exit */
-            //         exit(-errno);
-            //     }
-            // }
-            // else if (-1 == pid)
-            // {
-            //     /* failed to fork a child process */
-            //     syslog(LOG_ERR, "ERROR: Failed to fork child process for %s in %s! (%d:%s)", 
-            //         dp->d_name, directory, errno, strerror(errno));
-            //     PRINT_F(("ERROR: Failed to fork child process for %s in %s! (%d:%s) \n", 
-            //         dp->d_name, directory, errno, strerror(errno)));
-
-            //     success = false;
-            //     break;
-            // } 
-            // else
-            // {
-            //     nth_node->child_pid = pid;                
-            // }
-
             nth_node->dir = concat;
+
             errno = 0;
             temp = (char *) malloc(len2 + 1);
             if ( 0 != errno )
@@ -271,6 +282,7 @@ int32_t launch_item( const char *directory )
             }
             temp = strdup(dp->d_name);
             nth_node->item_name = temp;
+
             errno = 0;
             nth_node->next = (child_pid_list *)malloc(sizeof(child_pid_list));
             if ( 0 != errno )
@@ -282,7 +294,9 @@ int32_t launch_item( const char *directory )
                 success = false;
             }
 
-            if ( ! restart_process() )
+            PRINT_F(("\nLaunching ... %s \n", concat));
+
+            if ( ! restart_process(nth_node) )
             {
                 success = false;
                 break;
@@ -308,7 +322,7 @@ int32_t launch_item( const char *directory )
                         PRINT_F(("ERROR: File %s not launched properly! (%d:%s) \n", \
                             dp->d_name, errno, strerror(errno)));
 
-                        restart_process();
+                        restart_process(nth_node);
                         launch_attempts++;
                         nth_node->alive = 0;
                         run_time = 0;
@@ -338,7 +352,7 @@ int32_t launch_item( const char *directory )
 
                     nth_node->alive = -1;
 
-                    /* return a termination value to signal BARSM shutdown if it is AACM that failed */
+                    /* return a termination value if it is AACM that failed */
                     if ( dirs[0] == directory )
                     {
                         syslog(LOG_ERR, "ERROR: AACM Cannot be started! (%d:%s)", \
@@ -371,17 +385,17 @@ int32_t launch_item( const char *directory )
     closedir(dir);
     if ( ! success )
     {
-        return(-1);
+        return(terminalError);
     }
     else if ( empty_dir )
     {
-        return(1);
+        return(dirIsEmpty);
     }
     else
     {
-        return(0);
+        return(normal);
     }
-}
+} /* int32_t launch_item( const char *directory ) */
 
 
 
@@ -391,15 +405,13 @@ int32_t launch_item( const char *directory )
  *      - Restarts any process that disappears or becomes a zombie as soon as it is found.
  *      - Logs an error for each dissapperance and zombie.  
  * 
- * IN:  VOID
- *      - Currently not used.
+ * IN:  child_pid_list *tmp_node
+ *      - Used to navigate throught the linked list that stores all the child data.
  * 
- * OUT: int
- *      - Currently not used.
- * 
- * ... this will go in a .h
+ * OUT: bool
+ *      - Signals whether a terminal error has occured.
  * ============================================================================================= */
-bool check_modules(void)
+bool check_modules(child_pid_list *tmp_node)
 {
     bool success = true;
     int32_t rc; 
@@ -408,46 +420,65 @@ bool check_modules(void)
     /* check status of the child processes that are supposed to be running */
     PRINT_F(("\n\n in check_modules \n\n"));
 
-    while( NULL != nth_node->next )
+    while( NULL != tmp_node->next )
     {
         errno = 0;
-        waitreturn = waitpid(nth_node->child_pid, &rc, WNOHANG);
+        waitreturn = waitpid(tmp_node->child_pid, &rc, WNOHANG);
 
-        if ( -1 == nth_node->alive )
+        if ( -1 == tmp_node->alive )
         {
             /* the process was not able to start up, so ignore */
         }
         else if (-1 == waitreturn)
         {
             syslog(LOG_ERR, "ERROR: Process for %s with PID %d no longer exists! (%d:%s)", \
-                nth_node->dir, nth_node->child_pid, errno, strerror(errno));
+                tmp_node->dir, tmp_node->child_pid, errno, strerror(errno));
             PRINT_F(("\nERROR: Process for %s with PID %d no longer exists! (%d:%s) \n", \
-                nth_node->dir, nth_node->child_pid, errno, strerror(errno)));
+                tmp_node->dir, tmp_node->child_pid, errno, strerror(errno)));
             /* alive == 1 indicates that this process needs to be replaced */
-            nth_node->alive = 1;   
+            tmp_node->alive = 1;   
         }
         else if (0 < waitreturn)
         {
             syslog(LOG_ERR, "ERROR: Process for %s with PID %d has changed state! (%d:%s)", \
-                nth_node->dir, nth_node->child_pid, errno, strerror(errno));
+                tmp_node->dir, tmp_node->child_pid, errno, strerror(errno));
             PRINT_F(("\nERROR: Process for %s with PID %d has changed state! (%d:%s) \n", \
-                nth_node->dir, nth_node->child_pid, errno, strerror(errno)));
+                tmp_node->dir, tmp_node->child_pid, errno, strerror(errno)));
             /* alive == 1 indicates that this process needs to be replaced */
-            nth_node->alive = 1;
+            tmp_node->alive = 1;
         }
-        if (1 == nth_node->alive)
+        if (1 == tmp_node->alive)
         {
-            syslog(LOG_NOTICE, "NOTICE: Restarting %s...", nth_node->item_name);
-            PRINT_F(("NOTICE: Restarting %s...", nth_node->item_name));
-            success = restart_process();
+            syslog(LOG_NOTICE, "NOTICE: Restarting %s...", tmp_node->item_name);
+            PRINT_F(("NOTICE: Restarting %s...", tmp_node->item_name));
+            success = restart_process(nth_node);
         }
 
-        nth_node = nth_node->next;
+        tmp_node = tmp_node->next;
     }
     return(success);
 }
 
 
+bool restart_select(uint32_t pid)
+{
+    bool success = true;
+
+    child_pid_list tmp_node = first_node;
+
+    while ( NULL != tmp_node->next )
+    {
+        if ( pid == tmp_node->child_pid )
+        {
+            if ( ! restart_process(tmp_node) )
+            {
+                success = false;
+            }
+        }
+    }
+
+    return (success);
+}
 
 /* ================================================================================================
  * FUNCTION: void restart_process()
@@ -459,15 +490,13 @@ bool check_modules(void)
  *      - Restarts whatever process is described by the information in the active link in the 
  *        linked list.
  * 
- * IN:  VOID
- *      - Currently not used.
+ * IN:  child_pid_list *tmp_node
+ *      - Used to navigate throught the linked list that stores all the child data.
  * 
- * OUT: VOID
- *      - Currently not used.
- * 
- *  ... this will go in a .h
+ * OUT: bool
+ *      - Signals whether a terminal error has occured.
  * ============================================================================================= */
-bool restart_process(void)
+bool restart_process(child_pid_list *tmp_node)
 {
     bool success = true;
     /* fork a new process to start the module back up */
@@ -477,12 +506,12 @@ bool restart_process(void)
     {
         /* execute the file again in the new child process */
         errno = 0;
-        if ( (0 != execl(nth_node->dir, nth_node->item_name, (char *)NULL)) )
+        if ( (0 != execl(tmp_node->dir, tmp_node->item_name, (char *)NULL)) )
         {
             syslog(LOG_ERR, "ERROR: 'execl()' failed for %s! (%d:%s)", \
-                nth_node->dir, errno, strerror(errno));
+                tmp_node->dir, errno, strerror(errno));
             PRINT_F(("ERROR: 'execl()' failed for %s! (%d:%s) \n", \
-                nth_node->dir, errno, strerror(errno)));
+                tmp_node->dir, errno, strerror(errno)));
             /* force the spawned process to exit */
             exit(-errno);
         }
@@ -490,15 +519,114 @@ bool restart_process(void)
     else if (-1 == new_pid)
     {
         syslog(LOG_ERR, "ERROR: Failed to fork child process for %s! (%d:%s)", \
-            nth_node->dir, errno, strerror(errno));
+            tmp_node->dir, errno, strerror(errno));
 
         success = false;
     } 
     else
     {
-        nth_node->child_pid = new_pid;
+        tmp_node->child_pid = new_pid;
         /* alive == 0 indicates that the process has been restarted and should be good */
-        nth_node->alive = 0;
+        tmp_node->alive = 0;
     }
     return (success);
+}
+
+
+
+/* ================================================================================================
+ * FUNCTION: bool aacmSetup(void)
+ *      - 
+ * 
+ * IN:  
+ *      - 
+ * 
+ * OUT: bool
+ *      - Signals whether a terminal error has occured.
+ * ============================================================================================= */
+bool aacmSetup(void)
+{
+    bool success            = true;
+
+    if ( ! TCPsetup() )
+    {
+        success = false;
+    }
+
+    // send the BARSM_TO_AACM_INIT_MSG to the AACM
+    if ( ! send_barsmToAacmInit(clientSocket_TCP) )
+    {
+        success = false;
+    }
+
+    // receive ACK message
+    if ( ! recieve_barsmToAacmInitAck(clientSocket_TCP) )
+    {
+        success = false;
+    }
+
+    return (success);
+}
+
+
+
+/* ================================================================================================
+ * FUNCTION: bool TCPsetup(void) 
+ *      - 
+ * 
+ * IN:  
+ *      - 
+ * 
+ * OUT: bool
+ *      - Signals whether a terminal error has occured.
+ * ============================================================================================= */
+bool TCPsetup(void) 
+{
+    bool success            = true;
+    char ServerIPAddress[]  = "127.0.0.1";
+    int TCPServerPort       =  8000;
+
+    errno = 0;
+    clientSocket_TCP = socket(AF_INET, SOCK_STREAM, 0);
+    if (0 > clientSocket_TCP)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to create socket %d (%d:%s) ", \
+            __FUNCTION__, __LINE__, clientSocket_TCP, errno, strerror(errno));
+    }
+
+    errno = 0;
+    if ( success )
+    {
+        memset(&DestAddr_TCP,0,sizeof(DestAddr_TCP));               // clear struct
+        DestAddr_TCP.sin_family = AF_INET;                          // must be this
+        DestAddr_TCP.sin_port = htons(TCPServerPort);               // set the port to write to
+        DestAddr_TCP.sin_addr.s_addr = inet_addr(ServerIPAddress);  // set destination IP address
+        memset(&(DestAddr_TCP.sin_zero), '\0', 8);                  // zero the rest of the struct
+
+        if (0 != connect(clientSocket_TCP,(struct sockaddr *)&DestAddr_TCP, sizeof(DestAddr_TCP)))
+        {
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! TCP failed to connect %u (%d:%s) ", \
+                __FUNCTION__, __LINE__, DestAddr_TCP.sin_port, errno, strerror(errno));
+        }
+    }
+
+    return success;
+}
+
+
+static void* rcv_errMsgs(void * UNUSED(param) )
+{
+    int32_t rc;
+
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+    }
+    
+    process_aacmToBarsm( clientSocket_TCP );
 }

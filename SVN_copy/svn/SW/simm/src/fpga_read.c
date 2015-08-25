@@ -1,3 +1,17 @@
+
+/** @file fpga_read.c
+ * This file will replace fpga_sim.c as the actual file that will be 
+ * used to read from the FPGA. Three functions are required to be 
+ * implemented in order to replace: one to wait for the FPGA to activate
+ * the interrupt register, one to obtain the raw value for the logical
+ * 1 Hz values, and one to obtain the timestamps.
+ *
+ * Copyright (c) 2010, DornerWorks, Ltd.
+ */
+
+/****************
+* INCLUDES
+****************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -13,25 +27,47 @@
 #include <stdint.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
-
+#include "simm_functions.h"
 #include "sensor.h"
 #include "fpga_read.h"
 
-/* This file will replace fpga_sim.c as the actual file that will be 
- * used to read from the FPGA. Three functions are required to be 
- * implemented in order to replace: one to wait for the FPGA to activate
- * the interrupt register, one to obtain the raw value for the logical
- * 1 Hz values, and one to obtain the timestamps. */
+/****************
+* GLOBALS
+****************/
+
+int32_t pfp_val;
+int32_t ptlt_val;
+int32_t ptrt_val;
+int32_t tcmp_val;
+int32_t cop_val;
+
+uint32_t returnVoltages[5];
+int32_t total_ts;
+int32_t logical_index; 
+int32_t timestamp_index;
+
+uint32_t voltages[5];
+uint32_t timestamps[9];
+uint32_t ts_HiLoCnt[3];
+uint32_t voltages_toGet[5];
+uint32_t timestamps_toGet[9];
+uint32_t ts_HiLoCnt_toGet[3];
 
 int32_t device_fd = 0;
-uint32_t *fpga_regs;
+int32_t *fpga_regs;
 
 // TESTING ONLY -----------------------------------------------------------------------------------------------------
 int32_t fpga_timer_fd;
 // ------------------------------------------------------------------------------------------------------------------
 
-/* This function goes through the configuration for the FPGA half of the SIMMM, 
- * and checks to see if any significant errors have occured. */
+/**
+ * Initialize/setup FPGA to SIMM interface
+ *
+ * @param[in] void
+ * @param[out] true/false 
+ *
+ * @return FPGA to SIMM init status, true/false.  
+ */
 bool fpga_init(void)
 {
     bool success = true;
@@ -45,6 +81,7 @@ bool fpga_init(void)
     {
         success = false;
     }
+
     if ( false == send_fpga_config() )
     {
         success = false;
@@ -56,13 +93,21 @@ bool fpga_init(void)
         success = false;
     }
 
-    printf("Config Complete!\n");
+    //printf("Config Complete!\n");
     return (success);
 }
 
-/* This function is needed to set up the interface between the FPGA and the software through UIO.
+
+/**
+ * This function is needed to set up the interface between the FPGA and the software through UIO.
  * In testing, an mmap'ed file is used rather than an mmap'ed device, and a periodic timer and 
- * blocking read() funcion are used. */
+ * blocking read() funcion are used.
+ *
+ * @param[in] void
+ * @param[out] true/false 
+ *
+ * @return true/false status.  
+ */
 bool setup_fpga_comm(void)
 {
     bool success = true;
@@ -73,11 +118,12 @@ bool setup_fpga_comm(void)
     // The two following functions will be replaced for the actual FPGA interface.
     errno = 0;
 
+    
     // TESTING ONLY ------------------------------------------------------------------------------------------------------
     device_fd = open("src/simulation_file.bin", O_RDWR);
     if ( -1 == device_fd )
     {
-        printf("\nERROR: open() failed for FPGA device file simulation_file.bin! (%d: %s) \n\n", errno, strerror(errno));
+        //printf("\nERROR: open() failed for FPGA device file simulation_file.bin! (%d: %s) \n\n", errno, strerror(errno));
         syslog(LOG_ERR, "%s:%d ERROR: open() failed for FPGA device file simulation_file.bin! (%d: %s)", \
             __FUNCTION__, __LINE__, errno, strerror(errno));
         success = false;
@@ -88,11 +134,12 @@ bool setup_fpga_comm(void)
 
     // -------------------------------------------------------------------------------------------------------------------
 
+    
     errno = 0;
-    fpga_regs = (uint32_t*) mmap(0, 512, PROT_READ | PROT_WRITE, MAP_SHARED, device_fd ,0);
+    fpga_regs = (int32_t*) mmap(0, 512, PROT_READ | PROT_WRITE, MAP_SHARED, device_fd ,0);
     if ( -1 == *fpga_regs )
     {
-        printf("\nERROR: mmap() failed for FPGA interface! (%d: %s) \n\n", errno, strerror(errno));
+        //printf("\nERROR: mmap() failed for FPGA interface! (%d: %s) \n\n", errno, strerror(errno));
         syslog(LOG_ERR, "%s:%d ERROR: mmap() failed for FPGA interface! (%d: %s)", \
         __FUNCTION__, __LINE__, errno, strerror(errno));
         success = false;
@@ -104,7 +151,7 @@ bool setup_fpga_comm(void)
     fpga_timer_fd = timerfd_create(CLOCK_REALTIME, 0);
     if ( -1 == fpga_timer_fd )
     {
-        printf("\nERROR: timerfd_create() failed! (%d: %s)\n\n", errno, strerror(errno));
+        //printf("\nERROR: timerfd_create() failed! (%d: %s)\n\n", errno, strerror(errno));
         syslog(LOG_ERR, "%s:%d ERROR: timerfd_create() failed! (%d: %s)", __FUNCTION__, __LINE__, errno, strerror(errno));
         success = false;
     }
@@ -127,12 +174,12 @@ bool setup_fpga_comm(void)
     {
         delay_finished = fpga_regs[IAR];
     }
-    printf("I'm guessing I get here?\n");
+
     errno = 0;
     new_fd = timerfd_settime(fpga_timer_fd, 0, &fpga_timer_setup, NULL);
     if ( -1 == new_fd )
     {
-        printf("ERROR: timerfd_settime() failed! (%d: %s)\n", errno, strerror(errno));
+        //printf("ERROR: timerfd_settime() failed! (%d: %s)\n", errno, strerror(errno));
         syslog(LOG_ERR, "%s:%d ERROR: timerfd_create() failed! (%d: %s)", __FUNCTION__, __LINE__, errno, strerror(errno));
         success = false;
     }
@@ -147,7 +194,15 @@ bool setup_fpga_comm(void)
     return(success);
 }
 
-/* This funtion is for adjusting the interrupt settings in the FPGA. */
+/**
+ * This funtion is for adjusting the interrupt settings in the
+ * FPGA.
+ *
+ * @param[in] void
+ * @param[out] true/false 
+ *
+ * @return true/false status.  
+ */
 bool send_fpga_config(void)
 {
     bool success = true;
@@ -162,6 +217,14 @@ bool send_fpga_config(void)
     return (success);
 }
 
+/**
+ * Waits for FPGA interrupt
+ *
+ * @param[in] void
+ * @param[out] true/false 
+ *
+ * @return true/false status.  
+ */
 bool wait_for_fpga(void)
 {
     bool success = true;
@@ -170,14 +233,14 @@ bool wait_for_fpga(void)
     errno = 0;
 
     // TESTING ONLY -------------------------------------------------------------------------------------------------------
-    printf("Starting blocking read()...");
+    //printf("Starting blocking read()...");
     if ( -1 == read(fpga_timer_fd, &num_interrupts, sizeof(num_interrupts)) )
     {
         printf("\nERROR: Read function failed! (%d: %s) \n\n", errno, strerror(errno));
         syslog(LOG_ERR, "%s:%d ERROR: Read function failed! (%d: %s)", __FUNCTION__, __LINE__, errno, strerror(errno));
         success = false;
     }
-    printf("Blocking read() finished...");
+    //printf("Blocking read() finished...");
     fpga_regs[IAR] = 1;
     // ACTUAL FPGA CODE ---------------------------------------------------------------------------------------------------
 
@@ -187,17 +250,28 @@ bool wait_for_fpga(void)
 
     if ( 1 < num_interrupts )
     {
-        printf("\nERROR: Missed %lu interrupts from FPGA! \n\n", num_interrupts-1);
-        syslog(LOG_ERR, "%s:%d ERROR: Missed %lu interrupts from FPGA!", __FUNCTION__, __LINE__, num_interrupts-1);
+        //printf("\nERROR: Missed %lu interrupts from FPGA! \n\n", num_interrupts-1);
+        syslog(LOG_ERR, "%s:%d ERROR: Missed %lld interrupts from FPGA!", __FUNCTION__, __LINE__, num_interrupts-1);
     }
 
     return(success);
 }
 
-void get_fpga_data(int32_t *voltages, int32_t *timestamps, int32_t *ts_HiLoCnt)
+/**
+ * Gets FGPA sample data.  Used to build
+ * allocated arrays of data to be published
+ *
+ * @param[in] void
+ * @param[out] void 
+ *
+ * @return void.  
+ */
+//void get_fpga_data(uint32_t *voltages, uint32_t *timestamps, uint32_t *ts_HiLoCnt)
+void get_fpga_data(void)
 {
     /* Bits 23:0 contain the voltage values in the given registers,
      * so the other 8 bits are masked off. */
+
     voltages[0] = fpga_regs[PFP_VAL] & 0x00FFFFFF;
     voltages[1] = fpga_regs[PTLT_VAL] & 0x00FFFFFF;
     voltages[2] = fpga_regs[PTRT_VAL] & 0x00FFFFFF;
@@ -220,3 +294,35 @@ void get_fpga_data(int32_t *voltages, int32_t *timestamps, int32_t *ts_HiLoCnt)
     ts_HiLoCnt[1] = fpga_regs[TS_LOW];
     ts_HiLoCnt[2] = fpga_regs[TS_COUNT];    
 }
+
+/**
+ * Buffers FPGA data
+ *
+ * @param[in] void
+ * @param[out] void 
+ *
+ * @return void.  
+ */
+void bufferFPGAdata(void)
+{
+    voltages_toGet[0]   = voltages[0];
+    voltages_toGet[1]   = voltages[1];
+    voltages_toGet[2]   = voltages[2];
+    voltages_toGet[3]   = voltages[3];
+    voltages_toGet[4]   = voltages[4];
+                  
+    timestamps_toGet[0] = timestamps[0];
+    timestamps_toGet[1] = timestamps[1];
+    timestamps_toGet[2] = timestamps[2];
+    timestamps_toGet[3] = timestamps[3];
+    timestamps_toGet[4] = timestamps[4];
+    timestamps_toGet[5] = timestamps[5];
+    timestamps_toGet[6] = timestamps[6];
+    timestamps_toGet[7] = timestamps[7];
+    timestamps_toGet[8] = timestamps[8];
+                     
+    ts_HiLoCnt_toGet[0] = ts_HiLoCnt[0];
+    ts_HiLoCnt_toGet[1] = ts_HiLoCnt[1];
+    ts_HiLoCnt_toGet[2] = ts_HiLoCnt[2]; 
+}
+

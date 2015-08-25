@@ -1,1 +1,1 @@
-build/barsm.o: src/barsm.c makefile
+build/barsm.o: src/barsm.c src/barsm_functions.h makefile

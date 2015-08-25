@@ -1,18 +1,24 @@
-//=========================================================================================================================================================
-// GET
-// ASSIMILATOR 
-// SIMM - Sensor Interface Master Module
-// David Norwood
-// Travis Kuiper
-// 
-// -	Sensor Interface Master Module (SIMM)
-//      o	SIMM shall interface with SI node, Convert RAW data to Logical value and get Logical  data to send to the AACM.
-//      o	SIMM shall implement the GE API for Master Modules – that will enable standard communication between SIMM and AACM.
-//      o	If there is problem communicating with the SI node then an error message is sent to the AACM.
-//      o	SIMM shall interface with AACM as per ICD defined in document - API ICD for DornerWorks.docx.
-// 
-// valgrind: --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A
-// ========================================================================================================================================================
+
+/** @file simm.c
+ * Main file to starting Sensor Master Module.  Init portion for
+ * FPGA and registering the app and it's data.  Opens UDP and
+ * waits for one sys init message and one subscribe message
+ * before starting 3 threads - SUBSCRIBE, PUBLISH, and SENSORS
+ * 
+ * Subscribe Thread: polls for a subscribe
+ * 
+ * Publish Thread: every second, publish respective data
+ * 
+ * Sensors Thread: interfaces to FPGA to collect data.  Once
+ * collected, generates logical MPs and timestamps in order to
+ * be published.  
+ *
+ * Copyright (c) 2010, DornerWorks, Ltd.
+ */
+
+/****************
+* INCLUDES
+****************/
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -29,52 +35,64 @@
 #include <signal.h>
 #include <time.h>
 #include <pthread.h>
-
 #include "simm_functions.h"
 #include "sensor.h"
-//#include "fpga_sim.h"
 #include "fpga_read.h"
+
+
+/****************
+* PRIVATE CONSTANTS
+****************/
+//  char UDPAddress[]   = "225.0.0.37";
+//  int UDPPort         =  4096;
+char UDPAddress[] = "127.0.0.1";
+int UDPPort =  4096;
 
 // THREADS
 static pthread_t thread_TCP;        // read, write TCP
 static pthread_t sensor_thread;     // get FPGA data
 static pthread_t thread_subscribe;  // waits for a subscribe and returns subscribe_ack
-
 pthread_mutex_t pubMutex                = PTHREAD_MUTEX_INITIALIZER;
 
-//  char UDPAddress[]   = "225.0.0.37";
-//  int UDPPort         =  4096;
-    char UDPAddress[] = "127.0.0.1";
-    int UDPPort =  4096;
+/****************
+* GLOBALS
+****************/
+static int32_t clientSocket_TCP = -1;
+static int32_t clientSocket_UDP = -1;
+struct sockaddr_in DestAddr_TCP;
+struct sockaddr_in DestAddr_UDP;
+struct in_addr localInterface;
+struct sockaddr_in DestAddr_SUBSCRIBE;
+int32_t Logicals[33];
+int32_t TimeStamp_s[9];
+int32_t TimeStamp_ns[9];
+bool publish = false;
+struct timespec goStart;
 
+topicToPublish *publishMe;
 
-// FUNCTION DECLARATIONS
+/****************
+* PRIVATE FUNCTION PROTOTYPES
+****************/
 static bool simm_init(void);
 static bool setupPublishStructure(void);
 static void simm_run(void); // calls/setup the threads
 static void* simm_runtime_publish(void *param);
 static void* simm_runtime_subscribe(void *param);
 static void* read_sensors(void *param);
-
 bool UDPsetup(void);
 bool TCPsetup(void);
 
-// GLOBALS
-static int32_t clientSocket_TCP = -1;
-static int32_t clientSocket_UDP = -1;
-struct sockaddr_in DestAddr_TCP;
-struct sockaddr_in DestAddr_UDP;
-struct sockaddr_in DestAddr_SUBSCRIBE;
-
-
-//int32_t Logicals[5];
-int32_t Logicals[33];
-int32_t TimeStamp_s[9];
-int32_t TimeStamp_ns[9];
-bool publish = false;
-
-struct timespec goStart;
-
+/**
+ * Calls SIMM init function.  If pass, start threads, else fail.
+ *
+ * @param[in] UNUSED(argc) 
+ * @param[in] UNUSED(*argv[]) 
+ * @param[out] true/false 
+ *
+ * @return true/false sucess of simm startup.  if fails to init,
+ *         returns false
+ */
 int32_t main(int32_t UNUSED(argc), char UNUSED(*argv[]))
 {
     bool success_simm = true;
@@ -98,6 +116,19 @@ int32_t main(int32_t UNUSED(argc), char UNUSED(*argv[]))
     return success_simm;
 }
 
+/**
+ * Init FPGA to SIMM inteface.  Setup TCP and UDP socket.
+ * Register the app and available data to publish.  Sends open
+ * UDP and waits for sys_init message.  once received,
+ * polls/waits for one subscribe message.  Once received (and
+ * everything prior succeeds), return status is true.  Else if
+ * anything fails along the way, returns false.  
+ *
+ * @param[in] void
+ * @param[out] true/false 
+ *
+ * @return true/false sucess of simm init.
+ */
 static bool simm_init(void) // 2.1
 {
     bool success            = true; 
@@ -134,12 +165,11 @@ static bool simm_init(void) // 2.1
 
     clock_gettime( CLOCK_REALTIME , &goStart );
 
-//  printf("START FPGA_INIT\n");
-//  if (false != success)
-//  {
-//      success = fpga_init();
-//  }
-//  printf("PASSED FPGA_INIT\n");
+
+    if (false != success)
+    {
+        success = fpga_init();
+    }
 
     if (false != success)
     {
@@ -151,6 +181,7 @@ static bool simm_init(void) // 2.1
         success = TCPsetup();
     }
 
+    //sleep(10);
     if (false != success)
     {
         success = process_registerApp( clientSocket_TCP , goStart );
@@ -191,7 +222,8 @@ static bool simm_init(void) // 2.1
     {
         success_sub     = process_subscribe( clientSocket_TCP );
         success_bPD     = buildPublishData();
-        success_subAck  = process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
+        //success_subAck  = process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
+        success_subAck  = process_subscribe_ack( clientSocket_TCP );
 
         if ( false == ( success_sub || success_bPD || success_subAck ) )
         {
@@ -202,6 +234,15 @@ static bool simm_init(void) // 2.1
     return success;
 }
 
+/**
+ * Starts three threads per main description.  Only executes if
+ * SIMM init passes.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
 static void simm_run(void)
 {
         bool success = true;
@@ -254,7 +295,7 @@ static void simm_run(void)
             {
                 success = false;
                 syslog(LOG_ERR, "%s:%d ERROR! waiting for signals (%d:%s)",__FUNCTION__, __LINE__, errno, strerror(errno));
-                printf("\nsigwaitinfo error\n");
+                //printf("\nsigwaitinfo error\n");
             }
             else
             { /* ! (0 >= sigwaitinfo(&set, &sig)) */
@@ -283,61 +324,92 @@ static void simm_run(void)
   }
 
 
+/**
+ * SUBSCRIBE thread.  Polls/waits for a subscribe.  Once
+ * received, locks (mutex) data and alloactes space for a new
+ * topic/subscription.  Once done, sends subscribe acknowledge
+ * message.  
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
 static void* simm_runtime_subscribe(void * UNUSED(param) )
 {
     int32_t rc;
-    bool success, success_sub_run, success_subAck_run, success_bPD_run, success_sub_malloc_run = true;
+    //bool success, 
+    //bool success_sub_run, success_subAck_run, success_bPD_run, success_sub_malloc_run = true;
     int32_t numSub;
 
     rc = pthread_detach( pthread_self() );
     if (rc != 0)
     {
-      success = false;
+      //success = false;
       syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
     }
 
     numSub = 0;
-    printf("SUBSCRIBE THREAD STARTED!\n");
+    //printf("SUBSCRIBE THREAD STARTED!\n");
     while ( 1 )
     {
-        success_sub_run = process_subscribe( clientSocket_TCP );
+        //success_sub_run = process_subscribe( clientSocket_TCP );
+        
+        process_subscribe( clientSocket_TCP );
         numSub++;
-
         pthread_mutex_lock(&pubMutex);
+        
 
         num_topics_total++;
 
         publishMe = realloc(publishMe, sizeof(topicToPublish)*num_topics_total);
         if (NULL == publishMe)
         {
-            success_sub_malloc_run = false;
+            //success_sub_malloc_run = false;
             syslog(LOG_ERR, "%s:%d REALLOC ERROR!", __FUNCTION__, __LINE__);
-            printf("BAD REALLOC: publishMe in buildPublishData\n");
+            //printf("BAD REALLOC: publishMe in buildPublishData\n");
         }
 
         currentTopic++;
-        success_bPD_run = buildPublishData();
-        pthread_mutex_unlock(&pubMutex);
+        //success_bPD_run = buildPublishData();
+        buildPublishData();
+        
 
-        success_subAck_run = process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
-        if ( false == ( success_sub_run || success_subAck_run || success_bPD_run || success_sub_malloc_run ) )
-        {
-            success = false;
-        }
+        //success_subAck_run = process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
+        //process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
+        process_subscribe_ack( clientSocket_TCP );
+        pthread_mutex_unlock(&pubMutex);
+//      if ( false == ( success_sub_run || success_subAck_run || success_bPD_run || success_sub_malloc_run ) )
+//      {
+//          success = false;
+//      }
     }
+    return 0;
 }
 
 
+/**
+ * PUBLISH thread.  Every second, publishes all available
+ * topics/subscriptions ready to publish.  After publish is
+ * made, determines next availble list of topics/subscriptions
+ * to publish.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
 // This is the thread for processing PUBLISH every second
 static void* simm_runtime_publish(void * UNUSED(param) )
 {
     int32_t rc, cntPublishes, i;
+    int32_t hrtBt;
     static int32_t numberToPublish;
     bool success = true;
     bool timeHasElapsed = true;
     struct timespec sec_begin, sec_end;
-    struct timespec timeToWait, currentTime;
-    int rt;
+
+    hrtBt = 0;
 
     rc = pthread_detach( pthread_self() );
     if (rc != 0)
@@ -346,7 +418,7 @@ static void* simm_runtime_publish(void * UNUSED(param) )
         syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
     }
 
-    printf("PUBLISH THREAD STARTED!\n");
+    //printf("PUBLISH THREAD STARTED!\n");
     numberToPublish = 0;
     nextPublishPeriod = 1000;
     clock_gettime(CLOCK_REALTIME, &sec_begin);  
@@ -359,14 +431,19 @@ static void* simm_runtime_publish(void * UNUSED(param) )
             timeHasElapsed = numSecondsHaveElapsed(sec_begin, sec_end, 1);     // check elapsed time of 1 second ... consider changing this based on nextPublishPeriod
         }
         else
-        {
+        {   
+            hrtBt++;
             pthread_mutex_lock(&pubMutex);
+
+            process_HeartBeat( clientSocket_TCP, hrtBt );
+            
             cntPublishes = 0;
             for( i = 0 ; i < num_topics_total ; i++ )
             {
                 if (true == publishMe[i].publishReady)
                 {
-                    process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns, i );
+                    //process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns, i );
+                    process_publish( clientSocket_UDP , DestAddr_UDP , i );
                     cntPublishes++; 
                 }
                 if ( (numberToPublish == cntPublishes) && (numberToPublish == num_topics_total) )
@@ -374,36 +451,44 @@ static void* simm_runtime_publish(void * UNUSED(param) )
                     nextPublishPeriod = 0;
                 }
             }
-
-            printf("\n\n\nFROM PUBLISH THREAD, nextPublishPeriod: %d\n", nextPublishPeriod);
+            pthread_mutex_unlock(&pubMutex);
+            //printf("\n\n\nFROM PUBLISH THREAD, nextPublishPeriod: %d\n", nextPublishPeriod);
             timeHasElapsed = false;
             clock_gettime(CLOCK_REALTIME, &sec_begin);
             nextPublishPeriod += 1000;
             numberToPublish = publishManager();
-            pthread_mutex_unlock(&pubMutex);
-
         }
     }
+    return 0;
 }
 
-
+/**
+ * SENSORS thread.  Gets FGPA data and generates logical MP and
+ * timestamp data.  See sensor.c
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
 static void* read_sensors(void * UNUSED(param) )
 {
 bool success = true;
     int32_t rc;
 
-    uint32_t voltages[5] = {0,0,0,0,0};
-    uint32_t timestamps[9] = {0,0,0,0,0,0,0,0,0};
-    uint32_t ts_HiLoCnt[3] = {0,0,0};
+//  voltages = {0,0,0,0,0};
+//  timestamps = {0,0,0,0,0,0,0,0,0};
+//  ts_HiLoCnt = {0,0,0};
 
-    printf("Thread Started!\n");
+    //printf("Thread Started!\n");
 
     // detach the thread so that main can resume
     errno = 0;
     rc = pthread_detach(pthread_self());
     if (rc != 0)
     {
-        printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
+        syslog(LOG_ERR, "%s:%d ERROR: Thread detaching unsuccessful (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
+        //printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
     }
 
     // LOOP FOREVER, BULDING X SECONDS WORTH OF DATA AND EXPORTING
@@ -417,89 +502,54 @@ bool success = true;
         // printf("\nFPGA Ready!\n");
 
         /* GET FPGA DATA IMMEDIATELY */
-        get_fpga_data(&voltages[0], &timestamps[0], &ts_HiLoCnt[0]);
+        //get_fpga_data(&voltages[0], &timestamps[0], &ts_HiLoCnt[0]);
+        get_fpga_data();
 
+        bufferFPGAdata();
+
+        // save copy to use
         pthread_mutex_lock(&pubMutex);
 
         // GET LOGICAL VALUES FROM REGISTERS
-        make_logicals(&voltages[0]);
+        //make_logicals(&voltages[0]);
+        make_logicals();
         // ADD ERROR CHECKING FOR STATUS
 
         // GET TIMESTAMPS FOM REGISTERS
-        calculate_timestamps(&timestamps[0], &ts_HiLoCnt[0]);
+        //calculate_timestamps(&timestamps[0], &ts_HiLoCnt[0]);
+        calculate_timestamps();
         // ADD ERROR CHECKING FOR STATUS
 
         pthread_mutex_unlock(&pubMutex);
     }
-
-//  int32_t rc, fpga_ready;
-//  int32_t get_lv_status, get_ts_status;
-//
-//  // detach the thread so that main can resume
-//  errno = 0;
-//  rc = pthread_detach(pthread_self());
-//  if (rc != 0)
-//  {
-//      syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
-//      printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
-//  }
-//
-//  printf("SENSOR THREAD STARTED!\n");
-//  // LOOP FOREVER, BULDING X SECONDS WORTH OF DATA AND EXPORTING
-//  while(1)
-//  {
-//      // WAIT FOR SIGNAL FROM FPGA
-//      // ADD ERROR FOR >1 SEC TIMEOUT
-//      for(fpga_ready = 0; 1 != fpga_ready;)
-//      {
-//          // "fpga_ready" WILL BE TRIGGERED BY AN INTERRUPT LATER
-//          fpga_ready = wait_for_fpga();
-//          // ADD ERROR SCENARIOS
-//          if(0 == fpga_ready)
-//          {
-//
-//          }
-//      }
-//
-//      // GET LOGICAL VALUES FROM REGISTERS
-//      get_lv_status = get_logicals(Logicals, 5);
-//      // ADD ERROR CHECKING FOR STATUS
-//      if(1 == get_lv_status)
-//      {
-//
-//      }
-//      else if (0 == get_lv_status)
-//      {
-//
-//      }
-//
-//      // GET TIMESTAMPS FOM REGISTERS
-//      get_ts_status = get_timestamps(TimeStamp_s, TimeStamp_ns, 9);
-//      // ADD ERROR CHECKING FOR STATUS
-//      if(get_ts_status)
-//      {
-//
-//      }
-//  }
+    return 0;
 }
 
 
+/**
+ * Establish UDP socket.  
+ *
+ * @param[in] void
+ * @param[out] true/false
+ *
+ * @return true/false status of socket setup.  
+ */
 bool UDPsetup(void) 
 {
     bool success        = true;
+    char loopch;
 
     // multicast - still 100% on how this struct, setsockopt,  and IP_ADD_MEMBERSHIP tie together.  
-    struct ip_mreq mreq;
-
+    //struct ip_mreq mreq;
     if (true == success)
     {
         errno = 0;
         clientSocket_UDP = socket(AF_INET, SOCK_DGRAM, 0);
         if (0 > clientSocket_UDP)
         {
-            printf("ERROR WITH UDP SOCKET\n");
+            //printf("ERROR WITH UDP SOCKET\n");
             success = false;
-            syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) ", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+            syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - configure socket failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
         }
     }
 
@@ -515,9 +565,36 @@ bool UDPsetup(void)
         memset(&(DestAddr_UDP.sin_zero), '\0', 8);                  // zero the rest of the struct
         //sizeof(DestAddr_UDP.sin_zero)
     }
+
+    // disable loopback, i.e. don't receive sent packets.  
+    loopch  = 0;
+    errno   = 0;
+    if (setsockopt(clientSocket_UDP, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch)) < 0) 
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - disbale loopback failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+    }
+
+    // set local interface for multicast
+    // this seems redundant
+//  errno = 0;
+//  if(setsockopt(clientSocket_UDP, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0)
+//  {
+//          success = false;
+//          syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - set local interface failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+//  }
+
     return success;
 }
 
+/**
+ * Establish TCP socket.  
+ *
+ * @param[in] void 
+ * @param[out] true/false
+ *
+ * @return true/false status of socket setup.  
+ */
 bool TCPsetup(void) 
 {
     bool success            = true;
@@ -553,6 +630,15 @@ bool TCPsetup(void)
     return success;
 }
 
+/**
+ * Initial allocation of publish structs and associated
+ * elements.  
+ *
+ * @param[in] void
+ * @param[out] true/false
+ *
+ * @return true/false status of mallocs.    
+ */
 bool setupPublishStructure(void)
 {
     bool success = true;

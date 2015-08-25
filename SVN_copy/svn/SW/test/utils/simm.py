@@ -91,8 +91,14 @@ MP_CAM_SEC_9                        = 1047
 MP_CAM_NSEC_9                       = 1048
 MP_COP_PRESSURE                     = 1049
 
-MP_PERIOD                           = 5000
-MP_NUM_SAMPLES                      = 5
+
+MP_PERIOD                           = 2000
+MP_NUM_SAMPLES                      = 2
+MP_PERIOD_1                         = 5000
+MP_NUM_SAMPLES_1                    = 2
+MP_PERIOD_2                         = 3000
+MP_NUM_SAMPLES_2                    = 3
+
 INVALID_MP                          = 500
 INVALID_MP_PERIOD                   = 500
 
@@ -108,25 +114,51 @@ UDP_OPEN_MSG_FMT                    = '=HHH'
 SYS_INIT_MSG_FMT                    = '=HH'
 SUBSCRIBE_STR_FMT                   = '=HHBIIIH'+69*'I'
 SUBSCRIBE_STR_FMT_RUN               = '=HHBIIIH'+9*'I'
+SUBSCRIBE_STR_FMT_RUN2               = '=HHBIIIH'+6*'I'
 PUBLISH_HDR_STR_FMT                 = '=HHIIH'
 SUBSCRIBE_ACK_HDR_STR_FMT           = '=HHIH'
+HEARTBEAT_STR_FMT                   = '=HHI'
+
+
+
+def startFPGAsimult():
+    # start/restart app here
+    os.chdir("/home/norwood/sandbox/repos/trunk/SW/simm/")
+    #subprocess.Popen("valgrind ./simm --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A") #vs. call vs. ?
+    subprocess.Popen("./fpga") #vs. call vs. ?
 
 def startSimm():
     # start/restart app here
     os.chdir("/home/norwood/sandbox/repos/trunk/SW/simm/")
     #subprocess.Popen("valgrind ./simm --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A") #vs. call vs. ?
-    subprocess.Popen("./simm") #vs. call vs. ?
+    subprocess.Popen("./simm_app") #vs. call vs. ?
 
-def publishThread(UDPsock):
+def publishThread(UDPsock, lock):
     while 1:
+        lock.acquire()
         pubMsg, SenderAddr = UDPsock.recvfrom(1024)
+        lock.release()
         retBytes = len(pubMsg)
-        mpData = int((retBytes - struct.calcsize(PUBLISH_HDR_STR_FMT))/struct.calcsize('=I'))
-        PUBLISH_STR_FMT = PUBLISH_HDR_STR_FMT+mpData*'I'
-        print(struct.unpack(PUBLISH_STR_FMT, pubMsg))
-        #print(SenderAddr)
-        print('PYTHON: PUBLISH DONE!')
+        print('publishThread retBytes: ', retBytes)
+        if 8 < retBytes:
+            mpData = int((retBytes - struct.calcsize(PUBLISH_HDR_STR_FMT))/struct.calcsize('=I'))
+            PUBLISH_STR_FMT = PUBLISH_HDR_STR_FMT+mpData*'I'
+            print(struct.unpack(PUBLISH_STR_FMT, pubMsg))
+            #print(SenderAddr)
+            print('PYTHON: PUBLISH DONE!')
+        
 
+def HeartBeatThread(TCPconn, lock):
+    while 1:
+        #lock.acquire()
+        hrtBtData = TCPconn.recv(1024)
+        #lock.release()
+        retBytes = len(hrtBtData)
+        print('HeartBeatThread retBytes: ', retBytes)
+        if 8 == retBytes:
+            print(struct.unpack(HEARTBEAT_STR_FMT , hrtBtData))
+            print('HEARTBEAT!')
+        
 
 def TCPsetup():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -143,11 +175,13 @@ def TCPsetup():
     #print('TCP Socket bind complete')
     s.listen(1)
     #print('TCP Socket now listening')
+    #p = multiprocessing.Process(target=startFPGAsimult)
+    #p.start()
     p = multiprocessing.Process(target=startSimm)
     p.start()
     (TCPconn, TCPaddr) = s.accept()
-    return TCPconn
-
+    print('DONE WITH TCP SETUP')
+    return TCPconn, s
 
 def UDPsetup():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -156,15 +190,18 @@ def UDPsetup():
     return s
 
 
-def registerApp(TCPconn):
-    #selectList = [toSelect]
+def registerApp(TCPconn, sVal):
+    selectList = [sVal]
     #print('BEFORE SELECT?')
-    #inputReady = select.select(selectList, [], [])
-    #if toSelect == inputReady:  
+#   inputReady = select.select(selectList, [], [],)
+#   for s in inputReady :
+#       if s == sVal:
+            #if toSelect == inputReady:  
+    print('GOT REGISTER APP')
     regAppData = TCPconn.recv(1024)
     retBytes = len(regAppData)
-    #print(struct.unpack(REGISTER_APP_STR_FMT , regAppData))
-    #print('REGISTER APP DONE!')
+    print(struct.unpack(REGISTER_APP_STR_FMT , regAppData))
+    print('REGISTER APP DONE!')
 
 
 def registerAppAck(TCPconn, regAppAck_passfail):
@@ -239,9 +276,12 @@ def sysInit(UDPsock, SenderAddr, sysInit_passfail):
 
 
 def subscribe(TCPconn, subscribe_passfail):
-    subscribeMPdata_run = [ MP_PFP_VALUE,           3000, 3, 
-                            MP_PTLT_TEMPERATURE,    3000, 3,
-                            MP_PTRT_TEMPERATURE,    3000, 3 ]
+    subscribeMPdata_run = [ MP_PFP_VALUE,       MP_PERIOD_1, MP_NUM_SAMPLES_1, 
+                            MP_CAM_SEC_1,       MP_PERIOD_1, MP_NUM_SAMPLES_1,
+                            MP_CAM_SEC_2,       MP_PERIOD_1, MP_NUM_SAMPLES_1 ]
+
+    subscribeMPdata_run2 = [ MP_TCMP,               MP_PERIOD_2, MP_NUM_SAMPLES_2, 
+                            MP_COP_PRESSURE,        MP_PERIOD_2, MP_NUM_SAMPLES_2 ]
 
     subscribeMPdata = [ MP_PFP_VALUE,           MP_PERIOD, MP_NUM_SAMPLES, 
                         MP_PTLT_TEMPERATURE,    MP_PERIOD, MP_NUM_SAMPLES,
@@ -269,6 +309,8 @@ def subscribe(TCPconn, subscribe_passfail):
     subscribeData = [CMD_SUBSCRIBE, 291, 0, 0, 0, 23, 0] + subscribeMPdata
     if 100 == subscribe_passfail:
         subscribeData = [CMD_SUBSCRIBE, 51, 0, 0, 0, 3, 0] + subscribeMPdata_run
+    elif 200 == subscribe_passfail:
+        subscribeData = [CMD_SUBSCRIBE, 39, 0, 0, 0, 2, 0] + subscribeMPdata_run2
     elif 0 == subscribe_passfail:
         subscribeData[subscribe_passfail] = 999
     elif 1 == subscribe_passfail:
@@ -283,20 +325,21 @@ def subscribe(TCPconn, subscribe_passfail):
     print(subscribeData)
     if 100 == subscribe_passfail:
         TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN, *subscribeData))
+    elif 200 == subscribe_passfail:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN2, *subscribeData))
     else:
         TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT, *subscribeData))
-    print('SUBSCRIBE DONE!')
+    print('SUBSCRIBE DONE! ', subscribe_passfail)
 
 
 def subscribeAck(TCPconn, subscribe_passfail):
     subAckData = TCPconn.recv(1024)
     retBytes = len(subAckData)
-    print('retBytes: ', retBytes)
-    mpErr = int((retBytes - struct.calcsize(SUBSCRIBE_ACK_HDR_STR_FMT))/struct.calcsize('=H'))
-    SUBSCRIBE_ACK_STR_FMT = SUBSCRIBE_ACK_HDR_STR_FMT+mpErr*'H'
-    subAckResponse = struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData)
-    print(struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData))
-    print('SUBSCRIBE ACK DONE!')
+    print('subscribeAck retBytes: ', retBytes)
+    if 8 < retBytes:
+        mpErr = int((retBytes - struct.calcsize(SUBSCRIBE_ACK_HDR_STR_FMT))/struct.calcsize('=H'))
+        SUBSCRIBE_ACK_STR_FMT = SUBSCRIBE_ACK_HDR_STR_FMT+mpErr*'H'
+        subAckResponse = struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData)
+        print(struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData))
+        print('SUBSCRIBE ACK DONE!')
 
-
-#def publish(UDPsock):
