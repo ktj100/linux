@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "barsm_functions.h"
 
@@ -71,6 +72,7 @@ child_pid_list *first_node, *nth_node, *tmp_toFree;
 static int32_t clientSocket_TCP = -1;
 struct sockaddr_in DestAddr_TCP;
 
+static pthread_t msgRcvThread;
 
 /* RETURN VALUE ENUM */
 enum e_return
@@ -87,6 +89,8 @@ bool check_modules(child_pid_list *tmp_node);
 bool aacmSetup(void);
 bool TCPsetup(void);
 
+static void* rcv_errMsgs(void * param);
+
 /* MAIN */
 int32_t main(void)
 {
@@ -94,6 +98,8 @@ int32_t main(void)
     int32_t dir_index;
     int32_t dirs_array_size;
     bool success = true;
+    int32_t rc;
+
 
     /* create linked list ... */
     errno = 0;
@@ -164,6 +170,19 @@ int32_t main(void)
                     if ( ! aacmSetup() )
                     {
                         success = false;
+                    }
+
+                    // start thread for recieving AACM messages
+                    if ( success )
+                    {
+                        errno = 0;
+                        rc = pthread_create(&msgRcvThread, NULL, rcv_errMsgs, NULL);
+                        if ( 0 != rc )
+                        {
+                            success = false;
+                            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)", \
+                                __FUNCTION__, __LINE__, errno, strerror(errno));
+                        }
                     }
                 }
             }
@@ -441,6 +460,25 @@ bool check_modules(child_pid_list *tmp_node)
 }
 
 
+bool restart_select(uint32_t pid)
+{
+    bool success = true;
+
+    child_pid_list tmp_node = first_node;
+
+    while ( NULL != tmp_node->next )
+    {
+        if ( pid == tmp_node->child_pid )
+        {
+            if ( ! restart_process(tmp_node) )
+            {
+                success = false;
+            }
+        }
+    }
+
+    return (success);
+}
 
 /* ================================================================================================
  * FUNCTION: void restart_process()
@@ -575,4 +613,20 @@ bool TCPsetup(void)
     }
 
     return success;
+}
+
+
+static void* rcv_errMsgs(void * UNUSED(param) )
+{
+    int32_t rc;
+
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+    }
+    
+    process_aacmToBarsm( clientSocket_TCP );
 }

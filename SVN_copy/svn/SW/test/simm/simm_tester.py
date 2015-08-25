@@ -16,11 +16,12 @@ if __name__ == '__main__':
     regAppAck_passfail  = 3     # 3
     regDataAck_passfail = 26    # 26
     sysInit_passfail    = 3     # 3
-    subscribe_passfail  = 76    # 76
+    subscribe_passfail  = 100    # 76
 
     sysLogFollow = log.logfollower()
+    lock = threading.Lock()
 
-    #consider using a stateMachine 
+    #BOOT PROCESSES
     while SimmTestResult != False:   
         subprocess.Popen("clear")
         time.sleep(1)
@@ -53,7 +54,7 @@ if __name__ == '__main__':
         if KeepMoving != False:
             # REGISTER APP
             #time.sleep(1)
-            simm.registerApp(TCPconn)
+            simm.registerApp(TCPconn, sVal)
             print("REGISTER APP: FINISHED RECEIVING")
             #time.sleep(1)
             sysLog = sysLogFollow.read()
@@ -163,19 +164,21 @@ if __name__ == '__main__':
                 #KeepMoving = False
                 subscribe_passfail = subscribe_passfail + 1
 
+
+        # RUN-TIME PROCESSING
         if KeepMoving != False:
         # RUN-TIME
             #cnt = 0
-            t = threading.Thread(group=None, target=simm.publishThread, name=None, args=(UDPsock,)).start()
-            #t = threading.Thread(group=None, target=simm.HeartBeatThread, name=None, args=(TCPconn)).start()
-            time.sleep(7)
-            simm.subscribe(TCPconn, 100)
-            time.sleep(1)
-            simm.subscribeAck(TCPconn, 100)
-            time.sleep(7)
-            simm.subscribe(TCPconn, 200)
-            time.sleep(1)
-            simm.subscribeAck(TCPconn, 200)
+            t = threading.Thread(group=None, target=simm.publishThread, name=None, args=(UDPsock, lock)).start()
+            t = threading.Thread(group=None, target=simm.HeartBeatThread, name=None, args=(TCPconn, lock)).start()
+#           time.sleep(7)
+#           simm.subscribe(TCPconn, 100)
+#           time.sleep(1)
+#           simm.subscribeAck(TCPconn, 100)
+#           time.sleep(7)
+#           simm.subscribe(TCPconn, 200)
+#           time.sleep(1)
+#           simm.subscribeAck(TCPconn, 200)
             alwaysRun = True
             while True == alwaysRun:
                 alwaysRun = True

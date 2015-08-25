@@ -85,7 +85,9 @@ bool process_registerApp( int32_t csocket , struct timespec goTime )
 
     //bool lessOneSecond = true;
     int32_t sendBytes = 0;
-    uint8_t *ptr; 
+    uint8_t *ptr;
+    int16_t val16;
+    int32_t val32; 
     uint8_t *msgLenPtr = 0;
     uint32_t actualLength = 0; 
     uint32_t secsToChk = 0;
@@ -93,7 +95,9 @@ bool process_registerApp( int32_t csocket , struct timespec goTime )
     struct timespec endTime;
     
     ptr = sendData;
-    remote_set16( ptr , CMD_REGISTER_APP);
+    val16 = CMD_REGISTER_APP;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , CMD_REGISTER_APP);
     ptr += CMD_ID;
 
     msgLenPtr = ptr;
@@ -102,10 +106,14 @@ bool process_registerApp( int32_t csocket , struct timespec goTime )
     *ptr = PETALINUX;
     ptr += HOST_OS;
 
-    remote_set32( ptr , getpid() );
+    val32 = getpid();
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , getpid() );
     ptr += SRC_PROC_ID;
 
-    remote_set32( ptr , 0);
+    val32 = 0;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , 0);
     ptr += SRC_APP_NAME;
 
     *ptr = MSG_SIZE;
@@ -173,6 +181,7 @@ bool process_registerApp_ack(int32_t csocket )
     uint8_t retData[ MSG_SIZE ];    // or whatever max is defined
     uint16_t appAckErr = 0;
     uint8_t *ptr;
+    //int16_t val16;
     int32_t actualLength = 0;
     struct pollfd myPoll[1];
     int32_t retPoll = 0;
@@ -208,14 +217,17 @@ bool process_registerApp_ack(int32_t csocket )
         {
             retBytes = recv(csocket, retData , MSG_SIZE , 0 );
 
-            command = remote_get16(retData);
+            //command = remote_get16(retData);
             ptr = retData;
+            memcpy(&command, ptr, sizeof(command));
             ptr += CMD_ID;
 
-            actualLength = remote_get16(ptr);
+            memcpy(&actualLength, ptr, sizeof(actualLength));
+            //actualLength = remote_get16(ptr);
             ptr += LENGTH;
-
-            appAckErr = remote_get16(ptr);
+e
+            memcpy(&appAckErr, ptr, sizeof(appAckErr));
+            //appAckErr = remote_get16(ptr);
             ptr += ERROR;
 
             calcLength = MSG_SIZE - CMD_ID - LENGTH;
@@ -360,13 +372,17 @@ bool process_registerData(int32_t csocket)
     bool success = true;
     int32_t sendBytes = 0;
     uint8_t *ptr;
+    int16_t val16;
+    int32_t val32;
     uint8_t *msgLenPtr;
     uint32_t actualLength = 0;
     uint8_t sendData[ MSG_SIZE ];
     //int32_t test_val = 0;
 
     ptr = sendData;
-    remote_set16( ptr , CMD_REGISTER_DATA);
+    val16 = CMD_REGISTER_APP;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , CMD_REGISTER_DATA);
     ptr += CMD_ID;
 
     msgLenPtr = ptr;
@@ -375,21 +391,44 @@ bool process_registerData(int32_t csocket)
     *ptr = PETALINUX;
     ptr += HOST_OS;
 
-    remote_set32( ptr , getpid() );
+    val32 = getpid();
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , getpid() );
     ptr += SRC_PROC_ID;
-    remote_set32( ptr , 1);
+
+    val32 = 1;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , 1);
     ptr += SRC_APP_NAME;
-    remote_set32( ptr , MAX_SIMM_SUBSCRIPTION);
+
+    val32 = MAX_SIMM_SUBSCRIPTION;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , MAX_SIMM_SUBSCRIPTION);
     ptr += NUM_MPS;
-    remote_set32( ptr , MP_PFP_VALUE);
+
+    val32 = MP_PFP_VALUE;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , MP_PFP_VALUE);
     ptr += PFP_VALUE;
-    remote_set32( ptr , MP_PTLT_TEMPERATURE);
+
+    val32 = MP_PTLT_TEMPERATURE;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , MP_PTLT_TEMPERATURE);
     ptr += PTLT_TEMPERATURE;
-    remote_set32( ptr , MP_PTRT_TEMPERATURE);
+
+    val32 = MP_PTRT_TEMPERATURE;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , MP_PTRT_TEMPERATURE);
     ptr += PTRT_TEMPERATURE;
-    remote_set32( ptr , MP_TCMP);
+
+    val32 = MP_TCMP;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , MP_TCMP);
     ptr += TCMP;
-    remote_set32( ptr , MP_COP_PRESSURE);
+
+    val32 = MP_COP_PRESSURE;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , MP_COP_PRESSURE);
     ptr += COP_PRESSURE;
 
 //  remote_set32( ptr , 8);
@@ -422,42 +461,114 @@ bool process_registerData(int32_t csocket)
 //  remote_set32( ptr , 17);
 //  ptr += CRANK_SQ;
 
-    remote_set32( ptr , MP_CAM_SEC_1);
+    val32 = MP_CAM_SEC_1;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_1;
-    remote_set32( ptr , MP_CAM_NSEC_1);
+
+    val32 = MP_CAM_NSEC_1;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_1;
-    remote_set32( ptr , MP_CAM_SEC_2);
+
+    val32 = MP_CAM_SEC_2;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_2;
-    remote_set32( ptr , MP_CAM_NSEC_2);
+
+    val32 = MP_CAM_NSEC_2;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_2;
-    remote_set32( ptr , MP_CAM_SEC_3);
+
+    val32 = MP_CAM_SEC_3;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_3;
-    remote_set32( ptr , MP_CAM_NSEC_3);
+
+    val32 = MP_CAM_NSEC_3;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_3;
-    remote_set32( ptr , MP_CAM_SEC_4);
+
+    val32 = MP_CAM_SEC_4;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_4;
-    remote_set32( ptr , MP_CAM_NSEC_4);
+
+    val32 = MP_CAM_NSEC_4;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_4;
-    remote_set32( ptr , MP_CAM_SEC_5);
+
+    val32 = MP_CAM_SEC_5;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_5;
-    remote_set32( ptr , MP_CAM_NSEC_5);
+
+    val32 = MP_CAM_NSEC_5;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_5;
-    remote_set32( ptr , MP_CAM_SEC_6);
+
+    val32 = MP_CAM_SEC_6;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_6;
-    remote_set32( ptr , MP_CAM_NSEC_6);
+
+    val32 = MP_CAM_NSEC_6;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_6;
-    remote_set32( ptr , MP_CAM_SEC_7);
+
+    val32 = MP_CAM_SEC_7;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_7;
-    remote_set32( ptr , MP_CAM_NSEC_7);
+
+    val32 = MP_CAM_NSEC_7;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_7;
-    remote_set32( ptr , MP_CAM_SEC_8);
+
+    val32 = MP_CAM_SEC_8;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_8;
-    remote_set32( ptr , MP_CAM_NSEC_8);
+
+    val32 = MP_CAM_NSEC_8;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_8;
-    remote_set32( ptr , MP_CAM_SEC_9);
+
+    val32 = MP_CAM_SEC_9;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_SEC_9;
-    remote_set32( ptr , MP_CAM_NSEC_9);
+
+    val32 = MP_CAM_NSEC_9;
+    memcpy(ptr, &val32, sizeof(val32));
     ptr += CAM_NSEC_9;
+
+//  remote_set32( ptr , MP_CAM_SEC_1);
+//  ptr += CAM_SEC_1;
+//  remote_set32( ptr , MP_CAM_NSEC_1);
+//  ptr += CAM_NSEC_1;
+//  remote_set32( ptr , MP_CAM_SEC_2);
+//  ptr += CAM_SEC_2;
+//  remote_set32( ptr , MP_CAM_NSEC_2);
+//  ptr += CAM_NSEC_2;
+//  remote_set32( ptr , MP_CAM_SEC_3);
+//  ptr += CAM_SEC_3;
+//  remote_set32( ptr , MP_CAM_NSEC_3);
+//  ptr += CAM_NSEC_3;
+//  remote_set32( ptr , MP_CAM_SEC_4);
+//  ptr += CAM_SEC_4;
+//  remote_set32( ptr , MP_CAM_NSEC_4);
+//  ptr += CAM_NSEC_4;
+//  remote_set32( ptr , MP_CAM_SEC_5);
+//  ptr += CAM_SEC_5;
+//  remote_set32( ptr , MP_CAM_NSEC_5);
+//  ptr += CAM_NSEC_5;
+//  remote_set32( ptr , MP_CAM_SEC_6);
+//  ptr += CAM_SEC_6;
+//  remote_set32( ptr , MP_CAM_NSEC_6);
+//  ptr += CAM_NSEC_6;
+//  remote_set32( ptr , MP_CAM_SEC_7);
+//  ptr += CAM_SEC_7;
+//  remote_set32( ptr , MP_CAM_NSEC_7);
+//  ptr += CAM_NSEC_7;
+//  remote_set32( ptr , MP_CAM_SEC_8);
+//  ptr += CAM_SEC_8;
+//  remote_set32( ptr , MP_CAM_NSEC_8);
+//  ptr += CAM_NSEC_8;
+//  remote_set32( ptr , MP_CAM_SEC_9);
+//  ptr += CAM_SEC_9;
+//  remote_set32( ptr , MP_CAM_NSEC_9);
+//  ptr += CAM_NSEC_9;
     
 //  remote_set32( ptr , 20);
 //  ptr += TURBO_REAL;
@@ -651,14 +762,17 @@ bool process_registerData_ack(int32_t csocket )
         {
             retBytes = recv( csocket , retData , MSG_SIZE , 0 );
 
-            command = remote_get16(retData);
+            //command = remote_get16(retData);
             ptr = retData;
+            memcpy(&command, ptr, sizeof(command));
             ptr += CMD_ID;
 
-            actualLength = remote_get16(ptr);
+            memcpy(&actualLength, ptr, sizeof(actualLength));
+            //actualLength = remote_get16(ptr);
             ptr += LENGTH;
 
-            genErr = remote_get16(ptr);
+            memcpy(&genErr, ptr, sizeof(genErr));
+            //genErr = remote_get16(ptr);
             if (0 != genErr) 
             {
                 syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! genErr",__FUNCTION__, __LINE__);
@@ -666,15 +780,17 @@ bool process_registerData_ack(int32_t csocket )
             }
             ptr += ERROR;
 
-            pfpErr = remote_get16(ptr);
-                if (0 != pfpErr) 
+            memcpy(&pfpErr, ptr, sizeof(pfpErr));
+            //pfpErr = remote_get16(ptr);
+            if (0 != pfpErr) 
             {
                 syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! pfpErr",__FUNCTION__, __LINE__);
                 errCnt++;
             }
             ptr += ERROR_PFP_VALUE;
 
-            ptltErr = remote_get16(ptr);
+            memcpy(&ptltErr, ptr, sizeof(ptltErr));
+            //ptltErr = remote_get16(ptr);
             if (0 != ptltErr) 
             {
                 syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! ptltErr",__FUNCTION__, __LINE__);
@@ -682,7 +798,8 @@ bool process_registerData_ack(int32_t csocket )
             }
             ptr += ERROR_PTLT_TEMPERATURE;
 
-            ptrtErr = remote_get16(ptr);
+            memcpy(&ptrtErr, ptr, sizeof(ptrtErr));
+            //ptrtErr = remote_get16(ptr);
             if (0 != ptrtErr) 
             {
                 syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! ptrtErr",__FUNCTION__, __LINE__);
@@ -690,7 +807,8 @@ bool process_registerData_ack(int32_t csocket )
             }
             ptr += ERROR_PTRT_TEMPERATURE;
 
-            tcmpErr = remote_get16(ptr);
+            memcpy(&tcmpErr, ptr, sizeof(tcmpErr));
+            //tcmpErr = remote_get16(ptr);
             if (0 != tcmpErr) 
             {
                 syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! tcmpErr",__FUNCTION__, __LINE__);
@@ -698,7 +816,8 @@ bool process_registerData_ack(int32_t csocket )
             }
             ptr += ERROR_TCMP;
 
-            copErr = remote_get16(ptr);
+            memcpy(&copErr, ptr, sizeof(copErr));
+            //copErr = remote_get16(ptr);
             if (0 != copErr) 
             {
                 syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! copErr",__FUNCTION__, __LINE__);
@@ -708,7 +827,8 @@ bool process_registerData_ack(int32_t csocket )
 
             for( i = 0 ; i < MAX_TIMESTAMPS ; i++ )
             {
-                camSecErr[i] = remote_get16(ptr);
+                memcpy(&camSecErr[i], ptr, sizeof(camSecErr[i]));
+                //camSecErr[i] = remote_get16(ptr);
                 if (0 != camSecErr[i]) 
                 {
                     syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! camSecErr%d",__FUNCTION__, __LINE__, i);
@@ -716,7 +836,8 @@ bool process_registerData_ack(int32_t csocket )
                 }
                 ptr += ERROR_CAM_SEC_1;
 
-                camNSecErr[i] = remote_get16(ptr);
+                memcpy(&camNSecErr[i], ptr, sizeof(camNSecErr[i]));
+                //camNSecErr[i] = remote_get16(ptr);
                 if (0 != camNSecErr[i]) 
                 {
                     syslog(LOG_ERR, "%s:%d REGISTER_DATA_ACK MP ERROR! camNSecErr%d",__FUNCTION__, __LINE__, i);
@@ -894,6 +1015,7 @@ bool process_openUDP( int32_t csocket , struct sockaddr_in addr_in )
 
     int32_t sendBytes = 0;
     uint8_t *ptr; 
+    int16_t val16;
     uint8_t *msgLenPtr;
     uint32_t actualLength = 0;
     uint8_t sendData[ MSG_SIZE ];
@@ -901,7 +1023,9 @@ bool process_openUDP( int32_t csocket , struct sockaddr_in addr_in )
     socklen_t UDPaddr_size;
 
     ptr = sendData;
-    remote_set16( ptr , CMD_OPEN);
+    val16 = CMD_OPEN;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , CMD_OPEN);
     ptr += CMD_ID;
 
     msgLenPtr = ptr;
@@ -998,11 +1122,13 @@ bool process_sysInit( int32_t csocket )
                 toRcvUDP_size = sizeof(toRcvUDP);
                 retBytes = recvfrom(csocket , retData , MSG_SIZE , 0 , (struct sockaddr *)&toRcvUDP , &toRcvUDP_size);
 
-                command = remote_get16(retData);
+                //command = remote_get16(retData);
                 ptr = retData;
+                memcpy(&command, ptr, sizeof(command));
                 ptr += CMD_ID;
 
-                actualLength = remote_get16(ptr);
+                memcpy(&actualLength, ptr, sizeof(actualLength));
+                //actualLength = remote_get16(ptr);
                 ptr += LENGTH;
 
                 calcLength = MSG_SIZE - CMD_ID - LENGTH; // shoudl be zero
@@ -1074,6 +1200,8 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t top
 
     //bool success = true;
     uint8_t *ptr; 
+    int16_t val16;
+    int32_t val32;
     uint8_t *msgLenPtr; 
     uint8_t sendData[ MAXBUFSIZE ];
     uint16_t actualLength = 0;
@@ -1086,7 +1214,9 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t top
 
 
     ptr = sendData;
-    remote_set16( ptr , CMD_PUBLISH);
+    val16 = CMD_PUBLISH;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , CMD_PUBLISH);
     ptr += CMD_ID;
     cntBytes += CMD_ID;
 
@@ -1095,17 +1225,23 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t top
     cntBytes += LENGTH;
 
     // this will change ...
-    remote_set32( ptr , publishMe[ topic_to_pub ].topic_id);
+    val32 = publishMe[ topic_to_pub ].topic_id;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , publishMe[ topic_to_pub ].topic_id);
     ptr += TOPIC_ID;
     cntBytes += TOPIC_ID;
 
     // this will change ...
-    remote_set32( ptr , publishMe[ topic_to_pub ].numMPs);
+    val32 = publishMe[ topic_to_pub ].numMPs;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , publishMe[ topic_to_pub ].numMPs);
     ptr += NUM_MPS;
     cntBytes += NUM_MPS;
 
     // ???
-    remote_set16( ptr , 0);
+    val16 = 0;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , 0);
     ptr += SEQ_NUM;
     cntBytes += SEQ_NUM;
 
@@ -1113,7 +1249,9 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t top
     for( i = 0 ; i < publishMe[ topic_to_pub ].numMPs ; i++ )
     {
         // printf("1 FROM PUBLISH PROCESS, publishMe[ %d ].topicSubscription[ %d ].mp: %d\n", topic_to_pub, i, publishMe[ topic_to_pub ].topicSubscription[ i ].mp);
-        remote_set32( ptr , publishMe[ topic_to_pub ].topicSubscription[ i ].mp);
+        val32 = publishMe[ topic_to_pub ].topicSubscription[ i ].mp;
+        memcpy(ptr, &val32, sizeof(val32));
+        //remote_set32( ptr , publishMe[ topic_to_pub ].topicSubscription[ i ].mp);
         ptr += MP;
         cntBytes += MP;
         // printf("2 ROM PUBLISH PROCESS, publishMe[ %d ].topicSubscription[ %d ].numSamples: %d\n", topic_to_pub, i, publishMe[ topic_to_pub ].topicSubscription[ i ].numSamples);
@@ -1122,97 +1260,143 @@ void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t top
             // logicals
             if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_PFP_VALUE )
             {
-                remote_set32(ptr, pfp_values[j]);
+                val32 = pfp_values[j];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, pfp_values[j]);
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_PTLT_TEMPERATURE )
             {
-                remote_set32(ptr, ptlt_values[j]);
+                val32 = pfp_values[j];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, ptlt_values[j]);
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_PTRT_TEMPERATURE )
             {
-                remote_set32(ptr, ptrt_values[j]);
+                val32 = pfp_values[j];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, ptrt_values[j]);
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_TCMP )
             {
-                remote_set32(ptr, tcmp_values[j]);
+                val32 = pfp_values[j];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, tcmp_values[j]);
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_COP_PRESSURE )
             {
-                remote_set32(ptr, cop_values[j]);
+                val32 = pfp_values[j];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cop_values[j]);
             }
 
             // timestamps
             else if  (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_1)
             {
-                remote_set32(ptr, cam_secs_chk[j*9+0]);//cam_secs_chk[i*9+0];
+                val32 = cam_secs_chk[j*9+0];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+0]);//cam_secs_chk[i*9+0];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_2 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+1]);//cam_secs_chk[i*9+1];
+                val32 = cam_secs_chk[j*9+1];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+1]);//cam_secs_chk[i*9+1];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_3 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+2]);//cam_secs_chk[i*9+2];
+                val32 = cam_secs_chk[j*9+2];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+2]);//cam_secs_chk[i*9+2];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_4 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+3]);//cam_secs_chk[i*9+3];
+                val32 = cam_secs_chk[j*9+3];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+3]);//cam_secs_chk[i*9+3];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_5 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+4]);//cam_secs_chk[i*9+4];
+                val32 = cam_secs_chk[j*9+4];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+4]);//cam_secs_chk[i*9+4];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_6 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+5]);//cam_secs_chk[i*9+5];
+                val32 = cam_secs_chk[j*9+5];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+5]);//cam_secs_chk[i*9+5];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_7 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+6]);//cam_secs_chk[i*9+6];
+                val32 = cam_secs_chk[j*9+6];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+6]);//cam_secs_chk[i*9+6];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_8 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+7]);//cam_secs_chk[i*9+7];
+                val32 = cam_secs_chk[j*9+7];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+7]);//cam_secs_chk[i*9+7];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_SEC_9 )
             {
-                remote_set32(ptr, cam_secs_chk[j*9+8]);//cam_secs_chk[i*9+8];
+                val32 = cam_secs_chk[j*9+8];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_secs_chk[j*9+8]);//cam_secs_chk[i*9+8];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_1)
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+0]);//cam_nsecs_chk[i*9+0];
+                val32 = cam_nsecs_chk[j*9+0];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+0]);//cam_nsecs_chk[i*9+0];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_2 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+1]);//cam_nsecs_chk[i*9+1];
+                val32 = cam_nsecs_chk[j*9+1];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+1]);//cam_nsecs_chk[i*9+1];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_3 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+2]);//cam_nsecs_chk[i*9+2];
+                val32 = cam_nsecs_chk[j*9+2];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+2]);//cam_nsecs_chk[i*9+2];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_4 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+3]);//cam_nsecs_chk[i*9+3];
+                val32 = cam_nsecs_chk[j*9+3];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+3]);//cam_nsecs_chk[i*9+3];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_5 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+4]);//cam_nsecs_chk[i*9+4];
+                val32 = cam_nsecs_chk[j*9+4];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+4]);//cam_nsecs_chk[i*9+4];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_6 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+5]);//cam_nsecs_chk[i*9+5];
+                val32 = cam_nsecs_chk[j*9+5];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+5]);//cam_nsecs_chk[i*9+5];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_7 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+6]);//cam_nsecs_chk[i*9+6];
+                val32 = cam_nsecs_chk[j*9+6];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+6]);//cam_nsecs_chk[i*9+6];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_8 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+7]);//cam_nsecs_chk[i*9+7];
+                val32 = cam_nsecs_chk[j*9+7];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+7]);//cam_nsecs_chk[i*9+7];
             }
             else if (publishMe[ topic_to_pub ].topicSubscription[ i ].mp == MP_CAM_NSEC_9 )
             {
-                remote_set32(ptr, cam_nsecs_chk[j*9+8]);//cam_nsecs_chk[i*9+8]; 
+                val32 = cam_nsecs_chk[j*9+8];
+                memcpy(ptr, &val32, sizeof(val32));
+                //remote_set32(ptr, cam_nsecs_chk[j*9+8]);//cam_nsecs_chk[i*9+8]; 
             }
             // else if ... else if ... else if ... oh ... wait ... I'm done already? 
             ptr += MP_VAL;
@@ -1326,17 +1510,17 @@ bool process_subscribe( int32_t csocket )
     } 
     else
     {
-        if (myPoll[0].revents && POLLIN)
+        if (myPoll[0].revents & POLLIN)
         {
             //toRcvUDP_size = sizeof(toRcvUDP);
             retBytes = recv(csocket , retData , MAXBUFSIZE , 0 );
 
-            command = remote_get16(retData);
             ptr = retData;
+            memcpy(&command, ptr, sizeof(command));
             ptr += CMD_ID;
-            cnt_retBytes += CMD_ID;
 
-            actualLength = remote_get16(ptr);
+            memcpy(&actualLength, ptr, sizeof(actualLength));
+            //actualLength = remote_get16(ptr);
             ptr += LENGTH;
             cnt_retBytes += LENGTH;
 
@@ -1348,11 +1532,13 @@ bool process_subscribe( int32_t csocket )
             ptr += SRC_PROC_ID;
             cnt_retBytes += SRC_PROC_ID;
 
-            src_app_name = remote_get32(ptr);   // need it
+            memcpy(&src_app_name, ptr, sizeof(src_app_name));
+            //src_app_name = remote_get32(ptr);   // need it
             ptr += SRC_APP_NAME;
             cnt_retBytes += SRC_APP_NAME;
 
-            num_mps = remote_get32(ptr);        // need it
+            memcpy(&num_mps, ptr, sizeof(num_mps));
+            //num_mps = remote_get32(ptr);        // need it
             ptr += NUM_MPS;
             cnt_retBytes += NUM_MPS;
 
@@ -1381,15 +1567,18 @@ bool process_subscribe( int32_t csocket )
 
             for( i = 0 ; i < MPnum ; i++ )
             {
-                sub_mp[i] = remote_get32(ptr);
+                memcpy(&sub_mp[i], ptr, sizeof(sub_mp[i]));
+                //sub_mp[i] = remote_get32(ptr);
                 ptr += MP;
                 cnt_retBytes += MP;
 
-                sub_mpPer[i] = remote_get32(ptr);
+                memcpy(&sub_mpPer[i], ptr, sizeof(sub_mpPer[i]));
+                //sub_mpPer[i] = remote_get32(ptr);
                 ptr += MP_PER;
                 cnt_retBytes += MP_PER;
 
-                sub_mpNumSamples[i] = remote_get32(ptr);
+                memcpy(&sub_mpNumSamples[i], ptr, sizeof(sub_mpNumSamples[i]));
+                //sub_mpNumSamples[i] = remote_get32(ptr);
                 ptr += MP_NUM_SAMPLES;
                 cnt_retBytes += MP_NUM_SAMPLES;
             }
@@ -1463,6 +1652,7 @@ bool process_subscribe_ack( int32_t csocket )
     };
 
     uint8_t *ptr , *msgLenPtr, *msgErrPtr, *topicIDptr;
+    int16_t val16;
     uint8_t sendData[ MAXBUFSIZE ];
     uint16_t actualLength;
     //socklen_t toSendUDP_size;
@@ -1474,7 +1664,9 @@ bool process_subscribe_ack( int32_t csocket )
     int16_t genErr      = GE_SUCCESS;
 
     ptr = sendData;
-    remote_set16( ptr , CMD_SUBSCRIBE_ACK );
+    val16 = CMD_SUBSCRIBE_ACK;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , CMD_SUBSCRIBE_ACK );
     ptr += CMD_ID;
     cntBytes += CMD_ID;
 
@@ -1494,11 +1686,15 @@ bool process_subscribe_ack( int32_t csocket )
     {
         if ( true == publishMe[ currentTopic ].topicSubscription[ i ].valid )
         {
-            remote_set16( ptr , GE_SUCCESS);
+            val16 = GE_SUCCESS;
+            memcpy(ptr, &val16, sizeof(val16));
+            //remote_set16( ptr , GE_SUCCESS);
         }
         else
         {
-            remote_set16( ptr , GE_INVALID_MP_NUMBER);
+            val16 = GE_INVALID_MP_NUMBER;
+            memcpy(ptr, &val16, sizeof(val16));
+            //remote_set16( ptr , GE_INVALID_MP_NUMBER);
             genErr = GE_INVALID_MP_NUMBER;
             success = false;
         }
@@ -1556,7 +1752,7 @@ bool process_HeartBeat( int32_t csocket, int32_t HeartBeat )
 {
     bool success = true;
 
-    enum subscribe_ack_params
+    enum heartbeat_params
     {
         CMD_ID                  = 2,
         LENGTH                  = 2,
@@ -1567,6 +1763,8 @@ bool process_HeartBeat( int32_t csocket, int32_t HeartBeat )
     };
 
     uint8_t *ptr;
+    int16_t val16;
+    int32_t val32;
     uint8_t *msgLenPtr;
     uint8_t sendData[ MSG_SIZE ];
     uint16_t actualLength;
@@ -1574,7 +1772,9 @@ bool process_HeartBeat( int32_t csocket, int32_t HeartBeat )
     int32_t sendBytes   = 0;
 
     ptr = sendData;
-    remote_set16( ptr , CMD_HEARTBEAT );
+    val16 = CMD_HEARTBEAT;
+    memcpy(ptr, &val16, sizeof(val16));
+    //remote_set16( ptr , CMD_HEARTBEAT );
     ptr += CMD_ID;
     cntBytes += CMD_ID;
 
@@ -1582,7 +1782,9 @@ bool process_HeartBeat( int32_t csocket, int32_t HeartBeat )
     ptr += LENGTH;
     cntBytes += LENGTH;
 
-    remote_set32( ptr , HeartBeat );
+    val32 = HeartBeat;
+    memcpy(ptr, &val32, sizeof(val32));
+    //remote_set32( ptr , HeartBeat );
     ptr += HRTBT_CNT;
     cntBytes += HRTBT_CNT;
 
@@ -1596,7 +1798,7 @@ bool process_HeartBeat( int32_t csocket, int32_t HeartBeat )
         success = false;
         if ( cntBytes != sendBytes )
         {
-            syslog(LOG_ERR, "%s:%d ERROR! insufficient message data %u != %u ", __FUNCTION__, __LINE__, sendBytes, cntBytes);
+            syslog(LOG_ERR, "%s:%d ERROR! heartbeat, insufficient message data %u != %u ", __FUNCTION__, __LINE__, sendBytes, cntBytes);
         }
     }
 
@@ -1741,6 +1943,7 @@ bool buildPublishData(void)
                 memset(publishMe[ currentTopic ].topicSubscription[ k ].mp_val_float, 0, sizeof(float)*sub_mpNumSamples[ k ]);
             }
 
+            // since this function is only called once per subscribe, this is not correct.  
             for ( i = 0 ; i < sub_mpNumSamples[ k ] ; i++ )
             {
                 if (publishMe[ currentTopic ].topicSubscription[ k ].mp == MP_PFP_VALUE )
@@ -1890,6 +2093,7 @@ bool buildPublishData(void)
         }
 
         // determines valid and invalid MPs based on (1) if MP is schedulable and (2) number of samples and period
+        // (0 == numMPsMatching) should be (numMPs == numMPsMatching), right?
         if ( ( 0 == numMPsMatching ) || ( 0 == numSamplesToChk ) )   
         {
             publishMe[ currentTopic ].topicSubscription[ k ].valid = false;
@@ -1934,7 +2138,7 @@ bool buildPublishData(void)
             publishMe[ currentTopic ].topic_id  = -1;
         }
     }
-   
+
     prevPeriodChk  = publishMe[ currentTopic ].topicSubscription[ 0 ].period;
 
     return success;

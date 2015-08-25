@@ -94,8 +94,8 @@ MP_COP_PRESSURE                     = 1049
 
 MP_PERIOD                           = 2000
 MP_NUM_SAMPLES                      = 2
-MP_PERIOD_1                         = 1000
-MP_NUM_SAMPLES_1                    = 1
+MP_PERIOD_1                         = 5000
+MP_NUM_SAMPLES_1                    = 2
 MP_PERIOD_2                         = 3000
 MP_NUM_SAMPLES_2                    = 3
 
@@ -133,9 +133,11 @@ def startSimm():
     #subprocess.Popen("valgrind ./simm --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A") #vs. call vs. ?
     subprocess.Popen("./simm_app") #vs. call vs. ?
 
-def publishThread(UDPsock):
+def publishThread(UDPsock, lock):
     while 1:
+        lock.acquire()
         pubMsg, SenderAddr = UDPsock.recvfrom(1024)
+        lock.release()
         retBytes = len(pubMsg)
         print('publishThread retBytes: ', retBytes)
         if 8 < retBytes:
@@ -144,15 +146,19 @@ def publishThread(UDPsock):
             print(struct.unpack(PUBLISH_STR_FMT, pubMsg))
             #print(SenderAddr)
             print('PYTHON: PUBLISH DONE!')
+        
 
-def HeartBeatThread(TCPconn):
+def HeartBeatThread(TCPconn, lock):
     while 1:
+        #lock.acquire()
         hrtBtData = TCPconn.recv(1024)
+        #lock.release()
         retBytes = len(hrtBtData)
         print('HeartBeatThread retBytes: ', retBytes)
         if 8 == retBytes:
             print(struct.unpack(HEARTBEAT_STR_FMT , hrtBtData))
             print('HEARTBEAT!')
+        
 
 def TCPsetup():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -174,6 +180,7 @@ def TCPsetup():
     p = multiprocessing.Process(target=startSimm)
     p.start()
     (TCPconn, TCPaddr) = s.accept()
+    print('DONE WITH TCP SETUP')
     return TCPconn, s
 
 def UDPsetup():
@@ -183,15 +190,18 @@ def UDPsetup():
     return s
 
 
-def registerApp(TCPconn):
-    #selectList = [toSelect]
+def registerApp(TCPconn, sVal):
+    selectList = [sVal]
     #print('BEFORE SELECT?')
-    #inputReady = select.select(selectList, [], [])
-    #if toSelect == inputReady:  
+#   inputReady = select.select(selectList, [], [],)
+#   for s in inputReady :
+#       if s == sVal:
+            #if toSelect == inputReady:  
+    print('GOT REGISTER APP')
     regAppData = TCPconn.recv(1024)
     retBytes = len(regAppData)
-    #print(struct.unpack(REGISTER_APP_STR_FMT , regAppData))
-    #print('REGISTER APP DONE!')
+    print(struct.unpack(REGISTER_APP_STR_FMT , regAppData))
+    print('REGISTER APP DONE!')
 
 
 def registerAppAck(TCPconn, regAppAck_passfail):
@@ -266,9 +276,9 @@ def sysInit(UDPsock, SenderAddr, sysInit_passfail):
 
 
 def subscribe(TCPconn, subscribe_passfail):
-    subscribeMPdata_run = [ MP_PFP_VALUE,           MP_PERIOD_1, MP_NUM_SAMPLES_1, 
-                            MP_PTLT_TEMPERATURE,    MP_PERIOD_1, MP_NUM_SAMPLES_1,
-                            MP_PTRT_TEMPERATURE,    MP_PERIOD_1, MP_NUM_SAMPLES_1 ]
+    subscribeMPdata_run = [ MP_PFP_VALUE,       MP_PERIOD_1, MP_NUM_SAMPLES_1, 
+                            MP_CAM_SEC_1,       MP_PERIOD_1, MP_NUM_SAMPLES_1,
+                            MP_CAM_SEC_2,       MP_PERIOD_1, MP_NUM_SAMPLES_1 ]
 
     subscribeMPdata_run2 = [ MP_TCMP,               MP_PERIOD_2, MP_NUM_SAMPLES_2, 
                             MP_COP_PRESSURE,        MP_PERIOD_2, MP_NUM_SAMPLES_2 ]

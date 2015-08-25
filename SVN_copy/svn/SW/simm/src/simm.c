@@ -61,6 +61,7 @@ static int32_t clientSocket_TCP = -1;
 static int32_t clientSocket_UDP = -1;
 struct sockaddr_in DestAddr_TCP;
 struct sockaddr_in DestAddr_UDP;
+struct in_addr localInterface;
 struct sockaddr_in DestAddr_SUBSCRIBE;
 int32_t Logicals[33];
 int32_t TimeStamp_s[9];
@@ -180,6 +181,7 @@ static bool simm_init(void) // 2.1
         success = TCPsetup();
     }
 
+    //sleep(10);
     if (false != success)
     {
         success = process_registerApp( clientSocket_TCP , goStart );
@@ -401,13 +403,13 @@ static void* simm_runtime_subscribe(void * UNUSED(param) )
 static void* simm_runtime_publish(void * UNUSED(param) )
 {
     int32_t rc, cntPublishes, i;
-    //int32_t hrtBt;
+    int32_t hrtBt;
     static int32_t numberToPublish;
     bool success = true;
     bool timeHasElapsed = true;
     struct timespec sec_begin, sec_end;
 
-    //hrtBt = 0;
+    hrtBt = 0;
 
     rc = pthread_detach( pthread_self() );
     if (rc != 0)
@@ -430,10 +432,10 @@ static void* simm_runtime_publish(void * UNUSED(param) )
         }
         else
         {   
-            //hrtBt++;
+            hrtBt++;
             pthread_mutex_lock(&pubMutex);
 
-            //process_HeartBeat( clientSocket_TCP, hrtBt );
+            process_HeartBeat( clientSocket_TCP, hrtBt );
             
             cntPublishes = 0;
             for( i = 0 ; i < num_topics_total ; i++ )
@@ -535,10 +537,10 @@ bool success = true;
 bool UDPsetup(void) 
 {
     bool success        = true;
+    char loopch;
 
     // multicast - still 100% on how this struct, setsockopt,  and IP_ADD_MEMBERSHIP tie together.  
     //struct ip_mreq mreq;
-
     if (true == success)
     {
         errno = 0;
@@ -547,7 +549,7 @@ bool UDPsetup(void)
         {
             //printf("ERROR WITH UDP SOCKET\n");
             success = false;
-            syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) ", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+            syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - configure socket failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
         }
     }
 
@@ -563,6 +565,25 @@ bool UDPsetup(void)
         memset(&(DestAddr_UDP.sin_zero), '\0', 8);                  // zero the rest of the struct
         //sizeof(DestAddr_UDP.sin_zero)
     }
+
+    // disable loopback, i.e. don't receive sent packets.  
+    loopch  = 0;
+    errno   = 0;
+    if (setsockopt(clientSocket_UDP, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch)) < 0) 
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - disbale loopback failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+    }
+
+    // set local interface for multicast
+    // this seems redundant
+//  errno = 0;
+//  if(setsockopt(clientSocket_UDP, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0)
+//  {
+//          success = false;
+//          syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - set local interface failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+//  }
+
     return success;
 }
 
