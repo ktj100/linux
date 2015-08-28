@@ -41,25 +41,25 @@ struct child_pid_list_struct
     int32_t alive;
     struct child_pid_list_struct *next;
 };
+
 typedef struct child_pid_list_struct child_pid_list;
 
 /* From barsm_functions.c */
-bool TCPsetup(int32_t csocket, struct sockaddr_in destAddr);
-bool UDPsetup(int32_t csocket, struct sockaddr_in destAddr, int32_t udpPort , char *udpAddr);
-
 bool send_barsmToAacmInit(int32_t csocket);
 bool receive_barsmToAacmInitAck(int32_t csocket);
-
-void assign_procName(char * pName);
-char rand_letter(void);
-
-bool start_process(child_pid_list *tmp_node);
-
-bool process_sysInit(int32_t csocket);
-bool send_barsmToAacmProcesses(int32_t csocket, child_pid_list *tmp_node, const char *dirs[], char barsm_name[4]);
-
-bool check_modules(child_pid_list *tmp_node);
-
 void receive_aacmToBarsm(int32_t csocket, child_pid_list *tmp_node);
 void send_aacmToBarsmAck(int32_t csocket);
+bool process_sysInit(int32_t csocket);
+void assign_procName(char * pName);
+char rand_letter(void);
+bool send_barsmToAacmProcesses(int32_t csocket, child_pid_list *tmp_node, const char *dirs[], char barsm_name[4]);
+
+/* From barsm.c */
+int32_t launch_itemsInDir( const char *directory );
+bool start_process(child_pid_list *tmp_node);
+bool check_modules(child_pid_list *tmp_node);
 bool start_select(pid_t pid, child_pid_list *tmp_node);
+bool aacmSetup(void);
+bool TCPsetup(int32_t csocket, struct sockaddr_in destAddr);
+bool UDPsetup(int32_t csocket, struct sockaddr_in destAddr, int32_t udpPort , char *udpAddr);
+void* rcv_errMsgs(void *param);

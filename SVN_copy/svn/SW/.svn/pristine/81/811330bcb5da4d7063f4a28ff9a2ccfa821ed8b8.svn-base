@@ -26,47 +26,32 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include <sys/stat.h>
 
 #include "barsm_functions.h"
 
-
-/****************
-* PRIVATE CONSTANTS
-****************/
 #define MAX_LAUNCH_ATTEMPTS    5
-/* LAUNCH_CHECK_PERIOD is the amount of time given between status checks on a 
- * module/appplication immediately after launch. Recommmended: 5 */
+/* LAUNCH_CHECK_PERIOD must equal five to meet system requirements */
 #define LAUNCH_CHECK_PERIOD    5
 /* START_ENSURE_DELAY must be greater than any possible amount of time that may 
  * pass between a child process being forked and the execl() command completion 
- * in the child process. Recommmended: 4 */
+ * in the child process. */
 #define START_ENSURE_DELAY     4
 
 char UDPAddress[] = "127.0.0.1";
 int UDPPort =  4096;
 
-/* THREADS */
-static pthread_t msgRcvThread;
-
-/* RETURN VALUE ENUMS */
-enum e_return
-{
-    terminalError = -1,
-    dirIsEmpty    = 1,
-    normal        = 0,
-};
-
-/****************
-* GLOBALS
-****************/
-child_pid_list *first_node, *nth_node, *tmp_toFree;
+/* LINKED LIST */
+child_pid_list *first_node, *nth_node;
+child_pid_list *tmp_toFree;
 
 static int32_t clientSocket_TCP = -1;
 static int32_t clientSocket_UDP = -1;
 struct sockaddr_in DestAddr_TCP;
 struct sockaddr_in DestAddr_UDP;
 
+static pthread_t msgRcvThread;
+
+/* DIRECTORIES TO OPEN/READ */
 const char *dirs[] = 
 {
     "/opt/rc360/system/",
@@ -76,12 +61,13 @@ const char *dirs[] =
     "/opt/rc360/apps/TPA/"
 };
 
-/****************
-* PRIVATE FUNCTION PROTOTYPES
-****************/
-static bool aacmSetup(void);
-static int32_t launch_itemsInDir( const char *directory );
-static void* rcv_errMsgs(void *param);
+/* RETURN VALUE ENUM */
+enum e_return
+{
+    terminalError = -1,
+    dirIsEmpty    = 1,
+    normal        = 0,
+};
 
 
 
@@ -101,30 +87,13 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
     int32_t dir_index;
     int32_t dirs_array_size;
     bool success = true;
-    int32_t rc, i;
+    int32_t rc;
     char barsm_name[4];
-
-    /* CORRECT DIRECTORY STRUCTURE REQUIRED */
-    for ( i = 0; i < 5; i++ )
-    {
-        errno = 0;
-        if ( -1 == mkdir(dirs[i], 0) )
-        {
-            if ( EEXIST != errno )
-            {
-                syslog(LOG_ERR, "%s:%d ERROR: Directory structure incorrect! (%d: %s)", \
-                    __FUNCTION__, __LINE__, errno, strerror(errno));
-                printf("ERROR: Directory structure incorrect! (%d: %s) \n", \
-                    errno, strerror(errno));
-                success = false;
-            }
-        }
-    }
 
     /* create linked list ... */
     errno = 0;
     first_node = (child_pid_list *)malloc(sizeof(child_pid_list));
-    if ( 0 != errno && success )
+    if ( 0 != errno )
     {
         syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' when creating 'first_node'! (%d: %s)", \
             __FUNCTION__, __LINE__, errno, strerror(errno));
@@ -133,28 +102,25 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
         success = false;
     }
 
-    if ( success )
+    if ( NULL != first_node )
     {
-        if ( NULL != first_node )
-        {
-            first_node->next = NULL;
-            nth_node = first_node;
-            printf("FIRST NODE: %p \n" , (void *)first_node ); 
-            printf("NEXT NODE: %p \n" , (void *)first_node->next );
-        }
-        else
-        {
-            syslog(LOG_ERR, "ERROR: In 'malloc()' when creating linked list!");
-            printf("ERROR: In 'malloc()' when creating linked list! \n");
-        }
-
-        launch_status = 0;
-        dir_index = 0;
-
-        /* get number of elements in dirs ... */
-        dirs_array_size = 0;
-        while( '\0' != dirs[++dirs_array_size] );
+        first_node->next = NULL;
+        nth_node = first_node;
+        printf("FIRST NODE: %p \n" , (void *)first_node ); 
+        printf("NEXT NODE: %p \n" , (void *)first_node->next );
     }
+    else
+    {
+        syslog(LOG_ERR, "ERROR: In 'malloc()' when creating linked list!");
+        printf("ERROR: In 'malloc()' when creating linked list! \n");
+    }
+
+    launch_status = 0;
+    dir_index = 0;
+
+    /* get number of elements in dirs ... */
+    dirs_array_size = 0;
+    while( '\0' != dirs[++dirs_array_size] );
 
     /* launch items in each dirs directory.  If directory empty, do nothing. */
     if ( success )
@@ -190,9 +156,9 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
                     // connect to the AACM TCP server
                     // send startup message
                     // receive ack
-                    if ( success )
+                    if ( ! aacmSetup() )
                     {
-                        success = aacmSetup();
+                        success = false;
                     }
 
                     // start thread for recieving AACM messages
@@ -217,18 +183,16 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
 
         /* BARSM needs to be assigned a name as all the child processes were 
          * given when they were launched */
-        if ( success ) 
+        assign_procName( &barsm_name[0] );
+
+        if ( ! process_sysInit(clientSocket_UDP) )
         {
-            assign_procName( &barsm_name[0] );
+            success = false;
         }
-        if ( success )
+
+        if ( ! send_barsmToAacmProcesses(clientSocket_TCP, first_node, &dirs[0], &barsm_name[0]) )
         {
-            success = process_sysInit(clientSocket_UDP);
-        }
-        if ( success )
-        {
-            success = send_barsmToAacmProcesses(clientSocket_TCP, first_node, \
-                &dirs[0], &barsm_name[0]);
+            success = false;
         }
         
         while( success )
@@ -241,9 +205,6 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
             success = check_modules(nth_node);
         }
     }
-
-    syslog(LOG_NOTICE, "NOTICE: BARSM exiting due to terminal error!");
-
     /* Won't get here with the above while(1) loop.  But, if this main ever 
      * exits, this free's all the nodes in the linked list. */
     nth_node = first_node;
@@ -260,32 +221,41 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
 
 
 /**
- * Runs through the steps required to communicate with the AACM  after launching
- * it, including setting up the sockets and seding an initial message over them.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] void
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false whether a terminal error has occurred
  *
- * @return true/false whether a terminal error has occured
+ * @return true/false status of sending message
  */
+
 bool aacmSetup(void)
 {
     bool success            = true;
 
-    if ( success )
+    if ( ! TCPsetup( clientSocket_TCP, DestAddr_TCP ) )
     {
-        success = TCPsetup( clientSocket_TCP, DestAddr_TCP );
+        success = false;
     }
-    if ( success )
+
+    if ( ! UDPsetup( clientSocket_UDP, DestAddr_UDP, UDPPort, &UDPAddress[0] ) )
     {
-        success = UDPsetup( clientSocket_UDP, DestAddr_UDP, UDPPort, &UDPAddress[0] );
+        success = false;
     }
-    if ( success )
+
+    // send the BARSM_TO_AACM_INIT_MSG to the AACM
+    if ( ! send_barsmToAacmInit(clientSocket_TCP) )
     {
-        success = send_barsmToAacmInit(clientSocket_TCP);
+        success = false;
     }
-    if ( success )
+
+    // receive ACK message
+    if ( ! receive_barsmToAacmInitAck(clientSocket_TCP) )
     {
-        success = receive_barsmToAacmInitAck(clientSocket_TCP);
+        success = false;
     }
 
     return (success);
@@ -294,15 +264,28 @@ bool aacmSetup(void)
 
 
 /**
- * Used to launch all the items in a passed in directory location. This function 
- * indicates if a terminal error has occurred, or if the directory is empty with
- * the return value.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] const char *directory: The directory location from which things 
- *      need to be luanched.
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return int: To indicate normal operation, empty directory, or terminal error
+ * @return true/false status of sending message
  */
+/* ================================================================================================
+ * FUNCTION: int32_t launch_itemsInDir (const char *directory)
+ *      - Used to start the fork process of each item within a directory.  Currently we have three 
+ *        directories with 'n' items in each.  
+ *      - As for now, AACM will only have one ... not sure how many modules or apps will be used.   
+ * 
+ * IN:  const char* directory
+ *      - use one of of the current directories ... as of now, just aacm, modules, and apps.  
+ *
+ * OUT: int32_t
+ *      - will be used to check status after running
+ * ============================================================================================= */
 int32_t launch_itemsInDir( const char *directory )
 {
     int32_t rc = 0;
@@ -372,13 +355,9 @@ int32_t launch_itemsInDir( const char *directory )
 
             printf("\nLaunching ... %s \n", concat);
 
-            if ( success )
+            if ( ! start_process(nth_node) )
             {
-                success = start_process(nth_node);
-            }
-            
-            if ( ! success )
-            {
+                success = false;
                 break;
             }
             else
@@ -444,19 +423,19 @@ int32_t launch_itemsInDir( const char *directory )
                     }
                 }
 
-                if ( NULL == nth_node->next )
+                if ( NULL != nth_node->next )
+                {
+                    printf( "CHILD linked list 'pid': %d \n" , nth_node->child_pid );
+                    printf( "CHILD linked list 'dir': %s \n" , nth_node->dir );
+                    printf( "CHILD linked list 'name': %s \n" , nth_node->item_name );
+                    printf( "this address %p \n" , (void *)nth_node );
+                    printf( "next address %p \n" , (void *)nth_node->next );
+                }
+                else /* ( NULL == nth_node->next ) */
                 {
                     syslog(LOG_ERR, "ERROR: In 'realloc()' when adding node to linked list!");
                     printf("ERROR: In 'realloc()' when adding node to linked list! \n");
-                    success = false;
                 }
-                
-                printf( "CHILD linked list 'pid': %d \n" , nth_node->child_pid );
-                printf( "CHILD linked list 'dir': %s \n" , nth_node->dir );
-                printf( "CHILD linked list 'name': %s \n" , nth_node->item_name );
-                printf( "this address %p \n" , (void *)nth_node );
-                printf( "next address %p \n" , (void *)nth_node->next );
-
                 nth_node = nth_node->next;
             }
         }
@@ -480,13 +459,15 @@ int32_t launch_itemsInDir( const char *directory )
 
 
 /**
- * Used to run the thread which watches for messages from the AACM and responds
- * to the messages by restarting or possibly terminating (not yet implemented) 
- * the modules/applications.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] void * UNUSED(param)
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return void
+ * @return true/false status of sending message
  */
 void* rcv_errMsgs( void * UNUSED(param) )
 {
@@ -509,3 +490,4 @@ void* rcv_errMsgs( void * UNUSED(param) )
 
     return (0);
 }
+

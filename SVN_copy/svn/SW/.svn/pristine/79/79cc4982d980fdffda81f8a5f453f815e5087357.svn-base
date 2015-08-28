@@ -1,0 +1,471 @@
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <string.h>
+#include <syslog.h>
+#include <errno.h>
+#include <poll.h>
+#include <stdlib.h>
+
+#include "barsm_functions.h"
+
+#define MAXBUFSIZE  1000
+
+bool send_barsmToAacmInit(int32_t csocket)
+{
+    bool success = true;
+
+    enum barsmToAacmInit_params
+    {
+        CMD_ID          = 2,
+        LENGTH          = 2,
+        MSG_SIZE        =   CMD_ID +
+                            LENGTH,
+    };
+
+    uint8_t *ptr; 
+    uint8_t *msgLenPtr = 0;
+    uint32_t actualLength = 0; 
+    uint16_t cmdId = CMD_BARSM_TO_AACM_INIT;
+    uint8_t sendData[ MSG_SIZE ];
+    int32_t sentBytes;
+
+
+    ptr = sendData;
+    memcpy(ptr, &cmdId, CMD_ID);
+    ptr += CMD_ID;
+
+    msgLenPtr = ptr;
+    ptr += LENGTH;
+
+    actualLength = MSG_SIZE - CMD_ID - LENGTH;
+    memcpy(msgLenPtr, &actualLength, sizeof(actualLength));
+
+    errno = 0;
+    sentBytes = send(csocket, sendData, MSG_SIZE, 0);
+    if ( -1 == sentBytes )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: send() failed! (%d: %s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+        success = false;
+    }
+    else if ( MSG_SIZE != sentBytes )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: send() return value (%d) does not match MSG_SIZE!", \
+            __FUNCTION__, __LINE__, sentBytes);
+    }
+
+    return (success);
+}
+
+
+
+bool recieve_barsmToAacmInitAck(int32_t csocket)
+{
+    enum barsmToAacmInitAck_params
+    {
+        CMD_ID          = 2,
+        LENGTH          = 2,
+        MSG_SIZE        =   CMD_ID +
+                            LENGTH,
+    };
+
+    bool success = true;
+
+    int32_t retBytes = 0;
+    uint8_t retData[ MSG_SIZE ];
+    uint8_t *ptr;
+    uint32_t fullMsg = 0;
+
+    struct pollfd myPoll[1];
+    int32_t retPoll;
+
+    myPoll[0].fd = csocket;
+    myPoll[0].events = POLLIN; 
+
+    errno = 0;
+    retPoll = poll( myPoll, 1, -1 );
+    if ( -1 == retPoll )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: poll() failure! (%d: %s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+        success = false;
+    }
+    else if ( 0 == retPoll )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: poll() timeout!",__FUNCTION__, __LINE__);
+        success = false;
+    }
+    else
+    {
+        if ( myPoll[0].revents && POLLIN )
+        {
+            retBytes = recv(csocket , retData , MSG_SIZE , 0 );
+            ptr = retData;
+
+            memcpy(&fullMsg, ptr, sizeof(fullMsg));
+            if ( -1 == retBytes )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR: recv() failure! (%d: %s)", \
+                    __FUNCTION__, __LINE__, errno, strerror(errno));
+                success = false;
+            }
+            else if ( 4 != retBytes || fullMsg != BARSM_TO_AACM_INIT_ACK_MSG )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR: Message recieved was not expected ACK!", \
+                    __FUNCTION__, __LINE__);
+                success = false;
+            }
+        }
+    }
+
+    return (success);
+}
+
+
+// MODEL AFTER "process_registerApp_ack" in simm_functions.c
+void process_aacmToBarsm( int32_t csocket )
+{
+    enum aacmToBarsm_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        PID                     = 4,
+        NUM_PROCESSES           = 2,
+    }
+
+    uint16_t command = 0;
+    uint16_t actualLength = 0;
+    uint32_t srcPid = 0;
+    uint16_t numErrors = 0;
+    uint32_t tmpPid = 0;
+
+    myPoll[0].fd = csocket;
+    myPoll[0].events = POLLIN; 
+
+    // WAIT TO RECEIVE RESPONSE ...
+    retPoll = poll( myPoll, 1, -1 );
+    if ( retPoll == -1 ) 
+    {
+        syslog(LOG_ERR, "%s:%d ERROR! error from pollfd poll()",__FUNCTION__, __LINE__);
+        //printf("ERROR WITH SELECT\n");
+    }
+    else if (retPoll == 0 ) 
+    {
+        syslog(LOG_ERR, "%s:%d ERROR! timeout error from pollfd poll()",__FUNCTION__, __LINE__);
+        //printf("SELECT TIMEOUT ERROR\n");
+    } 
+    else
+    {
+        if (myPoll[0].revents & POLLIN)
+        {
+            retBytes = recv( csocket , retData , MAXBUFSIZE , 0 );
+
+            ptr = retData;
+            memcpy(&command, ptr, sizeof(command));
+            ptr += CMD_ID;
+
+            memcpy(&actualLength, ptr, sizeof(actualLength));
+            ptr += LENGTH;
+
+            memcpy(&srcPid, ptr, sizeof(srcPid));
+            ptr += PID;
+            restart_select(srcPid);
+
+            memcpy(&numErrors, ptr, sizeof(numErrors));
+            ptr += NUM_PROCESSES;
+
+            while ( numErrors > 0 )
+            {
+                memcpy(&tmpPid, ptr, sizeof(tmpPid));
+                ptr += PID;
+                restart_select(tmpPid);
+                numErrors--;
+            }
+        }
+    }
+}
+
+
+// MODEL AFTER "process_registerApp" in simm_functions.c
+void send_aacmToBarsmAck( int32_t csocket )
+{
+    enum registerApp_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        ERROR                   = 2,
+        MSG_SIZE                =   CMD_ID + 
+                                    LENGTH + 
+                                    ERROR,
+    };
+
+    uint8_t sendData[ MSG_SIZE ];
+    uint8_t *ptr;
+    uint16_t val16;
+    uint8_t *msgLenPtr = 0;
+    uint32_t actualLength = 0;
+    int32_t sentBytes = 0;
+
+    ptr = sendData;
+    val16 = CMD_AACM_TO_BARSM_ACK;
+    memcpy(ptr, &val16, sizeof(val16));
+    ptr += CMD_ID;
+
+    msgLenPtr = ptr;
+    ptr += LENGTH;
+
+    val16 = GE_AACM_TO_BARSM_ERR;           /* THIS WILL NEED TO CHANGE ONCE SPECIFIED BY GE */
+    memcpy(ptr, &val16, sizeof(val16));
+    ptr += ERROR;
+
+    *ptr = MSG_SIZE;
+    ptr += MSG_SIZE;
+
+    actualLength = MSG_SIZE - CMD_ID - LENGTH;
+    memcpy(msgLenPtr, &actualLength, sizeof(actualLength));
+
+    errno = 0;
+    sentBytes = send(csocket, sendData, MSG_SIZE, 0);
+    if ( -1 == sentBytes )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: Sending of AACM_TO_BARSM_ACK failed! (%d: %s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+    }
+    else if ( 6 != sentBytes )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: During ending of AACM_TO_BARSM_ACK!", \
+            __FUNCTION__, __LINE__);
+    }
+}
+
+
+
+/**
+ * Used to package data for receiving sys init complete message.
+ *
+ * @param[in] csocket UDP socket
+ * @param[out] success true/false status of receiving message
+ *
+ * @return true/false status of receiving message
+ */
+bool process_sysInit( int32_t csocket )
+{
+    bool gotMsg = false;
+
+    enum sysinit_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        MSG_SIZE                =   CMD_ID +
+                                    LENGTH,
+    };
+
+    uint16_t command = 0;
+    uint32_t retBytes = 0; 
+    uint32_t actualLength = 0; 
+    uint32_t calcLength;
+    uint8_t retData[ MSG_SIZE ];
+    uint8_t *ptr;
+    socklen_t toRcvUDP_size;
+    struct pollfd myPoll[1];
+    int32_t retPoll;
+
+    myPoll[0].fd = csocket;
+    myPoll[0].events = POLLIN; 
+
+//  struct timeval tv;
+//
+//  // add timeout of ? 3 seconds here
+//  tv.tv_sec = 3;
+//  tv.tv_usec = 0;
+
+    // WAIT TO RECEIVE RESPONSE ...
+    while ( true != gotMsg )
+    {
+        retPoll = poll(myPoll, 1, -1);
+        if ( retPoll == -1 ) 
+        {
+            syslog(LOG_ERR, "%s:%d ERROR! error from pollfd poll()",__FUNCTION__, __LINE__);
+            gotMsg = false;
+        }
+        else if (retPoll == 0 ) 
+        {
+            gotMsg = false;
+        } 
+        else
+        {
+            if (myPoll[0].revents & POLLIN)
+            {
+                toRcvUDP_size = sizeof(toRcvUDP);
+                retBytes = recvfrom(csocket , retData , MSG_SIZE , 0 , (struct sockaddr *)&toRcvUDP , &toRcvUDP_size);
+
+                //command = remote_get16(retData);
+                ptr = retData;
+                memcpy(&command, ptr, sizeof(command));
+                ptr += CMD_ID;
+
+                memcpy(&actualLength, ptr, sizeof(actualLength));
+                //actualLength = remote_get16(ptr);
+                ptr += LENGTH;
+
+                calcLength = MSG_SIZE - CMD_ID - LENGTH; // shoudl be zero
+            }
+        }
+
+        // check message
+        if ( (retPoll <= 0) || (MSG_SIZE != retBytes) || ( CMD_SYSINIT != command ) || ( calcLength != actualLength ) )
+        {
+            gotMsg = false;
+            if ( (MSG_SIZE != retBytes) )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR! insufficient message data %u != %u", __FUNCTION__, __LINE__, retBytes, MSG_SIZE);
+            }
+            if ( ( CMD_SYSINIT != command ) )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR! invalid command %u", __FUNCTION__, __LINE__, command);
+            }
+            if ( ( calcLength != actualLength ) )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR! payload not equal to expected number of bytes %u != %u ",__FUNCTION__, __LINE__, calcLength, actualLength);
+            }
+            if ( (retPoll <= 0) )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR! error getting message %u ",__FUNCTION__, __LINE__, retPoll);
+            }
+        }
+        else
+        {
+            gotMsg = true;
+            //printf("SYS_INIT TRUE\n");
+        }
+        //printf("SYS_INIT SIZE: %d\n\n", retBytes);
+    }
+    return gotMsg;
+}
+
+
+void assign_procName( char * pName )
+{
+    int32_t i;
+    for ( i = 0; i < 4; i++ )
+    {
+        pName[i] = rand_letter();
+    }
+}
+
+
+char rand_letter(void)
+{
+    randNum = rand() % 26;
+
+    switch (randNum)
+    {
+        case 0:
+        return ('a');
+        case 1:
+        return ('b');
+        case 2:
+        return ('c');
+        case 3:
+        return ('d');
+        case 4:
+        return ('e');
+        case 5:
+        return ('f');
+        case 6:
+        return ('g');
+        case 7:
+        return ('h');
+        case 8:
+        return ('i');
+        case 9:
+        return ('j');
+        case 10:
+        return ('k');
+        case 11:
+        return ('l');
+        case 12:
+        return ('m');
+        case 13:
+        return ('n');
+        case 14:
+        return ('o');
+        case 15:
+        return ('p');
+        case 16:
+        return ('q');
+        case 17:
+        return ('r');
+        case 18:
+        return ('s');
+        case 19:
+        return ('t');
+        case 20:
+        return ('u');
+        case 21:
+        return ('v');
+        case 22:
+        return ('w');
+        case 23:
+        return ('x');
+        case 24:
+        return ('y');
+        case 25:
+        return ('z');
+    }
+}
+
+
+bool send_barsmToAacmProcesses( int32_t csocket, child_pid_list tmp_node )
+{
+    enum registerData_params
+    {
+        CMD_ID                  = 2,
+        LENGTH                  = 2,
+        NUM_PROCESSES           = 2, 
+        PID                     = 4, 
+        PROC_NAME               = 4, 
+        PROC_TYPE               = 4,
+    };
+
+    uint8_t sendData[ MAXBUFSIZE ];
+    uint8_t *ptr;
+    uint16_t val16;
+    uint8_t *msgLenPtr;
+    uint8_t *numProcsPtr;
+    uint32_t tmpPid;
+    uint8_t tmpChar;
+    int32_t i;
+
+    ptr = sendData;
+    val16 = CMD_BARSM_TO_AACM_PROCESSES;
+    memcpy(ptr, &val16, sizeof(val16));
+    ptr += CMD_ID;
+
+    msgLenPtr = ptr;
+    ptr += LENGTH;
+
+    numProcsPtr = ptr;
+    ptr += NUM_PROCESSES;
+
+    while ( NULL != tmp_node->next )
+    {
+        if ( -1 != tmp_node->alive )
+        {
+            tmpPid = tmp_node->child_pid;
+            memcpy(ptr, &tmpPid, sizeof(tmpPid));
+            ptr += PID;
+
+            for ( i = 0; i < 4; i++ )
+            {
+                tmpChar = child_pid->proc_name[i];
+                memcpy(ptr, &tmpChar, sizeof(tmpChar));
+                ptr += 1;
+            }
+
+            
+        }
+    }
+}

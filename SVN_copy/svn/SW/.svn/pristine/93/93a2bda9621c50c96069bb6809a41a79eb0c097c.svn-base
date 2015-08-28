@@ -26,7 +26,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include <sys/stat.h>
 
 #include "barsm_functions.h"
 
@@ -101,30 +100,13 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
     int32_t dir_index;
     int32_t dirs_array_size;
     bool success = true;
-    int32_t rc, i;
+    int32_t rc;
     char barsm_name[4];
-
-    /* CORRECT DIRECTORY STRUCTURE REQUIRED */
-    for ( i = 0; i < 5; i++ )
-    {
-        errno = 0;
-        if ( -1 == mkdir(dirs[i], 0) )
-        {
-            if ( EEXIST != errno )
-            {
-                syslog(LOG_ERR, "%s:%d ERROR: Directory structure incorrect! (%d: %s)", \
-                    __FUNCTION__, __LINE__, errno, strerror(errno));
-                printf("ERROR: Directory structure incorrect! (%d: %s) \n", \
-                    errno, strerror(errno));
-                success = false;
-            }
-        }
-    }
 
     /* create linked list ... */
     errno = 0;
     first_node = (child_pid_list *)malloc(sizeof(child_pid_list));
-    if ( 0 != errno && success )
+    if ( 0 != errno )
     {
         syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' when creating 'first_node'! (%d: %s)", \
             __FUNCTION__, __LINE__, errno, strerror(errno));
@@ -133,28 +115,25 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
         success = false;
     }
 
-    if ( success )
+    if ( NULL != first_node )
     {
-        if ( NULL != first_node )
-        {
-            first_node->next = NULL;
-            nth_node = first_node;
-            printf("FIRST NODE: %p \n" , (void *)first_node ); 
-            printf("NEXT NODE: %p \n" , (void *)first_node->next );
-        }
-        else
-        {
-            syslog(LOG_ERR, "ERROR: In 'malloc()' when creating linked list!");
-            printf("ERROR: In 'malloc()' when creating linked list! \n");
-        }
-
-        launch_status = 0;
-        dir_index = 0;
-
-        /* get number of elements in dirs ... */
-        dirs_array_size = 0;
-        while( '\0' != dirs[++dirs_array_size] );
+        first_node->next = NULL;
+        nth_node = first_node;
+        printf("FIRST NODE: %p \n" , (void *)first_node ); 
+        printf("NEXT NODE: %p \n" , (void *)first_node->next );
     }
+    else
+    {
+        syslog(LOG_ERR, "ERROR: In 'malloc()' when creating linked list!");
+        printf("ERROR: In 'malloc()' when creating linked list! \n");
+    }
+
+    launch_status = 0;
+    dir_index = 0;
+
+    /* get number of elements in dirs ... */
+    dirs_array_size = 0;
+    while( '\0' != dirs[++dirs_array_size] );
 
     /* launch items in each dirs directory.  If directory empty, do nothing. */
     if ( success )
@@ -190,9 +169,9 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
                     // connect to the AACM TCP server
                     // send startup message
                     // receive ack
-                    if ( success )
+                    if ( ! aacmSetup() )
                     {
-                        success = aacmSetup();
+                        success = false;
                     }
 
                     // start thread for recieving AACM messages
@@ -217,18 +196,16 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
 
         /* BARSM needs to be assigned a name as all the child processes were 
          * given when they were launched */
-        if ( success ) 
+        assign_procName( &barsm_name[0] );
+
+        if ( ! process_sysInit(clientSocket_UDP) )
         {
-            assign_procName( &barsm_name[0] );
+            success = false;
         }
-        if ( success )
+
+        if ( ! send_barsmToAacmProcesses(clientSocket_TCP, first_node, &dirs[0], &barsm_name[0]) )
         {
-            success = process_sysInit(clientSocket_UDP);
-        }
-        if ( success )
-        {
-            success = send_barsmToAacmProcesses(clientSocket_TCP, first_node, \
-                &dirs[0], &barsm_name[0]);
+            success = false;
         }
         
         while( success )
@@ -241,9 +218,6 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
             success = check_modules(nth_node);
         }
     }
-
-    syslog(LOG_NOTICE, "NOTICE: BARSM exiting due to terminal error!");
-
     /* Won't get here with the above while(1) loop.  But, if this main ever 
      * exits, this free's all the nodes in the linked list. */
     nth_node = first_node;
@@ -267,25 +241,31 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
  *
  * @return true/false whether a terminal error has occured
  */
+
 bool aacmSetup(void)
 {
     bool success            = true;
 
-    if ( success )
+    if ( ! TCPsetup( clientSocket_TCP, DestAddr_TCP ) )
     {
-        success = TCPsetup( clientSocket_TCP, DestAddr_TCP );
+        success = false;
     }
-    if ( success )
+
+    if ( ! UDPsetup( clientSocket_UDP, DestAddr_UDP, UDPPort, &UDPAddress[0] ) )
     {
-        success = UDPsetup( clientSocket_UDP, DestAddr_UDP, UDPPort, &UDPAddress[0] );
+        success = false;
     }
-    if ( success )
+
+    // send the BARSM_TO_AACM_INIT_MSG to the AACM
+    if ( ! send_barsmToAacmInit(clientSocket_TCP) )
     {
-        success = send_barsmToAacmInit(clientSocket_TCP);
+        success = false;
     }
-    if ( success )
+
+    // receive ACK message
+    if ( ! receive_barsmToAacmInitAck(clientSocket_TCP) )
     {
-        success = receive_barsmToAacmInitAck(clientSocket_TCP);
+        success = false;
     }
 
     return (success);
@@ -372,13 +352,9 @@ int32_t launch_itemsInDir( const char *directory )
 
             printf("\nLaunching ... %s \n", concat);
 
-            if ( success )
+            if ( ! start_process(nth_node) )
             {
-                success = start_process(nth_node);
-            }
-            
-            if ( ! success )
-            {
+                success = false;
                 break;
             }
             else

@@ -19,12 +19,15 @@ struct sockaddr_storage toRcvUDP;
 
 
 /**
- * Establish TCP socket.  
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] csocket: socket for the TCP communications
- * @param[in] destAddr: settings holder for the TCP communications
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false status of socket setup.  
+ * @return true/false status of sending message
  */
 bool TCPsetup( int32_t csocket, struct sockaddr_in destAddr ) 
 {
@@ -65,10 +68,8 @@ bool TCPsetup( int32_t csocket, struct sockaddr_in destAddr )
 /**
  * Establish UDP socket.  
  *
- * @param[in] csocket: socket for the UDP communications
- * @param[in] destAddr: settings holder for the UDP communications
- * @param[in] udpPort: port for the UDP communications
- * @param[in] udpAddr: IP address for the UDP communications
+ * @param[in] void
+ * @param[out] true/false
  *
  * @return true/false status of socket setup.  
  */
@@ -118,12 +119,15 @@ bool UDPsetup( int32_t csocket, struct sockaddr_in destAddr, int32_t udpPort , c
 
 
 /**
- * Used to initialize communications between BARSM and AACM immediately after 
- * startup of the AACM.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] csocket: TCP socket
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false whether a terminal error has occured
+ * @return true/false status of sending message
  */
 bool send_barsmToAacmInit(int32_t csocket)
 {
@@ -175,16 +179,18 @@ bool send_barsmToAacmInit(int32_t csocket)
 
 
 /**
- * Used to receive the ackknoledgement message from the AACM.
+ * Used to package data to be sent for registering the
+ * application.
  *
  * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false whether a terminal error has occured
+ * @return true/false status of sending message
  */
 bool receive_barsmToAacmInitAck(int32_t csocket)
 {
-    bool success = true;
-
     enum barsmToAacmInitAck_params
     {
         CMD_ID          = 2,
@@ -192,6 +198,8 @@ bool receive_barsmToAacmInitAck(int32_t csocket)
         MSG_SIZE        =   CMD_ID +
                             LENGTH,
     };
+
+    bool success = true;
 
     int32_t retBytes = 0;
     uint8_t retData[ MSG_SIZE ];
@@ -246,11 +254,15 @@ bool receive_barsmToAacmInitAck(int32_t csocket)
 
 
 /**
- * Used to assign a name to each process in the system.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] pName: The 4 character string to store the name in
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return void
+ * @return true/false status of sending message
  */
 void assign_procName( char * pName )
 {
@@ -264,11 +276,15 @@ void assign_procName( char * pName )
 
 
 /**
- * Returns a random character from the alphabet.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] void
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return char: randomly selected letter of the alphabet
+ * @return true/false status of sending message
  */
 char rand_letter(void)
 {
@@ -365,14 +381,32 @@ char rand_letter(void)
 
 
 /**
- * Starts a new process in the linked list position that was send in the input
- * parameters. The new PID is copied in place and 'alive' status updated.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] tmp_node: pointer position in the linked list wehre the new 
- *      process information needs to be stored
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false whether a terminal error has occured
+ * @return true/false status of sending message
  */
+/* ================================================================================================
+ * FUNCTION: void start_process()
+ *      - Used to start a process to replace one that ended prematurely or wouldn't start.
+ *      - Sets the 'alive' portion of the struct to 0 to indicate that the process is functioning 
+ *        properly.
+ *      - Starts up a new process to run the same file that shut down, using the same list link for 
+ *        the failed process.
+ *      - Restarts whatever process is described by the information in the active link in the 
+ *        linked list.
+ * 
+ * IN:  child_pid_list *tmp_node
+ *      - Used to navigate throught the linked list that stores all the child data.
+ * 
+ * OUT: bool
+ *      - Signals whether a terminal error has occured.
+ * ============================================================================================= */
 bool start_process(child_pid_list *tmp_node)
 {
     bool success = true;
@@ -412,11 +446,12 @@ bool start_process(child_pid_list *tmp_node)
 
 
 /**
- * Receives the system initialization message from AACM
+ * Used to package data for receiving sys init complete message.
  *
  * @param[in] csocket UDP socket
+ * @param[out] success true/false status of receiving message
  *
- * @return true/false whether the message was received
+ * @return true/false status of receiving message
  */
 bool process_sysInit( int32_t csocket )
 {
@@ -442,6 +477,12 @@ bool process_sysInit( int32_t csocket )
 
     myPoll[0].fd = csocket;
     myPoll[0].events = POLLIN; 
+
+//  struct timeval tv;
+//
+//  // add timeout of ? 3 seconds here
+//  tv.tv_sec = 3;
+//  tv.tv_usec = 0;
 
     // WAIT TO RECEIVE RESPONSE ...
     while ( true != gotMsg )
@@ -516,16 +557,15 @@ bool process_sysInit( int32_t csocket )
 
 
 /**
- * Sends the list of all processes in the system with the process IDs, names, 
- * and type values immediately after the SYS_INIT message is received.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] csocket: TCP socket
- * @param[in] tmp_node: the pointer to the first item in the linked list
- * @param[in] dirs[]: list of directories for making the process type parameters
- * @param[in] barsm_name[4]: the random 4 char string assigned to barsm (the 
- *      name not stored in the linked list)
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false whether a terminal error has occured
+ * @return true/false status of sending message
  */
 bool send_barsmToAacmProcesses( int32_t csocket, child_pid_list *tmp_node, \
     const char *dirs[], char barsm_name[4] )
@@ -652,13 +692,28 @@ bool send_barsmToAacmProcesses( int32_t csocket, child_pid_list *tmp_node, \
 
 
 /**
- * Goes through the entire list of modules once, checking if each successfully 
- * started module is still running, and restarts those that have stopped.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] tmp_node: a pointer to the first item in the linked list
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false whether a terminal error has occurred
- */ 
+ * @return true/false status of sending message
+ */
+/* ================================================================================================
+ * FUNCTION: int32_t check_modules()
+ *      - Used to check once if each of the child processes are running. 
+ *      - Restarts any process that disappears or becomes a zombie as soon as it is found.
+ *      - Logs an error for each dissapperance and zombie.  
+ * 
+ * IN:  child_pid_list *tmp_node
+ *      - Used to navigate throught the linked list that stores all the child data.
+ * 
+ * OUT: bool
+ *      - Signals whether a terminal error has occured.
+ * ============================================================================================= */
 bool check_modules(child_pid_list *tmp_node)
 {
     bool success = true;
@@ -699,10 +754,7 @@ bool check_modules(child_pid_list *tmp_node)
         {
             syslog(LOG_NOTICE, "NOTICE: Restarting %s...", tmp_node->item_name);
             printf("NOTICE: Restarting %s...", tmp_node->item_name);
-            if ( ! start_process(tmp_node) )
-            {
-                success = false;
-            }
+            success = start_process(tmp_node);
         }
 
         tmp_node = tmp_node->next;
@@ -713,14 +765,17 @@ bool check_modules(child_pid_list *tmp_node)
 
 
 /**
- * Waits for error messages from the AACM, and restarts or terminates modules 
- * and applications as directed in the messages.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] csocket: TCP socket
- * @param[in] tmp_node: a pointer to the first item in the linked list
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return void
+ * @return true/false status of sending message
  */
+// MODEL AFTER "process_registerApp_ack" in simm_functions.c
 void receive_aacmToBarsm( int32_t csocket, child_pid_list *tmp_node )
 {
     enum aacmToBarsm_params
@@ -797,12 +852,15 @@ void receive_aacmToBarsm( int32_t csocket, child_pid_list *tmp_node )
 
 
 /**
- * Sends a response to the AACM_TO_BARSM message conatining a signal showing
- * whether the app/modules were restarted or terminated.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] csocket: TCP socket
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return void
+ * @return true/false status of sending message
  */
 // MODEL AFTER "process_registerApp" in simm_functions.c
 void send_aacmToBarsmAck( int32_t csocket )
@@ -859,13 +917,15 @@ void send_aacmToBarsmAck( int32_t csocket )
 
 
 /**
- * Selects the item in the linked list that matches the given PID, and calls
- * the start_process() with that item of the linked list.
+ * Used to package data to be sent for registering the
+ * application.
  *
- * @param[in] pid: the PID of the process that needs to be replaced/restarted
- * @param[in] tmp_node: a pointer to the first item in the linked list
+ * @param[in] csocket TCP socket
+ * @param[in] goTime Used to check 1 second requirement (must be
+ *       sent within 1 second of establishing TCP connection)
+ * @param[out] success true/false status of sending message
  *
- * @return true/false whether a terminal error occured
+ * @return true/false status of sending message
  */
 bool start_select(pid_t pid, child_pid_list *tmp_node)
 {
@@ -884,3 +944,4 @@ bool start_select(pid_t pid, child_pid_list *tmp_node)
 
     return (success);
 }
+
