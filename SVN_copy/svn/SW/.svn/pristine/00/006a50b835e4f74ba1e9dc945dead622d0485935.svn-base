@@ -1,6 +1,6 @@
 
-/** @file simm_functions.h
- * Globals for most of the simm functionality  
+/** @file fdl.h
+ * Globals for most of the fdl functionality  
  *
  * Copyright (c) 2010, DornerWorks, Ltd.
  */
@@ -8,15 +8,15 @@
 /****************
 * INCLUDES
 ****************/
-#ifndef __SIMMFUNCTIONS_H__
-#define __SIMMFUNCTIONS_H__
+#ifndef __FDL_H__
+#define __FDL_H__
 #include <time.h>
 #include <sys/socket.h>
 
 /****************
 * GLOBALS
 ****************/
-#define DAEMON_NAME             "SIMM"
+#define DAEMON_NAME             "FDL"
 #define UNUSED(x) (x)__attribute__((unused))
                                                 // MILLSECONDS
 #define MINPER                                  1000    // using this for now, while each MP must have the same PERIOD
@@ -43,12 +43,21 @@
 #define MINPER_CAM_SEC_9                        1000
 #define MINPER_CAM_NSEC_9                       1000
 #define MINPER_TS                               1000
-#define MINPER_SIMM                             1000
+#define MINPER_fdl                              1000
 #define MINPER_COP_PRESSURE                     1000
  
-#define MAX_SIMM_SUBSCRIPTION                   33   
-#define MAX_TIMESTAMPS                          9  
-#define PI                                      3.1415926535897932384626433832795
+#define MAX_fdl_TO_PUBLISH                      14
+#define MAX_fdl_SUBSCRIPTION                    10  //24   sending 14, subscribing for 10
+#define MAX_TIMESTAMPS                          9    
+
+#define HO_REAL                                 0
+#define HO_IMAG                                 1
+#define FO_REAL                                 2
+#define FO_IMAG                                 3
+#define TURBO_REAL                              0
+#define TURBO_IMAG                              1
+
+
 //SUBSCRIBE MP INFO
 typedef struct
 {
@@ -75,6 +84,17 @@ typedef struct
 //MPinfo *subscribeMP;
 extern topicToPublish *publishMe;
 
+
+typedef struct
+{
+    int32_t *mp;
+    int32_t *cop;
+    int32_t *crank;
+    int32_t *turbo;
+} FDLinfo;
+extern FDLinfo *recvFDL;
+
+
 extern uint32_t voltages[5];
 extern uint32_t timestamps[9];
 extern uint32_t ts_HiLoCnt[3];
@@ -99,12 +119,13 @@ extern uint32_t *cam_nsecs;
 extern uint32_t *cam_secs_chk;
 extern uint32_t *cam_nsecs_chk;
 extern int32_t num_mps; 
-extern int32_t MPnum;
+extern int32_t num_mps_fromPub;
+//extern int32_t MPnum;
 extern int32_t *sub_mp;
 extern int32_t *sub_mpPer;
 extern uint32_t *sub_mpNumSamples;
-extern int32_t subAppName;
-extern int32_t simmAppName;
+extern int32_t src_app_name;
+extern int32_t fromSubAckTopicID;
 
 //uint32_t *src_apps; // index will be offset? need to sort through list to determine if ID already exists.  
 extern int32_t num_topics_total;
@@ -117,7 +138,6 @@ extern int32_t nextPublishPeriod;
 //int32_t *periodTrack;
 //bool goPublish;
 
-extern float *hannWindowCo;
 
 /****************
 * PRIVATE DATA TYPES
@@ -138,7 +158,7 @@ enum WhichMsg
     CMD_SYSINIT                         = 0x000B,   // send
 };
 
-// MPs for SIMM
+// MPs for fdl
 //enum subscribeMPs
 //{
 //    MP_PFP_VALUE                        = 1003,
@@ -256,19 +276,28 @@ bool process_registerData_ack(int32_t csocket );
 bool process_openUDP( int32_t csocket , struct sockaddr_in addr_in );
 bool process_sysInit( int32_t csocket );
 
+// app related (boot and/or run-time)
+bool process_sendSubscribe( int32_t csocket );
+bool process_getSubscribe_ack( int32_t csocket );
+bool process_getPublish( int32_t csocket );
+
 // run-time API processing
 //void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t LogMPs[] , int32_t time_secMP[] , int32_t time_nsecMP[], int32_t topic_to_pub );
-void process_publish( int32_t csocket , struct sockaddr_in addr_in , int32_t topic_to_pub );
-bool process_subscribe( int32_t csocket );
+void process_sendPublish( int32_t csocket , struct sockaddr_in addr_in , int32_t topic_to_pub );
+bool process_getSubscribe( int32_t csocket );
 //bool process_subscribe_ack( int32_t csocket , struct sockaddr_in addr_in );
-bool process_subscribe_ack( int32_t csocket );
+bool process_sendSubscribe_ack( int32_t csocket );
 bool process_HeartBeat( int32_t csocket, int32_t HeartBeat );
 //int32_t process_subscribe_send_DEBUG(int32_t csocket);
 bool numSecondsHaveElapsed( struct timespec startTime , struct timespec stopTime , int32_t numSeconds );
 //bool check_validMP( int32_t fromLoop );
 bool buildPublishData(void);
-//int32_t getTopicId(uint32_t subAppName);
+int32_t getTopicId(uint32_t subAppName);
 int32_t publishManager(void);
+
+float getAmplitude(int32_t realVal, int32_t imagVal);
+float getPhase(int32_t realVal, int32_t imagVal);
+//float getPower(int32_t realVal, int32_t imagVal);
 
 
 

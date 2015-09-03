@@ -1,18 +1,13 @@
 
-/** @file simm.c
- * Main file to starting Sensor Master Module.  Init portion for
- * FPGA and registering the app and it's data.  Opens UDP and
- * waits for one sys init message and one subscribe message
- * before starting 3 threads - SUBSCRIBE, PUBLISH, and SENSORS
+/** @file fdl.c
+ * Subscribes for data in order to calculate power, amplitude,
+ * and phase.  Publishes calcuations as MPs.  Publishes 
+ * heartbeat as well.   
  * 
  * Subscribe Thread: polls for a subscribe
  * 
- * Publish Thread: every second, publish respective data
+ * Publish Thread: Publishes power, amplitude, and phase
  * 
- * Sensors Thread: interfaces to FPGA to collect data.  Once
- * collected, generates logical MPs and timestamps in order to
- * be published.  
- *
  * Copyright (c) 2010, DornerWorks, Ltd.
  */
 
@@ -22,7 +17,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <libgen.h>
@@ -36,23 +30,24 @@
 #include <signal.h>
 #include <time.h>
 #include <pthread.h>
-#include "simm_functions.h"
-#include "sensor.h"
-#include "fpga_read.h"
+#include <math.h>
+#include "fdl.h"
+
 
 
 /****************
 * PRIVATE CONSTANTS
 ****************/
-  char UDPAddress[]   = "225.0.0.37";
-  int UDPPort         =  4096;
-//char UDPAddress[] = "127.0.0.1";
-//int UDPPort =  4096;
+//  char UDPAddress[]   = "225.0.0.37";
+//  int UDPPort         =  4096;
+char UDPAddress[] = "127.0.0.1";
+int UDPPort =  4096;
 
 // THREADS
-static pthread_t thread_publish;        // read, write TCP
-static pthread_t sensor_thread;     // get FPGA data
-static pthread_t thread_subscribe;  // waits for a subscribe and returns subscribe_ack
+static pthread_t thread_getPublish;         // read, write TCP
+//static pthread_t thread_sendSubscribe;      // read, write TCP                                        
+static pthread_t thread_sendPublish;        // read, write TCP
+static pthread_t thread_getSubscribe;       // waits for a subscribe and returns subscribe_ack
 pthread_mutex_t pubMutex                = PTHREAD_MUTEX_INITIALIZER;
 
 /****************
@@ -62,7 +57,6 @@ static int32_t clientSocket_TCP = -1;
 static int32_t clientSocket_UDP = -1;
 struct sockaddr_in DestAddr_TCP;
 struct sockaddr_in DestAddr_UDP;
-//struct ip_mreq mreq;
 struct in_addr localInterface;
 struct sockaddr_in DestAddr_SUBSCRIBE;
 int32_t Logicals[33];
@@ -70,60 +64,58 @@ int32_t TimeStamp_s[9];
 int32_t TimeStamp_ns[9];
 bool publish = false;
 struct timespec goStart;
-int32_t simmAppName;
 
 topicToPublish *publishMe;
+FDLinfo *recvFDL;
+
 
 /****************
 * PRIVATE FUNCTION PROTOTYPES
 ****************/
-static bool simm_init(void);
+static bool fdl_init(void);
 static bool setupPublishStructure(void);
-static void simm_run(void); // calls/setup the threads
-static void* simm_runtime_publish(void *param);
-static void* simm_runtime_subscribe(void *param);
-static void* read_sensors(void *param);
+static void fdl_run(void); // calls/setup the threads
+static void* fdl_runtime_sendPublish(void *param);
+static void* fdl_runtime_getPublish(void *param);
+static void* fdl_runtime_getSubscribe(void *param);
 bool UDPsetup(void);
 bool TCPsetup(void);
 
 /**
- * Calls SIMM init function.  If pass, start threads, else fail.
+ * Calls fdl init function.  If pass, start threads, else fail.
  *
  * @param[in] UNUSED(argc) 
  * @param[in] UNUSED(*argv[]) 
  * @param[out] true/false 
  *
- * @return true/false sucess of simm startup.  if fails to init,
+ * @return true/false sucess of fdl startup.  if fails to init,
  *         returns false
  */
-//int32_t main(int32_t UNUSED(argc), char UNUSED(*argv[]))
-int32_t main(int32_t UNUSED(argc), char *argv[])
+int32_t main(int32_t UNUSED(argc), char UNUSED(*argv[]))
 {
-    bool success_simm = true;
-
-    memcpy(&simmAppName, argv[0], sizeof(simmAppName));
+    bool success_fdl = true;
 
     openlog(DAEMON_NAME, LOG_CONS, LOG_LOCAL0);
     syslog(LOG_INFO, DAEMON_NAME " started");
 
-    if ( false != simm_init() ) 
+    if ( false != fdl_init() ) 
     {
-        syslog(LOG_INFO, "%s:%d simm_init() SUCCESS!", __FUNCTION__, __LINE__);
-        simm_run();
+        syslog(LOG_INFO, "%s:%d fdl_init() SUCCESS!", __FUNCTION__, __LINE__);
+        fdl_run();
     } 
     else 
     {
-        success_simm = false;
-        syslog(LOG_ERR, "%s:%d simm_init() ERROR!", __FUNCTION__, __LINE__);
+        success_fdl = false;
+        syslog(LOG_ERR, "%s:%d fdl_init() ERROR!", __FUNCTION__, __LINE__);
     }
 
     // shutdown/cleanup
 
-    return success_simm;
+    return success_fdl;
 }
 
 /**
- * Init FPGA to SIMM inteface.  Setup TCP and UDP socket.
+ * Init FPGA to fdl inteface.  Setup TCP and UDP socket.
  * Register the app and available data to publish.  Sends open
  * UDP and waits for sys_init message.  once received,
  * polls/waits for one subscribe message.  Once received (and
@@ -133,14 +125,29 @@ int32_t main(int32_t UNUSED(argc), char *argv[])
  * @param[in] void
  * @param[out] true/false 
  *
- * @return true/false sucess of simm init.
+ * @return true/false sucess of fdl init.
  */
-static bool simm_init(void) // 2.1
+static bool fdl_init(void) // 2.1
 {
     bool success            = true; 
-    bool success_sub        = true; 
-    bool success_subAck     = true; 
-    bool success_bPD        = true;
+
+    float copAmplitudeHO;
+    float copPhaseHO;
+    float copPowerHO;
+    float copAmplitudeFO;
+    float copPhaseFO;
+    float copPowerFO;
+
+    float crankAmplitudeHO;
+    float crankPhaseHO;
+    float crankPowerHO;
+    float crankAmplitudeFO;
+    float crankPhaseFO;
+    float crankPowerFO;
+
+    //bool success_sub        = true; 
+    //bool success_subAck     = true; 
+    //bool success_bPD        = true;
 
 
     //int32_t sizeofSubscribedMPs = 0;
@@ -171,12 +178,6 @@ static bool simm_init(void) // 2.1
 
     clock_gettime( CLOCK_REALTIME , &goStart );
 
-
-    if (false != success)
-    {
-        success = fpga_init();
-    }
-
     if (false != success)
     {
         success = UDPsetup();
@@ -187,7 +188,6 @@ static bool simm_init(void) // 2.1
         success = TCPsetup();
     }
 
-    //sleep(10);
     if (false != success)
     {
         success = process_registerApp( clientSocket_TCP , goStart );
@@ -224,68 +224,140 @@ static bool simm_init(void) // 2.1
         success = setupPublishStructure();
     }
 
+    // app related
     if (false != success)
     {
-        success_sub     = process_subscribe( clientSocket_TCP );
-        success_bPD     = buildPublishData();
-        //success_subAck  = process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
-        success_subAck  = process_subscribe_ack( clientSocket_TCP );
-
-        if ( false == ( success_sub || success_bPD || success_subAck ) )
-        {
-            success = false;
-        }
+        // subscribes for 10 MPS
+        success = process_sendSubscribe( clientSocket_TCP );
     }
 
-    success = calcHannWindowCo(64);
+    if (false != success)
+    {
+        // gets the acknowledge
+        success = process_getSubscribe_ack( clientSocket_TCP );
+    }
+
+
+    // consider waiting for 1st subscribe from SIMM (or wherever) before receiving first publish.  
+
+
+    if (false != success)
+    {
+        // gets the first publish subscribed for
+        success                 = process_getPublish( clientSocket_UDP );
+
+        copAmplitudeHO          = getAmplitude(recvFDL[0].cop[0], recvFDL[0].cop[1]);
+        copPhaseHO              = getPhase(recvFDL[0].cop[0], recvFDL[0].cop[1]);
+        copPowerHO              = pow(copAmplitudeHO, 2) / 2;
+        copAmplitudeFO          = getAmplitude(recvFDL[0].cop[2], recvFDL[0].cop[3]);
+        copPhaseFO              = getPhase(recvFDL[0].cop[2], recvFDL[0].cop[3]);
+        copPowerFO              = pow(copAmplitudeFO, 2) / 2;
+
+        crankAmplitudeHO        = getAmplitude(recvFDL[0].crank[0], recvFDL[0].crank[1]);
+        crankPhaseHO            = getPhase(recvFDL[0].crank[0], recvFDL[0].crank[1]);
+        crankPowerHO            = pow(crankAmplitudeHO, 2) / 2;
+        crankAmplitudeFO        = getAmplitude(recvFDL[0].crank[2], recvFDL[0].crank[3]);
+        crankPhaseFO            = getPhase(recvFDL[0].crank[2], recvFDL[0].crank[3]);
+        crankPowerFO            = pow(crankAmplitudeFO, 2) / 2;
+
+        printf("CALC AMPLITUDE, COP HO: %f\n",     copAmplitudeHO);
+        printf("CALC PHASE, COP HO: %f\n",         copPhaseHO);
+        printf("CALC POWER, COP HO: %f\n",         copPowerHO);
+        printf("CALC AMPLITUDE, COP FO: %f\n",     copAmplitudeFO);
+        printf("CALC PHASE, COP FO: %f\n",         copPhaseFO);
+        printf("CALC POWER, COP FO: %f\n",         copPowerFO);
+
+        printf("CALC AMPLITUDE, CRANK HO: %f\n",   crankAmplitudeHO);
+        printf("CALC PHASE, CRANK HO: %f\n",       crankPhaseHO);
+        printf("CALC POWER, CRANK HO: %f\n",       crankPowerHO);
+        printf("CALC AMPLITUDE, CRANK FO: %f\n",   crankAmplitudeFO);
+        printf("CALC PHASE, CRANK FO: %f\n",       crankPhaseFO);
+        printf("CALC POWER, CRANK FO: %f\n",       crankPowerFO);
+
+//      copPhaseHO          = getCopPhaseHO(recvFDL[0].cop);
+//      copPowerHO          = getCopPowerHO(recvFDL[0].cop);
+//
+//      copAmplitudeFO      = getCopAmplitudeFO(recvFDL[0].cop);
+//      copPhaseFO          = getCopPhaseFO(recvFDL[0].cop);
+//      copPowerFO          = getCopPowerFO(recvFDL[0].cop);
+//
+//      crankAmplitudeHO    = getCrankAmplitudeHO(recvFDL[0].crank);
+//      crankPhaseHO        = getCrankPhaseHO(recvFDL[0].crank);
+//      crankPowerHO        = getCrankPowerHO(recvFDL[0].crank);
+//
+//      crankAmplitudeFO    = getCrankAmplitudeFO(recvFDL[0].crank);
+//      crankPhaseFO        = getCrankPhaseFO(recvFDL[0].crank);
+//      crankPowerFO        = getCrankPowerFO(recvFDL[0].crank);
+//
+//      turboAmplitudeFO    = getTurboAmplitudeFO(recvFDL[0].turbo);
+//      turboPowerFO        = getTurboPowerFO(recvFDL[0].turbo);
+       
+    }
+    // GETS through to here without errors
+
+
+
+    // FDL needs to subscribe, not poll for a subscribe
+//  if (false != success)
+//  {
+//      success_sub     = process_getSubscribe( clientSocket_TCP );
+//      success_bPD     = buildPublishData();
+//      //success_subAck  = process_sendSubscribe_ack( clientSocket_TCP , DestAddr_TCP );
+//      success_subAck  = process_sendSubscribe_ack( clientSocket_TCP );
+//
+//      if ( false == ( success_sub || success_bPD || success_subAck ) )
+//      {
+//          success = false;
+//      }
+//  }
 
     return success;
 }
 
 /**
  * Starts three threads per main description.  Only executes if
- * SIMM init passes.
+ * fdl init passes.
  *
  * @param[in] void
  * @param[out] void
  *
  * @return void
  */
-static void simm_run(void)
+static void fdl_run(void)
 {
         bool success = true;
-        int32_t rc_sensor, rc_publish, rc_subscribe;
+        int32_t rc_sendPublish;
+        int32_t rc_getSubscribe; 
+        int32_t rc_getPublish;
         sigset_t set;
         siginfo_t sig;
 
-        // CREATE SENSOR THREAD
-        // looks to be ~272 possibly lost bytes per valgrind with each thread.
         errno = 0;
-        rc_sensor = pthread_create(&sensor_thread, NULL, read_sensors, NULL);
-        if(0 != rc_sensor)
+        rc_getPublish = pthread_create(&thread_getPublish, NULL, fdl_runtime_getPublish, NULL);
+        if (0 != rc_getPublish)
         {
             success = false;
-            syslog(LOG_ERR, "%s:%d ERROR! failed to create sensor thread (%d:%s)",__FUNCTION__, __LINE__, rc_sensor, strerror(rc_sensor));
+            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_getPublish, strerror(rc_getPublish));
+        }
+
+        // CREATE SUBSCRIBE THREAD (UDP)
+        // looks to be ~272 possibly lost bytes per valgrind with each thread.
+        errno = 0;
+        rc_getSubscribe = pthread_create(&thread_getSubscribe, NULL, fdl_runtime_getSubscribe, NULL);
+        if (0 != rc_getSubscribe)
+        {
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_getSubscribe, strerror(rc_getSubscribe));
         }
 
         // CREATE PUBLISH THREAD (UDP)
         // looks to be ~272 possibly lost bytes per valgrind with each thread.
         errno = 0;
-        rc_publish = pthread_create(&thread_publish, NULL, simm_runtime_publish, NULL);
-        if (0 != rc_publish)
+        rc_sendPublish = pthread_create(&thread_sendPublish, NULL, fdl_runtime_sendPublish, NULL);
+        if (0 != rc_sendPublish)
         {
             success = false;
-            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_publish, strerror(rc_publish));
-        }
-
-        // CREATE SUBSCRIBE THREAD (UDP)
-         // looks to be ~272 possibly lost bytes per valgrind with each thread.
-        errno = 0;
-        rc_subscribe = pthread_create(&thread_subscribe, NULL, simm_runtime_subscribe, NULL);
-        if (0 != rc_subscribe)
-        {
-            success = false;
-            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_subscribe, strerror(rc_subscribe));
+            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_sendPublish, strerror(rc_sendPublish));
         }
 
         errno = 0;
@@ -337,13 +409,13 @@ static void simm_run(void)
  * received, locks (mutex) data and alloactes space for a new
  * topic/subscription.  Once done, sends subscribe acknowledge
  * message.  
- * 
+ *
  * @param[in] void
  * @param[out] void
  *
  * @return void
  */
-static void* simm_runtime_subscribe(void * UNUSED(param) )
+static void* fdl_runtime_getSubscribe(void * UNUSED(param) )
 {
     int32_t rc;
     //bool success, 
@@ -363,11 +435,10 @@ static void* simm_runtime_subscribe(void * UNUSED(param) )
     {
         //success_sub_run = process_subscribe( clientSocket_TCP );
         
-        process_subscribe( clientSocket_TCP );
+        process_getSubscribe( clientSocket_TCP );
         numSub++;
         pthread_mutex_lock(&pubMutex);
         
-
         num_topics_total++;
 
         publishMe = realloc(publishMe, sizeof(topicToPublish)*num_topics_total);
@@ -383,9 +454,9 @@ static void* simm_runtime_subscribe(void * UNUSED(param) )
         buildPublishData();
         
 
-        //success_subAck_run = process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
-        //process_subscribe_ack( clientSocket_TCP , DestAddr_TCP );
-        process_subscribe_ack( clientSocket_TCP );
+        //success_subAck_run = process_sendSubscribe_ack( clientSocket_TCP , DestAddr_TCP );
+        //process_sendSubscribe_ack( clientSocket_TCP , DestAddr_TCP );
+        process_sendSubscribe_ack( clientSocket_TCP );
         pthread_mutex_unlock(&pubMutex);
 //      if ( false == ( success_sub_run || success_subAck_run || success_bPD_run || success_sub_malloc_run ) )
 //      {
@@ -395,29 +466,81 @@ static void* simm_runtime_subscribe(void * UNUSED(param) )
     return 0;
 }
 
-
 /**
- * PUBLISH thread.  Every second, publishes all available
- * topics/subscriptions ready to publish.  After publish is
- * made, determines next availble list of topics/subscriptions
- * to publish.
+ * PUBLISH thread for receiving data.  Data should originate
+ * only if this app made a subscription. At a minimum during
+ * boot, this app should subscribe for real and imaginary values
+ * for the half-order and first-order cam, crank and turbo
+ * sensors.
  *
  * @param[in] void
  * @param[out] void
  *
  * @return void
  */
-// This is the thread for processing PUBLISH every second
-static void* simm_runtime_publish(void * UNUSED(param) )
+static void* fdl_runtime_getPublish(void * UNUSED(param) )
 {
-    int32_t rc, cntPublishes, i;
-    int32_t hrtBt;
+    bool success = true;
+    int32_t rc;
+
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
+    }
+
+    while ( true == success )
+    {
+        success = process_getPublish( clientSocket_UDP );
+    }
+    return 0;
+}
+
+/**
+ * PUBLISH thread for sending data.  Every second, checks which
+ * available topics/subscriptions are ready to
+ * publish.  After publish is made, determines next availble
+ * list of topics/subscriptions to publish.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
+static void* fdl_runtime_sendPublish(void * UNUSED(param) )
+{
+//  //bool success = true;
+//  int32_t rc;
+//
+//  rc = pthread_detach( pthread_self() );
+//  if (rc != 0)
+//  {
+//      //success = false;
+//      syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
+//  }
+//
+//  while ( 1 )
+//  {
+//      //sleep(1);
+//      process_sendPublish( clientSocket_UDP , DestAddr_UDP , 1 );
+//      //success = true;
+//  }
+//
+//  return 0;
+
+
+
+
+
+    int32_t rc, cntPublishes; //, i;
+    //int32_t hrtBt;
     static int32_t numberToPublish;
     bool success = true;
     bool timeHasElapsed = true;
     struct timespec sec_begin, sec_end;
 
-    hrtBt = 0;
+    //hrtBt = 0;
 
     rc = pthread_detach( pthread_self() );
     if (rc != 0)
@@ -429,7 +552,7 @@ static void* simm_runtime_publish(void * UNUSED(param) )
     //printf("PUBLISH THREAD STARTED!\n");
     numberToPublish = 0;
     nextPublishPeriod = 1000;
-    clock_gettime(CLOCK_REALTIME, &sec_begin);  
+    clock_gettime(CLOCK_REALTIME, &sec_begin);
 
     while ( true == success )
     {
@@ -439,26 +562,27 @@ static void* simm_runtime_publish(void * UNUSED(param) )
             timeHasElapsed = numSecondsHaveElapsed(sec_begin, sec_end, 1);     // check elapsed time of 1 second ... consider changing this based on nextPublishPeriod
         }
         else
-        {   
-            hrtBt++;
+        {
+            //hrtBt++;
             pthread_mutex_lock(&pubMutex);
 
-            process_HeartBeat( clientSocket_TCP, hrtBt );
-            
+            //process_HeartBeat( clientSocket_TCP, hrtBt );
+
             cntPublishes = 0;
-            for( i = 0 ; i < num_topics_total ; i++ )
-            {
-                if (true == publishMe[i].publishReady)
+            printf("FROM PUBLISH, num_topics_total: %d\n", num_topics_total);
+            //for( i = 0 ; i < num_topics_total ; i++ )
+            //{
+                if (true == publishMe[1].publishReady)
                 {
                     //process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns, i );
-                    process_publish( clientSocket_UDP , DestAddr_UDP , i );
-                    cntPublishes++; 
+                    process_sendPublish( clientSocket_UDP , DestAddr_UDP , 1 );
+                    cntPublishes++;
                 }
                 if ( (numberToPublish == cntPublishes) && (numberToPublish == num_topics_total) )
                 {
                     nextPublishPeriod = 0;
                 }
-            }
+           // }
             pthread_mutex_unlock(&pubMutex);
             //printf("\n\n\nFROM PUBLISH THREAD, nextPublishPeriod: %d\n", nextPublishPeriod);
             timeHasElapsed = false;
@@ -466,69 +590,6 @@ static void* simm_runtime_publish(void * UNUSED(param) )
             nextPublishPeriod += 1000;
             numberToPublish = publishManager();
         }
-    }
-    return 0;
-}
-
-/**
- * SENSORS thread.  Gets FGPA data and generates logical MP and
- * timestamp data.  See sensor.c
- *
- * @param[in] void
- * @param[out] void
- *
- * @return void
- */
-static void* read_sensors(void * UNUSED(param) )
-{
-    bool success = true;
-    int32_t rc;
-
-//  voltages = {0,0,0,0,0};
-//  timestamps = {0,0,0,0,0,0,0,0,0};
-//  ts_HiLoCnt = {0,0,0};
-
-    //printf("Thread Started!\n");
-
-    // detach the thread so that main can resume
-    errno = 0;
-    rc = pthread_detach(pthread_self());
-    if (rc != 0)
-    {
-        syslog(LOG_ERR, "%s:%d ERROR: Thread detaching unsuccessful (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
-        //printf("ERROR: Thread detaching unsuccessful: (%d)\n", errno);
-    }
-
-    // LOOP FOREVER, BULDING X SECONDS WORTH OF DATA AND EXPORTING
-    while(success)
-    {
-        // CONTAINS A BLOCKING READ FOR THE FPGA INTERRUPT REGISTERS
-        if ( false == wait_for_fpga() )
-        {
-            success = false;
-        }
-        // printf("\nFPGA Ready!\n");
-
-        /* GET FPGA DATA IMMEDIATELY */
-        //get_fpga_data(&voltages[0], &timestamps[0], &ts_HiLoCnt[0]);
-        get_fpga_data();
-
-        bufferFPGAdata();
-
-        // save copy to use
-        pthread_mutex_lock(&pubMutex);
-
-        // GET LOGICAL VALUES FROM REGISTERS
-        //make_logicals(&voltages[0]);
-        make_logicals();
-        // ADD ERROR CHECKING FOR STATUS
-
-        // GET TIMESTAMPS FOM REGISTERS
-        //calculate_timestamps(&timestamps[0], &ts_HiLoCnt[0]);
-        calculate_timestamps();
-        // ADD ERROR CHECKING FOR STATUS
-
-        pthread_mutex_unlock(&pubMutex);
     }
     return 0;
 }
@@ -548,8 +609,7 @@ bool UDPsetup(void)
     char loopch;
 
     // multicast - still 100% on how this struct, setsockopt,  and IP_ADD_MEMBERSHIP tie together.  
-    struct ip_mreq mreq;
-
+    //struct ip_mreq mreq;
     if (true == success)
     {
         errno = 0;
@@ -570,12 +630,10 @@ bool UDPsetup(void)
         //bzero( &DestAddr_UDP , sizeof(DestAddr_UDP ) );
         DestAddr_UDP.sin_family = AF_INET;					        // must be this
         DestAddr_UDP.sin_port = htons(UDPPort);	                    // set the port to write to
-        //DestAddr_UDP.sin_addr.s_addr = inet_addr(UDPAddress);       // set destination IP address
-        DestAddr_UDP.sin_addr.s_addr = INADDR_ANY;
+        DestAddr_UDP.sin_addr.s_addr = inet_addr(UDPAddress);       // set destination IP address
         memset(&(DestAddr_UDP.sin_zero), '\0', 8);                  // zero the rest of the struct
         //sizeof(DestAddr_UDP.sin_zero)
     }
-
 
     // disable loopback, i.e. don't receive sent packets.  
     loopch  = 0;
@@ -585,18 +643,6 @@ bool UDPsetup(void)
         success = false;
         syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - disbale loopback failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
     }
-    //printf("BEFORE MULTI?\n");
-
-    // use setsockopt() to request that the kernel join a multicast group 
-    errno = 0;
-    mreq.imr_multiaddr.s_addr = inet_addr(UDPAddress);
-    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    if (setsockopt(clientSocket_UDP, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq, sizeof(mreq)) < 0)
-    {
-        success = false;
-        syslog(LOG_ERR, "%s:%d ERROR! error with setsockopt multicast group %d (%d:%s)", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
-    }
-//  printf("AFTER MULTI?\n");
 
     // set local interface for multicast
     // this seems redundant
@@ -683,5 +729,41 @@ bool setupPublishStructure(void)
         syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
         success = false;
     }
+
+    recvFDL = malloc(sizeof(FDLinfo));
+    if (NULL == recvFDL)
+    {
+        syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+        success = false;
+    }
+
+    recvFDL[0].mp = malloc(sizeof(int32_t)*10);
+    if (NULL == recvFDL[0].mp)
+    {
+        syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+        success = false;
+    }
+
+    recvFDL[0].cop = malloc(sizeof(int32_t)*4);
+    if (NULL == recvFDL[0].cop)
+    {
+        syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+        success = false;
+    }
+
+    recvFDL[0].crank = malloc(sizeof(int32_t)*4);
+    if (NULL == recvFDL[0].crank)
+    {
+        syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+        success = false;
+    }
+
+    recvFDL[0].turbo = malloc(sizeof(int32_t)*2);
+    if (NULL == recvFDL[0].turbo)
+    {
+        syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+        success = false;
+    }
+
     return success;
 }

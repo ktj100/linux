@@ -27,7 +27,6 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <signal.h>
 
 #include "barsm_functions.h"
 
@@ -102,8 +101,25 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
     int32_t dir_index;
     int32_t dirs_array_size;
     bool success = true;
-    int32_t rc;
+    int32_t rc, i;
     char barsm_name[4];
+
+    /* CORRECT DIRECTORY STRUCTURE REQUIRED */
+    for ( i = 0; i < 5; i++ )
+    {
+        errno = 0;
+        if ( -1 == mkdir(dirs[i], 0) )
+        {
+            if ( EEXIST != errno )
+            {
+                syslog(LOG_ERR, "%s:%d ERROR: Directory structure incorrect! (%d: %s)", \
+                    __FUNCTION__, __LINE__, errno, strerror(errno));
+                printf("ERROR: Directory structure incorrect! (%d: %s) \n", \
+                    errno, strerror(errno));
+                success = false;
+            }
+        }
+    }
 
     /* create linked list ... */
     errno = 0;
@@ -138,7 +154,7 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
         /* get number of elements in dirs ... */
         dirs_array_size = 0;
         while( '\0' != dirs[++dirs_array_size] );
-    } /* if (success) */
+    }
 
     /* launch items in each dirs directory.  If directory empty, do nothing. */
     if ( success )
@@ -191,13 +207,9 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
                                 __FUNCTION__, __LINE__, errno, strerror(errno));
                         }
                     }
-                    else
-                    {
-                        break;
-                    }
-                } /* if ( 0 == dir_index ) */
-            } /* else if (normal == launch_status) */
-        } /* for (dir_index = 0; dir_index < dirs_array_size; dir_index++) */
+                }
+            }
+        }
         syslog(LOG_NOTICE, "COMPLETED: Launch sequence complete!");
         printf("\nCOMPLETED: Launch sequence complete!\n\n");
         /* all done, so last node is NULL */
@@ -228,7 +240,7 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
             printf(" in while before checking \n");
             success = check_modules(nth_node);
         }
-    } /* if (success) */
+    }
 
     syslog(LOG_NOTICE, "NOTICE: BARSM exiting due to terminal error!");
 
@@ -236,15 +248,7 @@ bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
      * exits, this free's all the nodes in the linked list. */
     nth_node = first_node;
     while( NULL != nth_node->next )
-    {    
-        /* Need to kill all child processes that were started up */
-        errno = 0;        
-        if ( -1 == kill(nth_node->child_pid, SIGTERM) )
-        {
-            syslog(LOG_ERR, "%s:%d ERROR! Not able to kill process with PID %d (%d:%s)", \
-                __FUNCTION__, __LINE__, nth_node->child_pid, errno, strerror(errno));
-        }
-
+    {
         tmp_toFree = nth_node;
         nth_node = nth_node->next;
         free(tmp_toFree);
@@ -269,23 +273,19 @@ bool aacmSetup(void)
 
     if ( success )
     {
-        success = TCPsetup( &clientSocket_TCP, DestAddr_TCP );
-        printf("TCP Setup Complete!\n");
+        success = TCPsetup( clientSocket_TCP, DestAddr_TCP );
     }
     if ( success )
     {
-        success = UDPsetup( &clientSocket_UDP, DestAddr_UDP, UDPPort, &UDPAddress[0] );
-        printf("UDP Setup Complete!\n");
+        success = UDPsetup( clientSocket_UDP, DestAddr_UDP, UDPPort, &UDPAddress[0] );
     }
     if ( success )
     {
         success = send_barsmToAacmInit(clientSocket_TCP);
-        printf("BARSM to AACM INIT sent!\n");
     }
     if ( success )
     {
         success = receive_barsmToAacmInitAck(clientSocket_TCP);
-        printf("INIT ACK recieved!\n");
     }
 
     return (success);
@@ -421,7 +421,7 @@ int32_t launch_itemsInDir( const char *directory )
                         {
                             run_time += LAUNCH_CHECK_PERIOD;
                         }
-                    } /* while ( launch_attempts < MAX_LAUNCH_ATTEMPTS && run_time <= START_ENSURE_DELAY ) */
+                    }
                     sleep(START_ENSURE_DELAY);
                     errno = 0;
                     nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
@@ -452,7 +452,7 @@ int32_t launch_itemsInDir( const char *directory )
 
                             success = false;
                         }
-                    } /* if ( 0 != nth_node->alive ) */
+                    }
 
                     if ( NULL == nth_node->next )
                     {
@@ -468,12 +468,12 @@ int32_t launch_itemsInDir( const char *directory )
                     printf( "next address %p \n" , (void *)nth_node->next );
 
                     nth_node = nth_node->next;
-                } /* else if ( success ) */
-            } /* if ( '.' != dp->d_name[0] ) */
+                }
+            }
             dp = readdir(dir);
-        } /* while ( NULL != dp ) */
+        }
         closedir(dir);
-    } /* else if (errno != ENOENT && errno != ENOTDIR) */
+    }
 
     if ( ! success )
     {
@@ -515,7 +515,6 @@ void* rcv_errMsgs( void * UNUSED(param) )
     
     while ( success )
     {
-        printf("Waiting for aacmToBarsm MSG... \n");
         receive_aacmToBarsm( clientSocket_TCP, first_node );
         send_aacmToBarsmAck( clientSocket_TCP );
     }

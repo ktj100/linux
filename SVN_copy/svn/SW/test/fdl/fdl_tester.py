@@ -2,7 +2,7 @@
 
 import sys
 sys.path.insert(0, '/home/norwood/sandbox/repos/trunk/SW/test/utils')
-import simm
+import fdl
 import log
 import subprocess
 import time
@@ -10,7 +10,7 @@ import threading
 
 # This is structured pretty much the same way as MyServer.c
 if __name__ == '__main__':
-    SimmTestResult      = True
+    fdlTestResult      = True
 
     # commented values can be used as PASS values.  Set to 0 for full test.  
     regAppAck_passfail  = 3     # 3
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     lock = threading.Lock()
 
     #BOOT PROCESSES
-    while SimmTestResult != False:   
+    while fdlTestResult != False:   
         subprocess.Popen("clear")
         time.sleep(1)
         print("TEST STARTED!")
@@ -33,7 +33,7 @@ if __name__ == '__main__':
         KeepMoving = True
         if KeepMoving != False:
             # TCP SETUP
-            TCPconn, sVal = simm.TCPsetup()
+            TCPconn, sVal = fdl.TCPsetup()
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
             launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
@@ -43,7 +43,7 @@ if __name__ == '__main__':
             
         if KeepMoving != False:
             #UDP SETUP
-            UDPsock = simm.UDPsetup()
+            UDPsock = fdl.UDPsetup()
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
             launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         if KeepMoving != False:
             # REGISTER APP
             #time.sleep(1)
-            simm.registerApp(TCPconn, sVal)
+            fdl.registerApp(TCPconn, sVal)
             print("REGISTER APP: FINISHED RECEIVING")
             #time.sleep(1)
             sysLog = sysLogFollow.read()
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         if KeepMoving != False:
             # REGISTER APP ACK
             print("REGISTER APP ACK ATTEMPT: ", regAppAck_passfail)
-            simm.registerAppAck(TCPconn, regAppAck_passfail)
+            fdl.registerAppAck(TCPconn, regAppAck_passfail)
             time.sleep(1)
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
@@ -80,7 +80,8 @@ if __name__ == '__main__':
 
         if KeepMoving != False:
         # REGISTER DATA
-            simm.registerData(TCPconn)
+            fdl.registerData(TCPconn)
+            print("READY TO GET REGISTER DATA")
             #time.sleep(1)
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
@@ -92,7 +93,7 @@ if __name__ == '__main__':
         if KeepMoving != False:
         # REGISTER DATA ACK
             print("REGISTER DATA ACK ATTEMPT: ", regDataAck_passfail)
-            simm.registerDataAck(TCPconn, regDataAck_passfail)
+            fdl.registerDataAck(TCPconn, regDataAck_passfail)
             time.sleep(1)
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
@@ -107,7 +108,7 @@ if __name__ == '__main__':
         # UDP OPEN 
         # If I don't put a large delay in my .c, this fails.  If the .c stuff executes before this starts, it fails.  
             #print("UDP OPEN")
-            SenderAddr = simm.udpOpen(UDPsock)
+            SenderAddr = fdl.udpOpen(UDPsock)
             time.sleep(1)
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
@@ -119,7 +120,7 @@ if __name__ == '__main__':
         if KeepMoving != False:
         # SYS INIT
             print("SYS INIT ATTEMPT: ", sysInit_passfail)
-            simm.sysInit(UDPsock, SenderAddr, sysInit_passfail)
+            fdl.sysInit(UDPsock, SenderAddr, sysInit_passfail)
             time.sleep(1)
             sysLog = sysLogFollow.read()
             sysLogFollow.start()
@@ -130,54 +131,105 @@ if __name__ == '__main__':
                 sysInit_passfail = sysInit_passfail + 1
 
         if KeepMoving != False:
-        # SUBSCRIBE
-            print("SUBSCRIBE ATTEMPT: ", subscribe_passfail)
-            # cosnider sending some random parameters as well ...
-            if 2 == subscribe_passfail:
-                simm.subscribe(TCPconn, 0)
-            elif 3 == subscribe_passfail:
-                simm.subscribe(TCPconn, 0)
-            elif 4 == subscribe_passfail:
-                simm.subscribe(TCPconn, 0)
-            elif 6 == subscribe_passfail:
-                simm.subscribe(TCPconn, 0)
-            else:
-                simm.subscribe(TCPconn, subscribe_passfail)
-            #time.sleep(1)
-            #sysLog = sysLogFollow.read()
-            #launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
-            #if 0 < launch_errors:
-                #print("SUBSCRIBE errors: ", launch_errors)
-                #KeepMoving = False
-
-        #if KeepMoving != False:
-        # SUBSCRIBE ACK
-            #sysLogFollow.start
-            simm.subscribeAck(TCPconn, subscribe_passfail)
+        # GET SUBSCRIBE
+            print("GET SUBSCRIBE ATTEMPT")
+            fdl.getSubscribe(TCPconn)
+            time.sleep(1)
             sysLog = sysLogFollow.read()
-            sysLogFollow.start
+            sysLogFollow.start()
             launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
-            #launch_success = sum(1 for d in sysLog if "simm_init() SUCCESS!" in d.get('message'))
             if 0 < launch_errors:
-                print("SUBSCRIBE ACK errors: ", launch_errors)
-                #KeepMoving = False
-                subscribe_passfail = subscribe_passfail + 1
+                print("SYS INIT errors: ", launch_errors)
+                KeepMoving = False
+                sysInit_passfail = sysInit_passfail + 1
 
-
-        # RUN-TIME PROCESSING
         if KeepMoving != False:
-        # RUN-TIME
-            #cnt = 0
-            t = threading.Thread(group=None, target=simm.publishThread, name=None, args=(UDPsock, lock)).start()
-            t = threading.Thread(group=None, target=simm.HeartBeatThread, name=None, args=(TCPconn, lock)).start()
-            time.sleep(7)
-            simm.subscribe(TCPconn, 100)
+        # SEND SUBSCRIBE ACK
+            print("SEND SUB ACK ATTEMPT")
+            fdl.sendSubscribeAck(TCPconn)
             time.sleep(1)
-            simm.subscribeAck(TCPconn, 100)
-            time.sleep(7)
-            simm.subscribe(TCPconn, 200)
+            sysLog = sysLogFollow.read()
+            sysLogFollow.start()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("SEND SUB ACK errors:",launch_errors)
+                KeepMoving = False
+                regDataAck_passfail = regDataAck_passfail + 1
+
+        if KeepMoving != False:
+        # SEND PUBLISH DATA
+            print("SEND PUBLISH DATA")
+            fdl.sendPublish(UDPsock, SenderAddr)
             time.sleep(1)
-            simm.subscribeAck(TCPconn, 200)
+            sysLog = sysLogFollow.read()
+            sysLogFollow.start()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("SEND PUBLISH DATA errors: ", launch_errors)
+                KeepMoving = False
+                sysInit_passfail = sysInit_passfail + 1
+            fdl.sendSubscribe(TCPconn)
+            time.sleep(1)
+            fdl.subscribeAck(TCPconn, 0)
+            time.sleep(1)
+            print('STARTING PUB THREAD ... ')
+            t = threading.Thread(group=None, target=fdl.getPublishThread, name=None, args=(UDPsock,lock,)).start()
+            t = threading.Thread(group=None, target=fdl.sendPublishThread, name=None, args=(UDPsock, SenderAddr)).start()
+            print('PUB THREAD STARTED!')
             alwaysRun = True
             while True == alwaysRun:
                 alwaysRun = True
+
+
+#       if KeepMoving != False:
+#       # SUBSCRIBE
+#           print("SUBSCRIBE ATTEMPT: ", subscribe_passfail)
+#           # cosnider sending some random parameters as well ...
+#           if 2 == subscribe_passfail:
+#               fdl.subscribe(TCPconn, 0)
+#           elif 3 == subscribe_passfail:
+#               fdl.subscribe(TCPconn, 0)
+#           elif 4 == subscribe_passfail:
+#               fdl.subscribe(TCPconn, 0)
+#           elif 6 == subscribe_passfail:
+#               fdl.subscribe(TCPconn, 0)
+#           else:
+#               fdl.subscribe(TCPconn, subscribe_passfail)
+#           #time.sleep(1)
+#           #sysLog = sysLogFollow.read()
+#           #launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+#           #if 0 < launch_errors:
+#               #print("SUBSCRIBE errors: ", launch_errors)
+#               #KeepMoving = False
+#
+#       #if KeepMoving != False:
+#       # SUBSCRIBE ACK
+#           #sysLogFollow.start
+#           fdl.subscribeAck(TCPconn, subscribe_passfail)
+#           sysLog = sysLogFollow.read()
+#           sysLogFollow.start
+#           launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+#           #launch_success = sum(1 for d in sysLog if "fdl_init() SUCCESS!" in d.get('message'))
+#           if 0 < launch_errors:
+#               print("SUBSCRIBE ACK errors: ", launch_errors)
+#               #KeepMoving = False
+#               subscribe_passfail = subscribe_passfail + 1
+#
+#
+#       # RUN-TIME PROCESSING
+#       if KeepMoving != False:
+#       # RUN-TIME
+#           #cnt = 0
+#           t = threading.Thread(group=None, target=fdl.sendPublishThread, name=None, args=(UDPsock, SenderAddr)).start()
+#           t = threading.Thread(group=None, target=fdl.HeartBeatThread, name=None, args=(TCPconn, lock)).start()
+#           time.sleep(7)
+#           fdl.subscribe(TCPconn, 100)
+#           time.sleep(1)
+#           fdl.subscribeAck(TCPconn, 100)
+#           time.sleep(7)
+#           fdl.subscribe(TCPconn, 200)
+#           time.sleep(1)
+#           fdl.subscribeAck(TCPconn, 200)
+#           alwaysRun = True
+#           while True == alwaysRun:
+#               alwaysRun = True

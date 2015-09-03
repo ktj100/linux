@@ -84,13 +84,13 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(.dynsym)
  .dynsym        0x00000000004002b8      0x3c0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.dynstr         0x0000000000400678      0x1d7
+.dynstr         0x0000000000400678      0x1d6
  *(.dynstr)
- .dynstr        0x0000000000400678      0x1d7 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .dynstr        0x0000000000400678      0x1d6 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.gnu.version    0x0000000000400850       0x50
+.gnu.version    0x000000000040084e       0x50
  *(.gnu.version)
- .gnu.version   0x0000000000400850       0x50 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .gnu.version   0x000000000040084e       0x50 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
 .gnu.version_d  0x00000000004008a0        0x0
  *(.gnu.version_d)
@@ -144,19 +144,19 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
                 0x0000000000400ce0                pthread_create@@GLIBC_2.2.5
                 0x0000000000400cf0                pthread_detach@@GLIBC_2.2.5
                 0x0000000000400d00                __errno_location@@GLIBC_2.2.5
-                0x0000000000400d10                mkdir@@GLIBC_2.2.5
-                0x0000000000400d20                puts@@GLIBC_2.2.5
-                0x0000000000400d30                setsockopt@@GLIBC_2.2.5
-                0x0000000000400d40                getpid@@GLIBC_2.2.5
-                0x0000000000400d50                opendir@@GLIBC_2.2.5
-                0x0000000000400d60                strlen@@GLIBC_2.2.5
-                0x0000000000400d70                __stack_chk_fail@@GLIBC_2.4
-                0x0000000000400d80                send@@GLIBC_2.2.5
-                0x0000000000400d90                closedir@@GLIBC_2.2.5
-                0x0000000000400da0                __strdup@@GLIBC_2.2.5
-                0x0000000000400db0                __libc_start_main@@GLIBC_2.2.5
-                0x0000000000400dc0                inet_addr@@GLIBC_2.2.5
-                0x0000000000400de0                memcpy@@GLIBC_2.14
+                0x0000000000400d10                puts@@GLIBC_2.2.5
+                0x0000000000400d20                setsockopt@@GLIBC_2.2.5
+                0x0000000000400d30                getpid@@GLIBC_2.2.5
+                0x0000000000400d40                opendir@@GLIBC_2.2.5
+                0x0000000000400d50                strlen@@GLIBC_2.2.5
+                0x0000000000400d60                __stack_chk_fail@@GLIBC_2.4
+                0x0000000000400d70                send@@GLIBC_2.2.5
+                0x0000000000400d80                closedir@@GLIBC_2.2.5
+                0x0000000000400d90                __strdup@@GLIBC_2.2.5
+                0x0000000000400da0                __libc_start_main@@GLIBC_2.2.5
+                0x0000000000400db0                inet_addr@@GLIBC_2.2.5
+                0x0000000000400dd0                memcpy@@GLIBC_2.14
+                0x0000000000400de0                kill@@GLIBC_2.2.5
                 0x0000000000400df0                readdir@@GLIBC_2.2.5
                 0x0000000000400e00                malloc@@GLIBC_2.2.5
                 0x0000000000400e10                recvfrom@@GLIBC_2.2.5
@@ -177,98 +177,96 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(.iplt)
  .iplt          0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.text           0x0000000000400f00     0x1c12
+.text           0x0000000000400f00     0x1d42
  *(.text.unlikely .text.*_unlikely .text.unlikely.*)
  *(.text.exit .text.exit.*)
  *(.text.startup .text.startup.*)
- .text.startup  0x0000000000400f00      0xa6e build/barsm.o
+ .text.startup  0x0000000000400f00      0xb16 build/barsm.o
                 0x0000000000400f00                main
  *(.text.hot .text.hot.*)
  *(.text .stub .text.* .gnu.linkonce.t.*)
- .text          0x000000000040196e       0x2a /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
-                0x000000000040196e                _start
- .text          0x0000000000401998        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
- *fill*         0x0000000000401998        0x8 
- .text          0x00000000004019a0       0xbd /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
- *fill*         0x0000000000401a5d        0x3 
- .text          0x0000000000401a60       0x83 build/barsm.o
- *fill*         0x0000000000401ae3        0xd 
- .text          0x0000000000401af0      0xfb0 build/barsm_functions.o
-                0x0000000000401af0                TCPsetup
-                0x0000000000401c70                UDPsetup
-                0x0000000000401dd0                send_barsmToAacmInit
-                0x0000000000401eb0                receive_barsmToAacmInitAck
-                0x0000000000402040                rand_letter
-                0x0000000000402080                assign_procName
-                0x00000000004020b0                start_process
-                0x00000000004021a0                process_sysInit
-                0x00000000004023f0                send_barsmToAacmProcesses
-                0x0000000000402620                check_modules
-                0x00000000004027d0                send_aacmToBarsmAck
-                0x00000000004028b0                start_select
-                0x0000000000402900                receive_aacmToBarsm
- .text          0x0000000000402aa0       0x72 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
-                0x0000000000402aa0                __libc_csu_init
-                0x0000000000402b10                __libc_csu_fini
- .text          0x0000000000402b12        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
- .text          0x0000000000402b12        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
+ .text          0x0000000000401a16       0x2a /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+                0x0000000000401a16                _start
+ .text          0x0000000000401a40        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
+ .text          0x0000000000401a40       0xbd /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+ *fill*         0x0000000000401afd        0x3 
+ .text          0x0000000000401b00       0xa3 build/barsm.o
+ *fill*         0x0000000000401ba3        0xd 
+ .text          0x0000000000401bb0     0x1020 build/barsm_functions.o
+                0x0000000000401bb0                TCPsetup
+                0x0000000000401d40                UDPsetup
+                0x0000000000401eb0                send_barsmToAacmInit
+                0x0000000000401fa0                receive_barsmToAacmInitAck
+                0x0000000000402170                rand_letter
+                0x00000000004021b0                assign_procName
+                0x00000000004021e0                start_process
+                0x00000000004022d0                process_sysInit
+                0x0000000000402520                send_barsmToAacmProcesses
+                0x0000000000402750                check_modules
+                0x0000000000402900                send_aacmToBarsmAck
+                0x00000000004029e0                start_select
+                0x0000000000402a30                receive_aacmToBarsm
+ .text          0x0000000000402bd0       0x72 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                0x0000000000402bd0                __libc_csu_init
+                0x0000000000402c40                __libc_csu_fini
+ .text          0x0000000000402c42        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .text          0x0000000000402c42        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(.gnu.warning)
 
-.fini           0x0000000000402b14        0x9
+.fini           0x0000000000402c44        0x9
  *(SORT(.fini))
- .fini          0x0000000000402b14        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
-                0x0000000000402b14                _fini
- .fini          0x0000000000402b18        0x5 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
-                0x0000000000402b1d                PROVIDE (__etext, .)
-                0x0000000000402b1d                PROVIDE (_etext, .)
-                0x0000000000402b1d                PROVIDE (etext, .)
+ .fini          0x0000000000402c44        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
+                0x0000000000402c44                _fini
+ .fini          0x0000000000402c48        0x5 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
+                0x0000000000402c4d                PROVIDE (__etext, .)
+                0x0000000000402c4d                PROVIDE (_etext, .)
+                0x0000000000402c4d                PROVIDE (etext, .)
 
-.rodata         0x0000000000402b20      0xde7
+.rodata         0x0000000000402c50      0xf37
  *(.rodata .rodata.* .gnu.linkonce.r.*)
- .rodata.cst4   0x0000000000402b20        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
-                0x0000000000402b20                _IO_stdin_used
- *fill*         0x0000000000402b24        0x4 
+ .rodata.cst4   0x0000000000402c50        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+                0x0000000000402c50                _IO_stdin_used
+ *fill*         0x0000000000402c54        0x4 
  .rodata.str1.8
-                0x0000000000402b28      0x575 build/barsm.o
+                0x0000000000402c58      0x5e2 build/barsm.o
  .rodata.str1.1
-                0x000000000040309d      0x165 build/barsm.o
- *fill*         0x0000000000403202        0xe 
- .rodata        0x0000000000403210       0x23 build/barsm.o
- *fill*         0x0000000000403233        0x5 
+                0x000000000040323a      0x1b9 build/barsm.o
+ *fill*         0x00000000004033f3        0xd 
+ .rodata        0x0000000000403400       0x23 build/barsm.o
+ *fill*         0x0000000000403423        0x5 
  .rodata.str1.8
-                0x0000000000403238      0x5a8 build/barsm_functions.o
-                                        0x5a2 (size before relaxing)
+                0x0000000000403428      0x620 build/barsm_functions.o
+                                        0x61a (size before relaxing)
  .rodata.str1.1
-                0x00000000004037e0       0x4c build/barsm_functions.o
- *fill*         0x000000000040382c        0x4 
- .rodata        0x0000000000403830       0xd7 build/barsm_functions.o
+                0x0000000000403a48       0x68 build/barsm_functions.o
+ .rodata        0x0000000000403ab0       0xd7 build/barsm_functions.o
 
 .rodata1
  *(.rodata1)
 
-.eh_frame_hdr   0x0000000000403908       0xa4
+.eh_frame_hdr   0x0000000000403b88       0xa4
  *(.eh_frame_hdr)
- .eh_frame_hdr  0x0000000000403908       0xa4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .eh_frame_hdr  0x0000000000403b88       0xa4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.eh_frame       0x00000000004039b0      0x434
+.eh_frame       0x0000000000403c30      0x43c
  *(.eh_frame)
- .eh_frame      0x00000000004039b0       0x30 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
- .eh_frame      0x00000000004039e0       0x40 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
- .eh_frame      0x0000000000403a20       0x70 build/barsm.o
+ .eh_frame      0x0000000000403c30       0x30 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .eh_frame      0x0000000000403c60       0x40 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .eh_frame      0x0000000000403ca0       0x70 build/barsm.o
                                          0x88 (size before relaxing)
- .eh_frame      0x0000000000403a90      0x2f0 build/barsm_functions.o
-                                        0x2e8 (size before relaxing)
- .eh_frame      0x0000000000403d80       0x60 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .eh_frame      0x0000000000403d10      0x2f8 build/barsm_functions.o
+                                        0x2f0 (size before relaxing)
+ .eh_frame      0x0000000000404008       0x60 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
                                          0x78 (size before relaxing)
- .eh_frame      0x0000000000403de0        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .eh_frame      0x0000000000404068        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
 
 .gcc_except_table
  *(.gcc_except_table .gcc_except_table.*)
 
 .exception_ranges
  *(.exception_ranges .exception_ranges*)
-                0x0000000000403de4                . = (ALIGN (0x200000) - ((0x200000 - .) & 0x1fffff))
-                0x0000000000603dfc                . = DATA_SEGMENT_ALIGN (0x200000, 0x1000)
+                0x000000000040406c                . = (ALIGN (0x200000) - ((0x200000 - .) & 0x1fffff))
+                0x0000000000604dfc                . = DATA_SEGMENT_ALIGN (0x200000, 0x1000)
 
 .eh_frame
  *(.eh_frame)
@@ -286,24 +284,24 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(.tbss .tbss.* .gnu.linkonce.tb.*)
  *(.tcommon)
 
-.preinit_array  0x0000000000603dfc        0x0
-                0x0000000000603dfc                PROVIDE (__preinit_array_start, .)
+.preinit_array  0x0000000000604dfc        0x0
+                0x0000000000604dfc                PROVIDE (__preinit_array_start, .)
  *(.preinit_array)
-                0x0000000000603dfc                PROVIDE (__preinit_array_end, .)
+                0x0000000000604dfc                PROVIDE (__preinit_array_end, .)
 
-.init_array     0x0000000000603e00        0x8
-                0x0000000000603e00                PROVIDE (__init_array_start, .)
+.init_array     0x0000000000604e00        0x8
+                0x0000000000604e00                PROVIDE (__init_array_start, .)
  *(SORT(.init_array.*) SORT(.ctors.*))
  *(.init_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .ctors)
- .init_array    0x0000000000603e00        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
-                0x0000000000603e08                PROVIDE (__init_array_end, .)
+ .init_array    0x0000000000604e00        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+                0x0000000000604e08                PROVIDE (__init_array_end, .)
 
-.fini_array     0x0000000000603e08        0x8
-                0x0000000000603e08                PROVIDE (__fini_array_start, .)
+.fini_array     0x0000000000604e08        0x8
+                0x0000000000604e08                PROVIDE (__fini_array_start, .)
  *(SORT(.fini_array.*) SORT(.dtors.*))
  *(.fini_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .dtors)
- .fini_array    0x0000000000603e08        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
-                0x0000000000603e10                PROVIDE (__fini_array_end, .)
+ .fini_array    0x0000000000604e08        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+                0x0000000000604e10                PROVIDE (__fini_array_end, .)
 
 .ctors
  *crtbegin.o(.ctors)
@@ -319,108 +317,108 @@ LOAD /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(SORT(.dtors.*))
  *(.dtors)
 
-.jcr            0x0000000000603e10        0x8
+.jcr            0x0000000000604e10        0x8
  *(.jcr)
- .jcr           0x0000000000603e10        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
- .jcr           0x0000000000603e10        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .jcr           0x0000000000604e10        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+ .jcr           0x0000000000604e10        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
 
 .data.rel.ro
  *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*)
  *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*)
 
-.dynamic        0x0000000000603e18      0x1e0
+.dynamic        0x0000000000604e18      0x1e0
  *(.dynamic)
- .dynamic       0x0000000000603e18      0x1e0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
-                0x0000000000603e18                _DYNAMIC
+ .dynamic       0x0000000000604e18      0x1e0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+                0x0000000000604e18                _DYNAMIC
 
-.got            0x0000000000603ff8        0x8
+.got            0x0000000000604ff8        0x8
  *(.got)
- .got           0x0000000000603ff8        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .got           0x0000000000604ff8        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
  *(.igot)
-                0x0000000000604fe8                . = DATA_SEGMENT_RELRO_END (., (SIZEOF (.got.plt) >= 0x18)?0x18:0x0)
+                0x0000000000605fe8                . = DATA_SEGMENT_RELRO_END (., (SIZEOF (.got.plt) >= 0x18)?0x18:0x0)
 
-.got.plt        0x0000000000604000      0x138
+.got.plt        0x0000000000605000      0x138
  *(.got.plt)
- .got.plt       0x0000000000604000      0x138 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
-                0x0000000000604000                _GLOBAL_OFFSET_TABLE_
+ .got.plt       0x0000000000605000      0x138 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+                0x0000000000605000                _GLOBAL_OFFSET_TABLE_
  *(.igot.plt)
  .igot.plt      0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
 
-.data           0x0000000000604140       0x48
+.data           0x0000000000605140       0x68
  *(.data .data.* .gnu.linkonce.d.*)
- .data          0x0000000000604140        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
-                0x0000000000604140                data_start
-                0x0000000000604140                __data_start
- .data          0x0000000000604144        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
- *fill*         0x0000000000604144        0x4 
- .data          0x0000000000604148        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
-                0x0000000000604148                __dso_handle
- .data          0x0000000000604150        0xe build/barsm.o
-                0x0000000000604150                UDPPort
-                0x0000000000604154                UDPAddress
- *fill*         0x000000000060415e        0x2 
+ .data          0x0000000000605140        0x4 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+                0x0000000000605140                data_start
+                0x0000000000605140                __data_start
+ .data          0x0000000000605144        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
+ *fill*         0x0000000000605144        0x4 
+ .data          0x0000000000605148        0x8 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+                0x0000000000605148                __dso_handle
+ .data          0x0000000000605150       0x16 build/barsm.o
+                0x0000000000605158                UDPPort
+                0x000000000060515c                UDPAddress
+ *fill*         0x0000000000605166       0x1a 
  .data.rel.local
-                0x0000000000604160       0x28 build/barsm.o
-                0x0000000000604160                dirs
- .data          0x0000000000604188        0x0 build/barsm_functions.o
- .data          0x0000000000604188        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
- .data          0x0000000000604188        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
- .data          0x0000000000604188        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
+                0x0000000000605180       0x28 build/barsm.o
+                0x0000000000605180                dirs
+ .data          0x00000000006051a8        0x0 build/barsm_functions.o
+ .data          0x00000000006051a8        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .data          0x00000000006051a8        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .data          0x00000000006051a8        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
 
 .tm_clone_table
-                0x0000000000604188        0x0
+                0x00000000006051a8        0x0
  .tm_clone_table
-                0x0000000000604188        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+                0x00000000006051a8        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
  .tm_clone_table
-                0x0000000000604188        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+                0x00000000006051a8        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
 
 .data1
  *(.data1)
-                0x0000000000604188                _edata = .
-                0x0000000000604188                PROVIDE (edata, .)
-                0x0000000000604188                . = .
-                0x0000000000604188                __bss_start = .
+                0x00000000006051a8                _edata = .
+                0x00000000006051a8                PROVIDE (edata, .)
+                0x00000000006051a8                . = .
+                0x00000000006051a8                __bss_start = .
 
-.bss            0x00000000006041a0       0xe0
+.bss            0x00000000006051c0       0xe0
  *(.dynbss)
  .dynbss        0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
  *(.bss .bss.* .gnu.linkonce.b.*)
- .bss           0x00000000006041a0        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
- .bss           0x00000000006041a0        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
- .bss           0x00000000006041a0        0x1 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
- *fill*         0x00000000006041a1        0xf 
- .bss           0x00000000006041b0       0x40 build/barsm.o
-                0x00000000006041b0                DestAddr_UDP
-                0x00000000006041c0                DestAddr_TCP
-                0x00000000006041d0                tmp_toFree
-                0x00000000006041d8                nth_node
-                0x00000000006041e0                first_node
- *fill*         0x00000000006041f0       0x10 
- .bss           0x0000000000604200       0x80 build/barsm_functions.o
-                0x0000000000604200                toRcvUDP
- .bss           0x0000000000604280        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
- .bss           0x0000000000604280        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
- .bss           0x0000000000604280        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
+ .bss           0x00000000006051c0        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o
+ .bss           0x00000000006051c0        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o
+ .bss           0x00000000006051c0        0x1 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbegin.o
+ *fill*         0x00000000006051c1        0xf 
+ .bss           0x00000000006051d0       0x40 build/barsm.o
+                0x00000000006051d0                DestAddr_UDP
+                0x00000000006051e0                DestAddr_TCP
+                0x00000000006051f0                tmp_toFree
+                0x00000000006051f8                nth_node
+                0x0000000000605200                first_node
+ *fill*         0x0000000000605210       0x10 
+ .bss           0x0000000000605220       0x80 build/barsm_functions.o
+                0x0000000000605220                toRcvUDP
+ .bss           0x00000000006052a0        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .bss           0x00000000006052a0        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/crtend.o
+ .bss           0x00000000006052a0        0x0 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o
  *(COMMON)
-                0x0000000000604280                . = ALIGN ((. != 0x0)?0x8:0x1)
+                0x00000000006052a0                . = ALIGN ((. != 0x0)?0x8:0x1)
 
 .lbss
  *(.dynlbss)
  *(.lbss .lbss.* .gnu.linkonce.lb.*)
  *(LARGE_COMMON)
-                0x0000000000604280                . = ALIGN (0x8)
-                0x0000000000604280                . = SEGMENT_START ("ldata-segment", .)
+                0x00000000006052a0                . = ALIGN (0x8)
+                0x00000000006052a0                . = SEGMENT_START ("ldata-segment", .)
 
 .lrodata
  *(.lrodata .lrodata.* .gnu.linkonce.lr.*)
 
-.ldata          0x0000000000a04280        0x0
+.ldata          0x0000000000a052a0        0x0
  *(.ldata .ldata.* .gnu.linkonce.l.*)
-                0x0000000000a04280                . = ALIGN ((. != 0x0)?0x8:0x1)
-                0x0000000000a04280                . = ALIGN (0x8)
-                0x0000000000a04280                _end = .
-                0x0000000000a04280                PROVIDE (end, .)
-                0x0000000000a04280                . = DATA_SEGMENT_END (.)
+                0x0000000000a052a0                . = ALIGN ((. != 0x0)?0x8:0x1)
+                0x0000000000a052a0                . = ALIGN (0x8)
+                0x0000000000a052a0                _end = .
+                0x0000000000a052a0                PROVIDE (end, .)
+                0x0000000000a052a0                . = DATA_SEGMENT_END (.)
 
 .stab
  *(.stab)

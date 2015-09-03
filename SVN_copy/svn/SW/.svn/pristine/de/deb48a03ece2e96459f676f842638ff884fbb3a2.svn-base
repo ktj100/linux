@@ -26,38 +26,36 @@ struct sockaddr_storage toRcvUDP;
  *
  * @return true/false status of socket setup.  
  */
-bool TCPsetup( int32_t *csocket, struct sockaddr_in destAddr ) 
+bool TCPsetup( int32_t csocket, struct sockaddr_in destAddr ) 
 {
     bool success            = true;
     char ServerIPAddress[]  = "127.0.0.1";
     int TCPServerPort       =  8000;
 
     errno = 0;
-    csocket[0] = socket(AF_INET, SOCK_STREAM, 0);
-    if (0 > csocket[0])
+    csocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (0 > csocket)
     {
         success = false;
         syslog(LOG_ERR, "%s:%d ERROR! Failed to create socket %d (%d:%s) ", \
-            __FUNCTION__, __LINE__, csocket[0], errno, strerror(errno));
+            __FUNCTION__, __LINE__, csocket, errno, strerror(errno));
     }
 
     errno = 0;
     if ( success )
     {
-        memset(&destAddr,0,sizeof(destAddr));                   // clear struct
+        memset(&destAddr,0,sizeof(destAddr));               // clear struct
         destAddr.sin_family = AF_INET;                          // must be this
         destAddr.sin_port = htons(TCPServerPort);               // set the port to write to
         destAddr.sin_addr.s_addr = inet_addr(ServerIPAddress);  // set destination IP address
         memset(&(destAddr.sin_zero), '\0', 8);                  // zero the rest of the struct
 
-        if (0 != connect(csocket[0],(struct sockaddr *)&destAddr, sizeof(destAddr)))
+        if (0 != connect(csocket,(struct sockaddr *)&destAddr, sizeof(destAddr)))
         {
             success = false;
             syslog(LOG_ERR, "%s:%d ERROR! TCP failed to connect %u (%d:%s) ", \
                 __FUNCTION__, __LINE__, destAddr.sin_port, errno, strerror(errno));
         }
-
-        printf("Connection to AACM successful!\n");
     }
 
     return success;
@@ -74,7 +72,7 @@ bool TCPsetup( int32_t *csocket, struct sockaddr_in destAddr )
  *
  * @return true/false status of socket setup.  
  */
-bool UDPsetup( int32_t *csocket, struct sockaddr_in destAddr, int32_t udpPort , char *udpAddr ) 
+bool UDPsetup( int32_t csocket, struct sockaddr_in destAddr, int32_t udpPort , char *udpAddr ) 
 {
     bool success        = true;
     char loopch;
@@ -84,13 +82,13 @@ bool UDPsetup( int32_t *csocket, struct sockaddr_in destAddr, int32_t udpPort , 
     if (true == success)
     {
         errno = 0;
-        csocket[0] = socket(AF_INET, SOCK_DGRAM, 0);
-        if (0 > csocket[0])
+        csocket = socket(AF_INET, SOCK_DGRAM, 0);
+        if (0 > csocket)
         {
             //printf("ERROR WITH UDP SOCKET\n");
             success = false;
             syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - configure socket failed", \
-                __FUNCTION__, __LINE__, csocket[0], errno, strerror(errno));
+                __FUNCTION__, __LINE__, csocket, errno, strerror(errno));
         }
     }
 
@@ -107,11 +105,11 @@ bool UDPsetup( int32_t *csocket, struct sockaddr_in destAddr, int32_t udpPort , 
     // disable loopback, i.e. don't receive sent packets.  
     loopch  = 0;
     errno   = 0;
-    if (setsockopt(csocket[0], IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch)) < 0) 
+    if (setsockopt(csocket, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch)) < 0) 
     {
         success = false;
         syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - disbale loopback failed", \
-            __FUNCTION__, __LINE__, csocket[0], errno, strerror(errno));
+            __FUNCTION__, __LINE__, csocket, errno, strerror(errno));
     }
 
     return success;
@@ -156,8 +154,6 @@ bool send_barsmToAacmInit(int32_t csocket)
 
     actualLength = MSG_SIZE - CMD_ID - LENGTH;
     memcpy(msgLenPtr, &actualLength, sizeof(actualLength));
-
-    printf("Socket File Descriptor: %d\n", csocket);
 
     errno = 0;
     sentBytes = send(csocket, sendData, MSG_SIZE, 0);
@@ -225,9 +221,8 @@ bool receive_barsmToAacmInitAck(int32_t csocket)
     {
         if ( myPoll[0].revents && POLLIN )
         {
-            errno = 0;
             retBytes = recv(csocket , retData , MSG_SIZE , 0 );
-            ptr = &retData[0];
+            ptr = retData;
 
             memcpy(&fullMsg, ptr, sizeof(fullMsg));
             if ( -1 == retBytes )
@@ -241,9 +236,6 @@ bool receive_barsmToAacmInitAck(int32_t csocket)
                 syslog(LOG_ERR, "%s:%d ERROR: Message received was not expected ACK!", \
                     __FUNCTION__, __LINE__);
                 success = false;
-                printf("Number of bytes in received ACK: %d \n", retBytes);
-                printf("Full Message: %u \nExpected Message: %u \n", \
-                    fullMsg, BARSM_TO_AACM_INIT_ACK_MSG);
             }
         }
     }

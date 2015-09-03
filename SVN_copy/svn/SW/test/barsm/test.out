@@ -1,0 +1,108 @@
+==5163== Memcheck, a memory error detector
+==5163== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==5163== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==5163== Command: ./../utils/../../barsm/build/barsm -v --read-var-info=yes --leak-check=full --track-origins=yes show-reachable=yes --malloc-fill=B5 --free-fill=4A
+==5163== 
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+FIRST NODE: 0x541a040 
+NEXT NODE: (nil) 
+
+OPEN DIRECTORY: /opt/rc360/system/ 
+
+Launching ... /opt/rc360/system/aacm 
+CHILD linked list 'pid': 5164 
+CHILD linked list 'dir': /opt/rc360/system/aacm 
+CHILD linked list 'name': aacm 
+this address 0x541a040 
+next address 0x54221d0 
+COMPLETED: All items in /opt/rc360/system/ launched! 
+CLOSE DIRECTORY: /opt/rc360/system/ 
+
+Connection to AACM successful!
+TCP Setup Complete!
+UDP Setup Complete!
+Socket File Descriptor: 4
+BARSM to AACM INIT sent!
+INIT ACK recieved!
+
+OPEN DIRECTORY: /opt/rc360/modules/GE/ 
+
+Launching ... /opt/rc360/modules/GE/gemod 
+Waiting for aacmToBarsm MSG... 
+CHILD linked list 'pid': 5166 
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod 
+CHILD linked list 'name': gemod 
+this address 0x54221d0 
+next address 0x542d5e0 
+COMPLETED: All items in /opt/rc360/modules/GE/ launched! 
+CLOSE DIRECTORY: /opt/rc360/modules/GE/ 
+
+
+OPEN DIRECTORY: /opt/rc360/modules/TPA/ 
+
+Launching ... /opt/rc360/modules/TPA/tpamod 
+ERROR: File tpamod not launched properly! (0:Success) 
+ERROR: File tpamod not launched properly! (0:Success) 
+ERROR: File tpamod not launched properly! (0:Success) 
+ERROR: File tpamod not launched properly! (0:Success) 
+ERROR: File tpamod not launched properly! (0:Success) 
+NOTICE: Process for tpamod in /opt/rc360/modules/TPA/ disabled permanently! (0:Success) 
+CHILD linked list 'pid': 5176 
+CHILD linked list 'dir': /opt/rc360/modules/TPA/tpamod 
+CHILD linked list 'name': tpamod 
+this address 0x542d5e0 
+next address 0x5437af0 
+COMPLETED: All items in /opt/rc360/modules/TPA/ launched! 
+CLOSE DIRECTORY: /opt/rc360/modules/TPA/ 
+
+
+OPEN DIRECTORY: /opt/rc360/apps/GE/ 
+
+Launching ... /opt/rc360/apps/GE/geapp 
+CHILD linked list 'pid': 5177 
+CHILD linked list 'dir': /opt/rc360/apps/GE/geapp 
+CHILD linked list 'name': geapp 
+this address 0x5437af0 
+next address 0x544f570 
+COMPLETED: All items in /opt/rc360/apps/GE/ launched! 
+CLOSE DIRECTORY: /opt/rc360/apps/GE/ 
+
+
+OPEN DIRECTORY: /opt/rc360/apps/TPA/ 
+
+Launching ... /opt/rc360/apps/TPA/tpaapp 
+CHILD linked list 'pid': 5178 
+CHILD linked list 'dir': /opt/rc360/apps/TPA/tpaapp 
+CHILD linked list 'name': tpaapp 
+this address 0x544f570 
+next address 0x5459a80 
+COMPLETED: All items in /opt/rc360/apps/TPA/ launched! 
+CLOSE DIRECTORY: /opt/rc360/apps/TPA/ 
+
+
+COMPLETED: Launch sequence complete!
+
+==5163== 
+==5163== HEAP SUMMARY:
+==5163==     in use at exit: 676 bytes in 17 blocks
+==5163==   total heap usage: 66 allocs, 49 frees, 274,344 bytes allocated
+==5163== 
+==5163== LEAK SUMMARY:
+==5163==    definitely lost: 0 bytes in 0 blocks
+==5163==    indirectly lost: 0 bytes in 0 blocks
+==5163==      possibly lost: 272 bytes in 1 blocks
+==5163==    still reachable: 404 bytes in 16 blocks
+==5163==         suppressed: 0 bytes in 0 blocks
+==5163== Rerun with --leak-check=full to see details of leaked memory
+==5163== 
+==5163== For counts of detected and suppressed errors, rerun with: -v
+==5163== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
