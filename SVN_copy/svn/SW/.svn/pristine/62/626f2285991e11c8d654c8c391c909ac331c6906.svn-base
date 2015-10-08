@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+
+# This script ensures that BARSM restarts any successed applications that started 
+# up good. Error logs are also checked
+
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+
+import log
+import barsm_utils
+
+import time
+import datetime
+import proc
+
+def run():
+    success = True
+    zombies = 0
+    #Should be 5
+    expectedZombies = 5
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+    follow2 = log.logfollower()
+
+    # clear out all app directories
+    barsm_utils.remove()
+
+    # compile needed applications and place in required directories
+    # barsm_utils.short_launch()  # testing...
+    barsm_utils.launch_bad()
+    #barsm_utils.norm_launch()
+
+    # # start barsm
+    # barsm_utils.start_barsm()
+
+    # # setup AACM side of BARSM/AACM communications
+    # if success:
+    #     success = barsm_utils.aacm_setup()
+
+    # start barsm
+    if success:
+        print('-Starting BARSM')
+        barsm_utils.start_barsm()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while starting BARSM!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--BARSM started')
+
+    # wait for AACM to start
+    if success:
+        print('-Waiting for AACM')
+        barsm_pid = (proc.findproc("valgrind.bin"))[0]['pid']
+        aacmStarted = False
+        while False == aacmStarted and success:
+            # check if AACM has started
+            all_child = proc.findchild(barsm_pid)
+            if 1 == len(all_child):
+                aacmStarted = True
+            # check for launch errors
+            logs = follow.read('barsm')
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while waiting for AACM startup!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False 
+        if success:
+            print('--AACM started')
+
+    # setup TCP connection
+    if success:
+        print('-Setting up TCP connection')
+        TCPconn, sVal = barsm_utils.TCPsetup()  # both return values are objects
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating TCP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--TCP connection setup successful')
+
+    # receive BARSM to AACM init
+    if success:
+        print('-Waiting for BARSM to AACM init')
+        success = barsm_utils.barsmToAacmInit(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while receiving BARSM to AACM init!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--Init received')
+
+    # send BARSM to AACM init ack
+    if success:
+        print('-Sending ACK')
+        barsm_utils.barsmToAacmInitAck(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while sending BARSM to AACM init ack!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--ACK sent')
+
+    # if success:
+    #     # launch processes
+    #     launch_result, launch_finish_ts = barsm_utils.monitor_launch(log=follow, resetApps=5)
+    #     if launch_result != 9 or None == launch_finish_ts:
+    #         print("Launch Failure")
+    #         print("Launch Result: {} != 9".format(launch_result))
+    #         print("Launch Finish TS: {}".format(launch_finish_ts))
+    #         success = False
+
+    #     # get the time of the launch finish
+    #     #logs = follow.read('barsm')
+    #     # print(logs)
+    #     #launch_finish_ts = list(filter(lambda t: "COMPLETED: Launch sequence complete!" in t['message'], logs))[0]['timestamp']
+
+    # wait for children to complete launching
+    if success:
+        print('-Waiting for launch completion')
+        children = barsm_utils.waitForLaunch(follow)
+        if 9 == children:
+            print('--Launch complete!')
+        else: 
+            print('ERROR: only {} child procs (should have 9)'.format(children))
+            success = False
+
+    # setup UDP connection
+    if success:
+        print('-Setting up UDP connection')
+        UDPsock = barsm_utils.UDPsetup()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating UDP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--UDP connection setup')
+
+    # send sysInit message
+    if success:
+        print('-Waiting to receive OPEN message from BARSM')
+        print('-Sending SYS_INIT message to BARSM')
+        barsm_utils.sysInit(UDPsock)
+        print('--OPEN received')
+
+    # receive barsm to aacm processes
+    if success: 
+        print('-Receiving BARSM_TO_AACM_PROCESSES')
+
+        barsm_utils.receiveTcpMessage(TCPconn)
+
+        print('--BARSM_TO_AACM_PROCESSES message received')
+
+    # if success:
+    #     # print("Launch completed at {}".format(launch_finish_ts))
+
+    #     # wait for 35 seconds to pass to check for 5 zombies
+    #     print("Waiting 35 seconds after launch for children to become zombies...")
+    #     # delay = 35.0 - (datetime.datetime.now() - launch_finish_ts).total_seconds()
+    #     # print ("Delay: ", delay)
+    #     # if delay > 0:
+    #     #     time.sleep(delay)
+    #     time.sleep(35)
+
+    #     # make sure all 5 thirty second apps ended and none others
+    #     child_info = barsm_utils.get_barsm_child_pids()
+    #     print(child_info)
+
+    #     zombies = sum(1 for c in child_info if "Z" == c['state'])
+    #     print('Zombies: {}'.format(zombies))
+
+    #     if expectedZombies != zombies:
+    #         print("Zombie Creation Failure")
+    #         success = False
+
+    #     # wait for 65 seconds to pass to check for child recreation
+    #     # print("Waiting 65 seconds after launch for children to be replaced...")
+    #     # delay = 65.0 - (datetime.datetime.now() - launch_finish_ts).total_seconds()
+    #     # if delay > 0:
+    #     #     time.sleep(delay)
+    #     time.sleep(30)
+
+    #     # make sure all 5 stopped processes have logged errors to go with
+    #     # get the time of the launch finish
+    #     logs = follow2.read('barsm')
+    #     print (logs)
+    #     if list(filter(lambda t: "ERROR: Process for /opt/rc360/system/thirty_aacm" in t['message'], logs)) == []:
+    #         print("SYSLOG error missing thirty_aacm")
+    #         success = False
+    #     if list(filter(lambda t: "ERROR: Process for /opt/rc360/modules/GE/thirty_gemod" in t['message'], logs)) == [] :
+    #         print("SYSLOG error missing thirty_gemod")
+    #         success = False
+    #     if list(filter(lambda t: "ERROR: Process for /opt/rc360/modules/TPA/thirty_tpamod" in t['message'], logs)) == [] :
+    #         print("SYSLOG error missing thirty_tpamod")
+    #         success = False
+    #     if list(filter(lambda t: "ERROR: Process for /opt/rc360/apps/GE/thirty_geapp" in t['message'], logs)) == [] :
+    #         print("SYSLOG error missing thirty_geapp")
+    #         success = False
+    #     if list(filter(lambda t: "ERROR: Process for /opt/rc360/apps/TPA/thirty_tpaapp" in t['message'], logs)) == [] :
+    #         print("SYSLOG error missing thirty_tpaapp")
+    #         success = False
+
+    #     # make sure all apps get started back up
+    #     child_info = barsm_utils.get_barsm_child_pids()
+    #     print(child_info)
+    #     zombies = sum(1 for c in child_info if "Z" == c.get('state'))
+    #     print('Zombies: {}'.format(zombies))
+
+    # wait for barsm to aacm messgae and reply back 
+    if success:
+        print('-Waiting for and responding to BARSM TO ACCM message 1')
+        barsm_utils.defaultBarsmToAacmResponse(TCPconn)
+        print('-Waiting for and responding to BARSM TO ACCM message 2')
+        barsm_utils.defaultBarsmToAacmResponse(TCPconn)
+        print('-Waiting for and responding to BARSM TO ACCM message 3')
+        barsm_utils.defaultBarsmToAacmResponse(TCPconn)
+        print('-Waiting for and responding to BARSM TO ACCM message 4')
+        barsm_utils.defaultBarsmToAacmResponse(TCPconn)
+        print('-Waiting for and responding to BARSM TO ACCM message 5')
+        barsm_utils.defaultBarsmToAacmResponse(TCPconn)
+
+    # kill off all started processes
+    barsm_utils.kill_procs()
+
+    if expectedZombies == zombies and success:
+        print('Test Passes')
+        return True
+    else:
+        print('Test Failed')
+        return False
+
+if __name__ == '__main__':
+    run()

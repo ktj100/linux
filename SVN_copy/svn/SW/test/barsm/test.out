@@ -1,108 +1,1099 @@
-==5163== Memcheck, a memory error detector
-==5163== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
-==5163== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
-==5163== Command: ./../utils/../../barsm/build/barsm -v --read-var-info=yes --leak-check=full --track-origins=yes show-reachable=yes --malloc-fill=B5 --free-fill=4A
-==5163== 
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-APP: Zero Second App Launched!
-APP: Zero Second App Ended!
-FIRST NODE: 0x541a040 
-NEXT NODE: (nil) 
-
-OPEN DIRECTORY: /opt/rc360/system/ 
-
-Launching ... /opt/rc360/system/aacm 
-CHILD linked list 'pid': 5164 
-CHILD linked list 'dir': /opt/rc360/system/aacm 
-CHILD linked list 'name': aacm 
-this address 0x541a040 
-next address 0x54221d0 
-COMPLETED: All items in /opt/rc360/system/ launched! 
-CLOSE DIRECTORY: /opt/rc360/system/ 
-
-Connection to AACM successful!
-TCP Setup Complete!
-UDP Setup Complete!
+==8490== Memcheck, a memory error detector
+==8490== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==8490== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==8490== Command: ./../utils/../../barsm/build/barsm
+==8490== 
+EXECUTING: 'malloc()' for creating 'first_node'
+SUCCESS: 'malloc()' for creating 'first_node'
+SUCCESS: creation of linked list
+EXECUTING: Launching all items in directory /opt/rc360/system
+EXECUTING: Opening directory /opt/rc360/system
+SUCCESS: Directory /opt/rc360/system opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/system
+SUCCESS: File found: thirty_aacm
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_aacm
+SUCCESS: Assigned name of nwlr
+EXECUTING: Launching item /opt/rc360/system/thirty_aacm
+EXECUTING: Forking a new process to replace thirty_aacm
+SUCCESS: New process with PID 8491 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_aacm after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8491
+CHILD linked list 'dir': /opt/rc360/system/thirty_aacm
+CHILD linked list 'name': thirty_aacm
+this address 0x541a040
+next address 0x5422280
+EXECUTING: Checking if another file is present in directory /opt/rc360/system
+EXECUTING: Leaving directory /opt/rc360/system
+SUCCESS: All items in /opt/rc360/system launched!
+EXECUTING: 'aacmSetup()'
+EXECUTING: TCP Setup
+EXECUTING: Creating TCP socket
+SUCCESS: Socket created
+EXECUTING: Running 'setsockopt()'
+SUCCESS: 'setsockopt()' completed normally
+EXECUTING: Setting up TCP connection settings
+SUCCESS: TCP connection to AACM successful
+SUCCESS: TCP Setup Complete!
+EXECUTING: UDP Setup
+EXECUTING: Creating UDP socket
+SUCCESS: UDP socket created!
+EXECUTING: Changing UDP Settings...
+SUCCESS: UDP settings changed!
+EXECUTING: Setting up receive side of UDP...
+SUCCESS: Receive side is set up!
+SUCCESS: UDP Setup Complete!
+EXECUTING: Sending BARSM to AACM INIT
 Socket File Descriptor: 4
-BARSM to AACM INIT sent!
-INIT ACK recieved!
+EXECUTING: Sending BARSM TO AACM INIT
+SUCCESS: BARSM TO AACM INIT sent
+SUCCESS: BARSM to AACM INIT sent!
+EXECUTING: Receiveing INIT ACK
+EXECUTING: Receiving BARSM TO AACM INIT ACK
+SUCCESS: BARSM TO AACM INIT ACK received
+SUCCESS: 'aacmSetup()'
+EXECUTING: creating thread for 'rcv_errMsgs()'
+EXECUTING: Detaching thread
+SUCCESS: Thread detach completed
+EXECUTING: Waiting for AACM_TO_BARSM message
+EXECUTING: Receiving AACM TO BARSM message
+SUCCESS: thread created for 'rcv_errMsgs()'
+EXECUTING: Launching all items in directory /opt/rc360/modules/GE
+EXECUTING: Opening directory /opt/rc360/modules/GE
+SUCCESS: Directory /opt/rc360/modules/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/GE
+SUCCESS: File found: thirty_gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_gemod
+SUCCESS: Assigned name of bbmq
+EXECUTING: Launching item /opt/rc360/modules/GE/thirty_gemod
+EXECUTING: Forking a new process to replace thirty_gemod
+SUCCESS: New process with PID 8493 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8493
+CHILD linked list 'dir': /opt/rc360/modules/GE/thirty_gemod
+CHILD linked list 'name': thirty_gemod
+this address 0x5422280
+next address 0x542fab0
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+SUCCESS: File found: gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item gemod
+SUCCESS: Assigned name of bhcd
+EXECUTING: Launching item /opt/rc360/moduleAPP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+s/GE/gemod
+EXECUTING: Forking a new process to replace gemod
+SUCCESS: New process with PID 8494 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8494
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod
+CHILD linked list 'name': gemod
+this address 0x542fab0
+next address 0x542fc80
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+EXECUTING: Leaving directory /opt/rc360/modules/GE
+SUCCESS: All items in /opt/rc360/modules/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/modules/TPA
+EXECUTING: Opening directory /opt/rc360/modules/TPA
+SUCCESS: Directory /opt/rc360/modules/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: thirty_tpamod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_tpamod
+SUCCESS: Assigned name of arzo
+EXECUTING: Launching item /opt/rc360/modules/TPA/thirty_tpamod
+EXECUTING: Forking a new process to replace thirty_tpamod
+SUCCESS: New process with PID 8495 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_tpamod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8495
+CHILD linked list 'dir': /opt/rc360/modules/TPA/thirty_tpamod
+CHILD linked list 'name': thirty_tpamod
+this address 0x542fc80
+next address 0x543a250
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: tpamod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpamod
+SUCCESS: Assigned name of wkky
+EXECUTING: Launching item /opt/rc360/modules/TPA/tpamod
+EXECUTING: Forking a new process to replace tpamod
+SUCCESS: New process with PID 8496 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of tpamod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8496
+CHILD linked list 'dir': /opt/rc360/modules/TPA/tpamod
+CHILD linked list 'name': tpamod
+this address 0x543a250
+next address 0x543a420
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/TPA
+EXECUTING: Leaving directory /opt/rc360/modules/TPA
+SUCCESS: All items in /opt/rc360/modules/TPA launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/GE
+EXECUTING: Opening directory /opt/rc360/apps/GE
+SUCCESS: Directory /opt/rc360/apps/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/GE
+SUCCESS: File found: geapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item geapp
+SUCCESS: Assigned name of hidd
+EXECUTING: Launching item /opt/rc360/apps/GE/geapp
+EXECUTING: Forking a new process to replace geapp
+SUCCESS: New process with PID 8497 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of geapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8497
+CHILD linked list 'dir': /opt/rc360/apps/GE/geapp
+CHILD linked list 'name': geapp
+this address 0x543a420
+next address 0x54449e0
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/GE
+SUCCESS: File found: thirty_geapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_geapp
+SUCCESS: Assigned name of qscd
+EXECUTING: Launching item /opt/rc360/apps/GE/thirty_geapp
+EXECUTING: Forking a new process to replace thirty_geapp
+SUCCESS: New process with PID 8498 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_geapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8498
+CHILD linked list 'dir': /opt/rc360/apps/GE/thirty_geapp
+CHILD linked list 'name': thirty_geapp
+this address 0x54449e0
+next address 0x5444bb0
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/GE
+EXECUTING: Leaving directory /opt/rc360/apps/GE
+SUCCESS: All items in /opt/rc360/apps/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/TPA
+EXECUTING: Opening directory /opt/rc360/apps/TPA
+SUCCESS: Directory /opt/rc360/apps/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/TPA
+SUCCESS: File found: thirty_tpaapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_tpaapp
+SUCCESS: Assigned name of xrjm
+EXECUTING: Launching item /opt/rc360/apps/TPA/thirty_tpaapp
+EXECUTING: Forking a new process to replace thirty_tpaapp
+SUCCESS: New process with PID 8499 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_tpaapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8499
+CHILD linked list 'dir': /opt/rc360/apps/TPA/thirty_tpaapp
+CHILD linked list 'name': thirty_tpaapp
+this address 0x5444bb0
+next address 0x544f170
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/TPA
+SUCCESS: File found: tpaapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpaapp
+SUCCESS: Assigned name of owfr
+EXECUTING: Launching item /opt/rc360/apps/TPA/tpaapp
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 8500 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of tpaapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8500
+CHILD linked list 'dir': /opt/rc360/apps/TPA/tpaapp
+CHILD linked list 'name': tpaapp
+this address 0x544f170
+next address 0x544f340
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/TPA
+EXECUTING: Leaving directory /opt/rc360/apps/TPA
+SUCCESS: All items in /opt/rc360/apps/TPA launched!
+SUCCESS: Launch sequence complete!
+EXECUTING: Assigning a 4 character name to BARSM
+SUCCESS: 'assign_procName()'
+EXECUTING: Sending OPEN message over UDP
+SUCCESS: OPEN message sent
+EXECUTING: Receiving SYS_INIT message over UDP
+EXECUTING: Receiving SYS INIT message
+SUCCESS: SYS_INIT message recieved over UDP
+EXECUTING: Sending the AACM_TO_BARSM_PROCESSES message on TCP
+EXECUTING: Sending BARSM TO AACM PROCESSES message over TCP
+SUCCESS: BARSM TO AACM PROCESSES message sent
+EXECUTING: BARSM health monitoring system
 
-OPEN DIRECTORY: /opt/rc360/modules/GE/ 
+ERROR: Process for /opt/rc360/system/thirty_aacm with PID 8491 has changed state! (0:Success)
+SUCCESS: AACM TO BARSM message received (10 bytes)
+EXECUTING: Restarting all 0 apps indicated in AACM TO BARSM message
+SUCCESS: Restarting of apps complete
+SUCCESS: AACM_TO_BARSM message received and handled
+EXECUTING: Sending ACK
+EXECUTING: Sending AACM TO BARSM ACK
+EXECUTING: Receiving BARSM to AACM ACK message
+SUCCESS: BARSM to AACM ACK message received (10 bytes)
+SUCCESS: ACK sent
+EXECUTAPP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+==8955== Memcheck, a memory error detector
+==8955== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==8955== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==8955== Command: ./../utils/../../barsm/build/barsm
+==8955== 
+EXECUTING: 'malloc()' for creating 'first_node'
+SUCCESS: 'malloc()' for creating 'first_node'
+SUCCESS: creation of linked list
+EXECUTING: Launching all items in directory /opt/rc360/system
+EXECUTING: Opening directory /opt/rc360/system
+SUCCESS: Directory /opt/rc360/system opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/system
+SUCCESS: File found: aacm
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item aacm
+SUCCESS: Assigned name of soip
+EXECUTING: Launching item /opt/rc360/system/aacm
+EXECUTING: Forking a new process to replace aacm
+SUCCESS: New process with PID 8962 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of aacm after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8962
+CHILD linked list 'dir': /opt/rc360/system/aacm
+CHILD linked list 'name': aacm
+this address 0x5421820
+next address 0x5429a60
+EXECUTING: Checking if another file is present in directory /opt/rc360/system
+EXECUTING: Leaving directory /opt/rc360/system
+SUCCESS: All items in /opt/rc360/system launched!
+EXECUTING: 'aacmSetup()'
+EXECUTING: TCP Setup
+EXECUTING: Creating TCP socket
+SUCCESS: Socket created
+EXECUTING: Running 'setsockopt()'
+SUCCESS: 'setsockopt()' completed normally
+EXECUTING: Setting up TCP connection settings
+SUCCESS: TCP connection to AACM successful
+SUCCESS: TCP Setup Complete!
+EXECUTING: UDP Setup
+EXECUTING: Creating UDP socket
+SUCCESS: UDP socket created!
+EXECUTING: Changing UDP Settings...
+SUCCESS: UDP settings changed!
+EXECUTING: Setting up receive side of UDP...
+SUCCESS: Receive side is set up!
+SUCCESS: UDP Setup Complete!
+EXECUTING: Sending BARSM to AACM INIT
+Socket File Descriptor: 4
+EXECUTING: Sending BARSM TO AACM INIT
+SUCCESS: BARSM TO AACM INIT sent
+SUCCESS: BARSM to AACM INIT sent!
+EXECUTING: Receiveing INIT ACK
+EXECUTING: Receiving BARSM TO AACM INIT ACK
+SUCCESS: BARSM TO AACM INIT ACK received
+EXECUTING: Launching all items in directory /opt/rc360/modules/GE
+EXECUTING: Opening directory /opt/rc360/modules/GE
+SUCCESS: Directory /opt/rc360/modules/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/GE
+SUCCESS: File found: gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item gemod
+SUCCESS: Assigned name of bpsr
+EXECUTING: Launching item /opt/rc360/modules/GE/gemod
+EXECUTING: Forking a new process to replace gemod
+SUCCESS: New process with PID 8964 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 8964
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod
+CHILD linked list 'name': gemod
+this address 0x5429a60
+next address 0x543aa70
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+EXECUTING: Leaving directory /opt/rc360/modules/GE
+SUCCESS: All items in /opt/rc360/modules/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/modules/TPA
+EXECUTING: Opening directory /opt/rc360/modules/TPA
+SUCCESS: Directory /opt/rc360/modules/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: tpamod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpamod
+SUCCESS: Assigned name of khuq
+EXECUTING: Launching item /opt/rc360/modules/TPA/tp==9004== Memcheck, a memory error detector
+==9004== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==9004== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==9004== Command: ./../utils/../../barsm/build/barsm
+==9004== 
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+==9058== Memcheck, a memory error detector
+==9058== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==9058== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==9058== Command: ./../utils/../../barsm/build/barsm
+==9058== 
+EXECUTING: 'malloc()' for creating 'first_node'
+SUCCESS: 'malloc()' for creating 'first_node'
+SUCCESS: creation of linked list
+EXECUTING: Launching all items in directory /opt/rc360/system
+EXECUTING: Opening directory /opt/rc360/system
+SUCCESS: Directory /opt/rc360/system opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/system
+SUCCESS: File found: aacm
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item aacm
+SUCCESS: Assigned name of ltnn
+EXECUTING: Launching item /opt/rc360/system/aacm
+EXECUTING: Forking a new process to replace aacm
+SUCCESS: New process with PID 9064 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of aacm after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9064
+CHILD linked list 'dir': /opt/rc360/system/aacm
+CHILD linked list 'name': aacm
+this address 0x5421820
+next address 0x5429a60
+EXECUTING: Checking if another file is present in directory /opt/rc360/system
+EXECUTING: Leaving directory /opt/rc360/system
+SUCCESS: All items in /opt/rc360/system launched!
+EXECUTING: 'aacmSetup()'
+EXECUTING: TCP Setup
+EXECUTING: Creating TCP socket
+SUCCESS: Socket created
+EXECUTING: Running 'setsockopt()'
+SUCCESS: 'setsockopt()' completed normally
+EXECUTING: Setting up TCP connection settings
+SUCCESS: TCP connection to AACM successful
+SUCCESS: TCP Setup Complete!
+EXECUTING: UDP Setup
+EXECUTING: Creating UDP socket
+SUCCESS: UDP socket created!
+EXECUTING: Changing UDP Settings...
+SUCCESS: UDP settings changed!
+EXECUTING: Setting up receive side of UDP...
+SUCCESS: Receive side is set up!
+SUCCESS: UDP Setup Complete!
+EXECUTING: Sending BARSM to AACM INIT
+Socket File Descriptor: 4
+EXECUTING: Sending BARSM TO AACM INIT
+SUCCESS: BARSM TO AACM INIT sent
+SUCCESS: BARSM to AACM INIT sent!
+EXECUTING: Receiveing INIT ACK
+EXECUTING: Receiving BARSM TO AACM INIT ACK
+SUCCESS: BARSM TO AACM INIT ACK received
+EXECUTING: Launching all items in directory /opt/rc360/modules/GE
+EXECUTING: Opening directory /opt/rc360/modules/GE
+SUCCESS: Directory /opt/rc360/modules/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/GE
+SUCCESS: File found: gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item gemod
+SUCCESS: Assigned name of wnhz
+EXECUTING: Launching item /opt/rc360/modules/GE/gemod
+EXECUTING: Forking a new process to replace gemod
+SUCCESS: New process with PID 9065 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9065
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod
+CHILD linked list 'name': gemod
+this address 0x5429a60
+next address 0x543aa70
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+EXECUTING: Leaving directory /opt/rc360/modules/GE
+SUCCESS: All items in /opt/rc360/modules/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/modules/TPA
+EXECUTING: Opening directory /opt/rc360/modules/TPA
+SUCCESS: Directory /opt/rc360/modules/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: tpamod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpamod
+SUCCESS: Assigned name of ftay
+EXECUTING: Launching item /opt/rc360/modules/TPA/tpAPP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+APP: Zero Second App Launched!
+APP: Zero Second App Ended!
+amod
+EXECUTING: Forking a new process to replace tpamod
+SUCCESS: New process with PID 9066 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of tpamod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9066
+CHILD linked list 'dir': /opt/rc360/modules/TPA/tpamod
+CHILD linked list 'name': tpamod
+this address 0x543aa70
+next address 0x5449730
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/TPA
+EXECUTING: Leaving directory /opt/rc360/modules/TPA
+SUCCESS: All items in /opt/rc360/modules/TPA launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/GE
+EXECUTING: Opening directory /opt/rc360/apps/GE
+SUCCESS: Directory /opt/rc360/apps/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/GE
+SUCCESS: File found: geapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item geapp
+SUCCESS: Assigned name of nmgy
+EXECUTING: Launching item /opt/rc360/apps/GE/geapp
+EXECUTING: Forking a new process to replace geapp
+SUCCESS: New process with PID 9072 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of geapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9072
+CHILD linked list 'dir': /opt/rc360/apps/GE/geapp
+CHILD linked list 'name': geapp
+this address 0x5449730
+next address 0x54583f0
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/GE
+EXECUTING: Leaving directory /opt/rc360/apps/GE
+SUCCESS: All items in /opt/rc360/apps/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/TPA
+EXECUTING: Opening directory /opt/rc360/apps/TPA
+SUCCESS: Directory /opt/rc360/apps/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/TPA
+SUCCESS: File found: tpaapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpaapp
+SUCCESS: Assigned name of wznf
+EXECUTING: Launching item /opt/rc360/apps/TPA/tpaapp
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 9073 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of tpaapp after initial launch
+ERROR: File tpaapp not launched properly! (0:Success)
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 9079 forked successfully
+EXECUTING: Checking status of tpaapp after initial launch
+ERROR: File tpaapp not launched properly! (0:Success)
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 9080 forked successfully
+EXECUTING: Checking status of tpaapp after initial launch
+ERROR: File tpaapp not launched properly! (0:Success)
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 9089 forked successfully
+EXECUTING: Checking status of tpaapp after initial launch
+ERROR: File tpaapp not launched properly! (0:Success)
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 9090 forked successfully
+ERROR: File tpaapp not launched properly! (0:Success)
+NOTICE: Process for tpaapp in /opt/rc360/apps/TPA disabled permanently! (0:Success)
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9090
+CHILD linked list 'dir': /opt/rc360/apps/TPA/tpaapp
+CHILD linked list 'name': tpaapp
+this address 0x54583f0
+next address 0x54670a0
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/TPA
+EXECUTING: Leaving directory /opt/rc360/apps/TPA
+SUCCESS: All items in /opt/rc360/apps/TPA launched!
+SUCCESS: Launch sequence complete!
+EXECUTING: Assigning a 4 character name to BARSM
+SUC==9113== Memcheck, a memory error detector
+==9113== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==9113== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==9113== Command: ./../utils/../../barsm/build/barsm
+==9113== 
+EXECUTING: 'malloc()' for creating 'first_node'
+SUCCESS: 'malloc()' for creating 'first_node'
+SUCCESS: creation of linked list
+EXECUTING: Launching all items in directory /opt/rc360/system
+EXECUTING: Opening directory /opt/rc360/system
+SUCCESS: Directory /opt/rc360/system opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/system
+SUCCESS: File found: aacm
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item aacm
+SUCCESS: Assigned name of yyio
+EXECUTING: Launching item /opt/rc360/system/aacm
+EXECUTING: Forking a new process to replace aacm
+SUCCESS: New process with PID 9119 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of aacm after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9119
+CHILD linked list 'dir': /opt/rc360/system/aacm
+CHILD linked list 'name': aacm
+this address 0x5421820
+next address 0x5429a60
+EXECUTING: Checking if another file is present in directory /opt/rc360/system
+EXECUTING: Leaving directory /opt/rc360/system
+SUCCESS: All items in /opt/rc360/system launched!
+EXECUTING: 'aacmSetup()'
+EXECUTING: TCP Setup
+EXECUTING: Creating TCP socket
+SUCCESS: Socket created
+EXECUTING: Running 'setsockopt()'
+SUCCESS: 'setsockopt()' completed normally
+EXECUTING: Setting up TCP connection settings
+SUCCESS: TCP connection to AACM successful
+SUCCESS: TCP Setup Complete!
+EXECUTING: UDP Setup
+EXECUTING: Creating UDP socket
+SUCCESS: UDP socket created!
+EXECUTING: Changing UDP Settings...
+SUCCESS: UDP settings changed!
+EXECUTING: Setting up receive side of UDP...
+SUCCESS: Receive side is set up!
+SUCCESS: UDP Setup Complete!
+EXECUTING: Sending BARSM to AACM INIT
+Socket File Descriptor: 4
+EXECUTING: Sending BARSM TO AACM INIT
+SUCCESS: BARSM TO AACM INIT sent
+SUCCESS: BARSM to AACM INIT sent!
+EXECUTING: Receiveing INIT ACK
+EXECUTING: Receiving BARSM TO AACM INIT ACK
+SUCCESS: BARSM TO AACM INIT ACK received
+EXECUTING: Launching all items in directory /opt/rc360/modules/GE
+EXECUTING: Opening directory /opt/rc360/modules/GE
+SUCCESS: Directory /opt/rc360/modules/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/GE
+EXECUTING: Leaving directory /opt/rc360/modules/GE
+NOTICE: Directory /opt/rc360/modules/GE empty!
 
-Launching ... /opt/rc360/modules/GE/gemod 
-Waiting for aacmToBarsm MSG... 
-CHILD linked list 'pid': 5166 
-CHILD linked list 'dir': /opt/rc360/modules/GE/gemod 
-CHILD linked list 'name': gemod 
-this address 0x54221d0 
-next address 0x542d5e0 
-COMPLETED: All items in /opt/rc360/modules/GE/ launched! 
-CLOSE DIRECTORY: /opt/rc360/modules/GE/ 
+EXECUTING: Launching all items in directory /opt/rc360/modules/TPA
+EXECUTING: Opening directory /opt/rc360/modules/TPA
+SUCCESS: Directory /opt/rc360/modules/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: thirty_sec
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_sec
+SUCCESS: Assigned name of vktn
+EXECUTING: Launching item /opt/rc360/modules/TPA/thirty_sec
+EXECUTING: Forking a new process to replace thirty_sec
+SUCCESS: New process with PID 9120 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_sec after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9120
+CHILD linked list 'dir': /opt/rc360/modules/TPA/thirty_sec
+CHILD linked list 'name': thirty_sec
+this address 0x5429a60
+next address 0x5444e60
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/TPA
+EXECUTING: Leaving directory /opt/rc360/modules/TPA
+SUCCESS: All items in /opt/rc360/modules/TPA launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/GE
+EXECUTING: Opening directory /opt/rc360/apps/GE
+SUCCESS: Directory /opt/rc360/apps/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/GE
+EXECUTING: Leaving directory /opt/rc360/apps/GE
+NOTICE: DirAPP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+==9212== Memcheck, a memory error detector
+==9212== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==9212== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==9212== Command: ./../utils/../../barsm/build/barsm
+==9212== 
+EXECUTING: 'malloc()' for creating 'first_node'
+SUCCESS: 'malloc()' for creating 'first_node'
+SUCCESS: creation of linked list
+EXECUTING: Launching all items in directory /opt/rc360/system
+EXECUTING: Opening directory /opt/rc360/system
+SUCCESS: Directory /opt/rc360/system opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/system
+SUCCESS: File found: thirty_aacm
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_aacm
+SUCCESS: Assigned name of rfsy
+EXECUTING: Launching item /opt/rc360/system/thirty_aacm
+EXECUTING: Forking a new process to replace thirty_aacm
+SUCCESS: New process with PID 9227 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_aacm after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9227
+CHILD linked list 'dir': /opt/rc360/system/thirty_aacm
+CHILD linked list 'name': thirty_aacm
+this address 0x5421820
+next address 0x5429a60
+EXECUTING: Checking if another file is present in directory /opt/rc360/system
+EXECUTING: Leaving directory /opt/rc360/system
+SUCCESS: All items in /opt/rc360/system launched!
+EXECUTING: 'aacmSetup()'
+EXECUTING: TCP Setup
+EXECUTING: Creating TCP socket
+SUCCESS: Socket created
+EXECUTING: Running 'setsockopt()'
+SUCCESS: 'setsockopt()' completed normally
+EXECUTING: Setting up TCP connection settings
+SUCCESS: TCP connection to AACM successful
+SUCCESS: TCP Setup Complete!
+EXECUTING: UDP Setup
+EXECUTING: Creating UDP socket
+SUCCESS: UDP socket created!
+EXECUTING: Changing UDP Settings...
+SUCCESS: UDP settings changed!
+EXECUTING: Setting up receive side of UDP...
+SUCCESS: Receive side is set up!
+SUCCESS: UDP Setup Complete!
+EXECUTING: Sending BARSM to AACM INIT
+Socket File Descriptor: 4
+EXECUTING: Sending BARSM TO AACM INIT
+SUCCESS: BARSM TO AACM INIT sent
+SUCCESS: BARSM to AACM INIT sent!
+EXECUTING: Receiveing INIT ACK
+EXECUTING: Receiving BARSM TO AACM INIT ACK
+SUCCESS: BARSM TO AACM INIT ACK received
+EXECUTING: Launching all items in directory /opt/rc360/modules/GE
+EXECUTING: Opening directory /opt/rc360/modules/GE
+SUCCESS: Directory /opt/rc360/modules/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/GE
+SUCCESS: File found: thirty_gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_gemod
+SUCCESS: Assigned name of efsg
+EXECUTING: Launching item /opt/rc360/modules/GE/thirty_gemod
+EXECUTING: Forking a new process to replace thirty_gemod
+SUCCESS: New process with PID 9228 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9228
+CHILD linked list 'dir': /opt/rc360/modules/GE/thirty_gemod
+CHILD linked list 'name': thirty_gemod
+this address 0x5429a60
+next address 0x543aa90
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+SUCCESS: File found: gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item gemod
+SUCCESS: Assigned name of eeja
+EXECUTING: Launching item /opt/rc360/modules/GE/gemod
+EXECUTING: Forking a new process to replace gemod
+SUCCESS: New process with PID 9229 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pAPP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+id': 9229
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod
+CHILD linked list 'name': gemod
+this address 0x543aa90
+next address 0x543f370
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+EXECUTING: Leaving directory /opt/rc360/modules/GE
+SUCCESS: All items in /opt/rc360/modules/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/modules/TPA
+EXECUTING: Opening directory /opt/rc360/modules/TPA
+SUCCESS: Directory /opt/rc360/modules/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: thirty_tpamod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_tpamod
+SUCCESS: Assigned name of acxz
+EXECUTING: Launching item /opt/rc360/modules/TPA/thirty_tpamod
+EXECUTING: Forking a new process to replace thirty_tpamod
+SUCCESS: New process with PID 9230 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_tpamod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9230
+CHILD linked list 'dir': /opt/rc360/modules/TPA/thirty_tpamod
+CHILD linked list 'name': thirty_tpamod
+this address 0x543f370
+next address 0x544e040
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/TPA
+SUCCESS: File found: tpamod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpamod
+SUCCESS: Assigned name of dbvt
+EXECUTING: Launching item /opt/rc360/modules/TPA/tpamod
+EXECUTING: Forking a new process to replace tpamod
+SUCCESS: New process with PID 9238 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of tpamod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9238
+CHILD linked list 'dir': /opt/rc360/modules/TPA/tpamod
+CHILD linked list 'name': tpamod
+this address 0x544e040
+next address 0x5452920
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/TPA
+EXECUTING: Leaving directory /opt/rc360/modules/TPA
+SUCCESS: All items in /opt/rc360/modules/TPA launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/GE
+EXECUTING: Opening directory /opt/rc360/apps/GE
+SUCCESS: Directory /opt/rc360/apps/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/GE
+SUCCESS: File found: geapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item geapp
+SUCCESS: Assigned name of ebou
+EXECUTING: Launching item /opt/rc360/apps/GE/geapp
+EXECUTING: Forking a new process to replace geapp
+SUCCESS: New process with PID 9240 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of geapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9240
+CHILD linked list 'dir': /opt/rc360/apps/GE/geapp
+CHILD linked list 'name': geapp
+this address 0x5452920
+next address 0x54615e0
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/GE
+SUCCESS: File found: thirty_geapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_geapp
+SUCCESS: Assigned name of rsym
+EXECUTING: Launching iteAPP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+APP: Thirty Second App Launched!
+APP: Thirty Second App Ended!
+m /opt/rc360/apps/GE/thirty_geapp
+EXECUTING: Forking a new process to replace thirty_geapp
+SUCCESS: New process with PID 9241 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_geapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9241
+CHILD linked list 'dir': /opt/rc360/apps/GE/thirty_geapp
+CHILD linked list 'name': thirty_geapp
+this address 0x54615e0
+next address 0x5465eb0
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/GE
+EXECUTING: Leaving directory /opt/rc360/apps/GE
+SUCCESS: All items in /opt/rc360/apps/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/apps/TPA
+EXECUTING: Opening directory /opt/rc360/apps/TPA
+SUCCESS: Directory /opt/rc360/apps/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/TPA
+SUCCESS: File found: thirty_tpaapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item thirty_tpaapp
+SUCCESS: Assigned name of ndvf
+EXECUTING: Launching item /opt/rc360/apps/TPA/thirty_tpaapp
+EXECUTING: Forking a new process to replace thirty_tpaapp
+SUCCESS: New process with PID 9244 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of thirty_tpaapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9244
+CHILD linked list 'dir': /opt/rc360/apps/TPA/thirty_tpaapp
+CHILD linked list 'name': thirty_tpaapp
+this address 0x5465eb0
+next address 0x5474b80
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/TPA
+SUCCESS: File found: tpaapp
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item tpaapp
+SUCCESS: Assigned name of kpfp
+EXECUTING: Launching item /opt/rc360/apps/TPA/tpaapp
+EXECUTING: Forking a new process to replace tpaapp
+SUCCESS: New process with PID 9246 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of tpaapp after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9246
+CHILD linked list 'dir': /opt/rc360/apps/TPA/tpaapp
+CHILD linked list 'name': tpaapp
+this address 0x5474b80
+next address 0x5479460
+EXECUTING: Checking if another file is present in directory /opt/rc360/apps/TPA
+EXECUTING: Leaving directory /opt/rc360/apps/TPA
+SUCCESS: All items in /opt/rc360/apps/TPA launched!
+SUCCESS: Launch sequence complete!
+EXECUTING: Assigning a 4 character name to BARSM
+SUCCESS: 'assign_procName() = uxxa'
+EXECUTING: Sending OPEN message over UDP
+SUCCESS: OPEN message sent
+EXECUTING: Receiving SYS_INIT message over UDP
+EXECUTING: Receiving SYS INIT message
+SUCCESS: SYS_INIT message recieved over UDP
+EXECUTING: Sending the AACM_TO_BARSM_PROCESSES message on TCP
+EXECUTING: Sending BARSM TO AACM PROCESSES message over TCP
+SUCCESS: BARSM TO AACM PROCESSES message sent
+EXECUTING: Waiting for AACM_TO_BARSM message
+EXECUTING: Receiving AACM TO BARSM message
+receive_aacmToBarsm:1098 timeout from pollfd poll()EXECUTING: BARSM health monitoring system
 
+ERROR: Process for /opt/rc360/system/thirty_aacm with PID 9227 has changed state! (0:Success)
+EXECUTING: Receiving BARSM to AACM ACK message
+SUCCESS: BARSM to AACM ACK message received (10 bytes)
+EXECUTING: Restarting thirty_aacm...EXECUTING: Forking a new process to replace thirty_aacm
+SUCCESS: New process with PID 9262 forked successfully
+SUCCESS: Restart completed
 
-OPEN DIRECTORY: /opt/rc360/modules/TPA/ 
+ERROR: Process for /opt/rc360/modules/GE/thirty_gemod with PID 9228 has changed state! (0:Success)
+EXECUTING: Receiving BARSM to AACM ACK message
+SUCCESS: BARSM to AACM ACK message received (10 bytes)
+EXECUTING: Restarting thirty_gemo==9291== Memcheck, a memory error detector
+==9291== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==9291== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==9291== Command: ./../utils/../../barsm/build/barsm
+==9291== 
+EXECUTING: 'malloc()' for creating 'first_node'
+SUCCESS: 'malloc()' for creating 'first_node'
+SUCCESS: creation of linked list
+EXECUTING: Launching all items in directory /opt/rc360/system
+EXECUTING: Opening directory /opt/rc360/system
+SUCCESS: Directory /opt/rc360/system opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/system
+SUCCESS: File found: aacm
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item aacm
+SUCCESS: Assigned name of datz
+EXECUTING: Launching item /opt/rc360/system/aacm
+EXECUTING: Forking a new process to replace aacm
+SUCCESS: New process with PID 9297 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of aacm after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9297
+CHILD linked list 'dir': /opt/rc360/system/aacm
+CHILD linked list 'name': aacm
+this address 0x5421820
+next address 0x5429a60
+EXECUTING: Checking if another file is present in directory /opt/rc360/system
+EXECUTING: Leaving directory /opt/rc360/system
+SUCCESS: All items in /opt/rc360/system launched!
+EXECUTING: 'aacmSetup()'
+EXECUTING: TCP Setup
+EXECUTING: Creating TCP socket
+SUCCESS: Socket created
+EXECUTING: Running 'setsockopt()'
+SUCCESS: 'setsockopt()' completed normally
+EXECUTING: Setting up TCP connection settings
+SUCCESS: TCP connection to AACM successful
+SUCCESS: TCP Setup Complete!
+EXECUTING: UDP Setup
+EXECUTING: Creating UDP socket
+SUCCESS: UDP socket created!
+EXECUTING: Changing UDP Settings...
+SUCCESS: UDP settings changed!
+EXECUTING: Setting up receive side of UDP...
+SUCCESS: Receive side is set up!
+SUCCESS: UDP Setup Complete!
+EXECUTING: Sending BARSM to AACM INIT
+Socket File Descriptor: 4
+EXECUTING: Sending BARSM TO AACM INIT
+SUCCESS: BARSM TO AACM INIT sent
+SUCCESS: BARSM to AACM INIT sent!
+EXECUTING: Receiveing INIT ACK
+EXECUTING: Receiving BARSM TO AACM INIT ACK
+SUCCESS: BARSM TO AACM INIT ACK received
+EXECUTING: Launching all items in directory /opt/rc360/modules/GE
+EXECUTING: Opening directory /opt/rc360/modules/GE
+SUCCESS: Directory /opt/rc360/modules/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/GE
+SUCCESS: File found: gemod
+EXECUTING: Putting file path and name together in malloc()'ed area
+SUCCESS: String combination completed
+EXECUTING: Copying filename
+SUCCESS: String copying completed
+EXECUTING: Allocating space for next item in linked list
+SUCCESS: Space allocated for next item
+EXECUTING: Assigning a 4 character name to item gemod
+SUCCESS: Assigned name of stzj
+EXECUTING: Launching item /opt/rc360/modules/GE/gemod
+EXECUTING: Forking a new process to replace gemod
+SUCCESS: New process with PID 9298 forked successfully
+SUCCESS: Item launch attempt complete
+EXECUTING: Checking status of gemod after initial launch
+SUCCESS: Status check completed
+CHILD linked list 'pid': 9298
+CHILD linked list 'dir': /opt/rc360/modules/GE/gemod
+CHILD linked list 'name': gemod
+this address 0x5429a60
+next address 0x543aa70
+EXECUTING: Checking if another file is present in directory /opt/rc360/modules/GE
+EXECUTING: Leaving directory /opt/rc360/modules/GE
+SUCCESS: All items in /opt/rc360/modules/GE launched!
+EXECUTING: Launching all items in directory /opt/rc360/modules/TPA
+EXECUTING: Opening directory /opt/rc360/modules/TPA
+SUCCESS: Directory /opt/rc360/modules/TPA opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/modules/TPA
+EXECUTING: Leaving directory /opt/rc360/modules/TPA
+NOTICE: Directory /opt/rc360/modules/TPA empty!
 
-Launching ... /opt/rc360/modules/TPA/tpamod 
-ERROR: File tpamod not launched properly! (0:Success) 
-ERROR: File tpamod not launched properly! (0:Success) 
-ERROR: File tpamod not launched properly! (0:Success) 
-ERROR: File tpamod not launched properly! (0:Success) 
-ERROR: File tpamod not launched properly! (0:Success) 
-NOTICE: Process for tpamod in /opt/rc360/modules/TPA/ disabled permanently! (0:Success) 
-CHILD linked list 'pid': 5176 
-CHILD linked list 'dir': /opt/rc360/modules/TPA/tpamod 
-CHILD linked list 'name': tpamod 
-this address 0x542d5e0 
-next address 0x5437af0 
-COMPLETED: All items in /opt/rc360/modules/TPA/ launched! 
-CLOSE DIRECTORY: /opt/rc360/modules/TPA/ 
+EXECUTING: Launching all items in directory /opt/rc360/apps/GE
+EXECUTING: Opening directory /opt/rc360/apps/GE
+SUCCESS: Directory /opt/rc360/apps/GE opened!
+EXECUTING: Checking if files are present in directory /opt/rc360/apps/GE
+EXECUTING: Leaving directory /opt/rc360/apps/GE
+NOTICE: Directory /opt/rc360/apps/GE empty!
 
-
-OPEN DIRECTORY: /opt/rc360/apps/GE/ 
-
-Launching ... /opt/rc360/apps/GE/geapp 
-CHILD linked list 'pid': 5177 
-CHILD linked list 'dir': /opt/rc360/apps/GE/geapp 
-CHILD linked list 'name': geapp 
-this address 0x5437af0 
-next address 0x544f570 
-COMPLETED: All items in /opt/rc360/apps/GE/ launched! 
-CLOSE DIRECTORY: /opt/rc360/apps/GE/ 
-
-
-OPEN DIRECTORY: /opt/rc360/apps/TPA/ 
-
-Launching ... /opt/rc360/apps/TPA/tpaapp 
-CHILD linked list 'pid': 5178 
-CHILD linked list 'dir': /opt/rc360/apps/TPA/tpaapp 
-CHILD linked list 'name': tpaapp 
-this address 0x544f570 
-next address 0x5459a80 
-COMPLETED: All items in /opt/rc360/apps/TPA/ launched! 
-CLOSE DIRECTORY: /opt/rc360/apps/TPA/ 
-
-
-COMPLETED: Launch sequence complete!
-
-==5163== 
-==5163== HEAP SUMMARY:
-==5163==     in use at exit: 676 bytes in 17 blocks
-==5163==   total heap usage: 66 allocs, 49 frees, 274,344 bytes allocated
-==5163== 
-==5163== LEAK SUMMARY:
-==5163==    definitely lost: 0 bytes in 0 blocks
-==5163==    indirectly lost: 0 bytes in 0 blocks
-==5163==      possibly lost: 272 bytes in 1 blocks
-==5163==    still reachable: 404 bytes in 16 blocks
-==5163==         suppressed: 0 bytes in 0 blocks
-==5163== Rerun with --leak-check=full to see details of leaked memory
-==5163== 
-==5163== For counts of detected and suppressed errors, rerun with: -v
-==5163== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+EXECAPP: Hundred Second App Launched!
+APP: Hundred Second App Ended!

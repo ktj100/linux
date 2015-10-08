@@ -1,0 +1,783 @@
+
+/** @file fdl.c
+ * Subscribes for data in order to calculate power, amplitude,
+ * and phase.  Publishes calcuations as MPs.  Publishes
+ * heartbeat as well.
+ *
+ * Subscribe Thread: polls for a subscribe
+ *
+ * Publish Thread: Publishes power, amplitude, and phase
+ *
+ * Copyright (c) 2015, DornerWorks, Ltd.
+ */
+
+/****************
+* INCLUDES
+****************/
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <libgen.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <syslog.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <signal.h>
+#include <time.h>
+#include <pthread.h>
+#include <math.h>
+#include "fdl.h"
+
+
+
+/****************
+* PRIVATE CONSTANTS
+****************/
+char UDPAddress[]   = "225.0.0.37";
+int UDPPort         =  4096;
+
+// THREADS
+static pthread_t thread_getPublish;             // read, write TCP
+static pthread_t thread_sendPublish;            // read, write TCP
+static pthread_t thread_getSubscribe;           // waits for a subscribe and returns subscribe_ack
+pthread_mutex_t pubMutex                = PTHREAD_MUTEX_INITIALIZER;
+
+/****************
+* GLOBALS
+****************/
+static int32_t clientSocket_TCP = -1;
+static int32_t clientSocket_UDP = -1;
+struct sockaddr_in DestAddr_TCP;
+struct sockaddr_in DestAddr_UDP;
+struct in_addr localInterface;
+struct sockaddr_in DestAddr_SUBSCRIBE;
+int32_t Logicals[33];
+int32_t TimeStamp_s[9];
+int32_t TimeStamp_ns[9];
+bool publish = false;
+struct timespec goStart;
+
+topicToPublish *publishMe;
+FDLinfo *recvFDL;
+
+char fdlAppName[5] = { 'f', 'd', 'l', 'a', '\0' };
+pid_t fdlPid;
+
+/****************
+* PRIVATE FUNCTION PROTOTYPES
+****************/
+static bool fdl_init(void);
+static bool setupPublishStructure(void);
+static void fdl_run(void); // calls/setup the threads
+static void* fdl_runtime_sendPublish(void *param);
+static void* fdl_runtime_getPublish(void *param);
+static void* fdl_runtime_getSubscribe(void *param);
+bool UDPsetup(void);
+bool TCPsetup(void);
+
+/**
+ * Calls fdl init function.  If pass, start threads, else fail.
+ *
+ * @param[in] argc
+ * @param[in] *argv[]
+ *
+ * @return true/false sucess of fdl startup.  if fails to init,
+ *         returns false
+ */
+int32_t main(int32_t argc, char *argv[])
+{
+    bool success_fdl = true;
+
+    /* If a "process name" is provided, copy it, otherwise leave the default 
+     * name set */
+    if (2 >= argc)
+    {
+        strncpy(fdlAppName, argv[1], 4);
+    }
+
+    fdlPid = getpid();
+
+    openlog(DAEMON_NAME, LOG_CONS, LOG_LOCAL0);
+    syslog(LOG_INFO, "%s started name:%s, pid:%u",
+           DAEMON_NAME, fdlAppName, fdlPid);
+
+    if ( false != fdl_init() )
+    {
+        printf("FDL initilization passed\n");
+        syslog(LOG_INFO, "%s:%d fdl_init() SUCCESS!", __FUNCTION__, __LINE__);
+        fdl_run();
+    }
+    else
+    {
+        printf("FDL initilization failed\n");
+        success_fdl = false;
+        syslog(LOG_ERR, "%s:%d fdl_init() ERROR!", __FUNCTION__, __LINE__);
+    }
+
+    // shutdown/cleanup
+
+    return success_fdl;
+}
+
+/**
+ * Init FPGA to fdl inteface.  Setup TCP and UDP socket.
+ * Register the app and available data to publish.  Sends open
+ * UDP and waits for sys_init message.  once received,
+ * polls/waits for one subscribe message.  Once received (and
+ * everything prior succeeds), return status is true.  Else if
+ * anything fails along the way, returns false.
+ *
+ * @param[in] void
+ * @param[out] true/false
+ *
+ * @return true/false sucess of fdl init.
+ */
+static bool fdl_init(void) // 2.1
+{
+    bool success            = true;
+
+/*
+    float copAmplitudeHO;
+    float copPhaseHO;
+    float copPowerHO;
+    float copAmplitudeFO;
+    float copPhaseFO;
+    float copPowerFO;
+
+    float crankAmplitudeHO;
+    float crankPhaseHO;
+    float crankPowerHO;
+    float crankAmplitudeFO;
+    float crankPhaseFO;
+    float crankPowerFO;
+*/
+
+    clock_gettime( CLOCK_REALTIME , &goStart );
+
+    if (false != success)
+    {
+        success = UDPsetup();
+        if (false == success)
+        {
+            printf("UDPsetup() FAIL!\n");
+        }
+        else
+        {
+            printf("UDPsetup() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = TCPsetup();
+        if (false == success)
+        {
+            printf("TCPsetup() FAIL!\n");
+        }
+        else
+        {
+            printf("TCPsetup() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = process_registerApp( clientSocket_TCP , goStart );
+        if (false == success)
+        {
+            printf("process_registerApp() FAIL!\n");
+        }
+        else
+        {
+            printf("process_registerApp() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = process_registerApp_ack( clientSocket_TCP );
+        if (false == success)
+        {
+            printf("process_registerApp_ack() FAIL!\n");
+        }
+        else
+        {
+            printf("process_registerApp_ack() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = process_registerData( clientSocket_TCP );
+        if (false == success)
+        {
+            printf("process_registerData() FAIL!\n");
+        }
+        else
+        {
+            printf("process_registerData() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = process_registerData_ack( clientSocket_TCP );
+        if (false == success)
+        {
+            printf("process_registerData_ack() FAIL!\n");
+        }
+        else
+        {
+            printf("process_registerData_ack() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        sleep(2);   // currently need for python script ...
+        success = process_openUDP( clientSocket_UDP , DestAddr_UDP );
+        if (false == success)
+        {
+            printf("process_openUDP() FAIL!\n");
+        }
+        else
+        {
+            printf("process_openUDP() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = process_sysInit( clientSocket_UDP );
+        if (false == success)
+        {
+            printf("process_sysInit() FAIL!\n");
+        }
+        else
+        {
+            printf("process_sysInit() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        success = setupPublishStructure();
+        if (false == success)
+        {
+            printf("setupPublishStructure() FAIL!\n");
+        }
+        else
+        {
+            printf("setupPublishStructure() SUCCESS!\n");
+        }
+    }
+
+    // app related
+    if (false != success)
+    {
+        // subscribes for 10 MPS
+        success = process_sendSubscribe( clientSocket_TCP );
+        if (false == success)
+        {
+            printf("process_sendSubscribe() FAIL!\n");
+        }
+        else
+        {
+            printf("process_sendSubscribe() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        // gets the acknowledge
+        success = process_getSubscribe_ack( clientSocket_TCP );
+        if (false == success)
+        {
+            printf("process_getSubscribe_ack() FAIL!\n");
+        }
+        else
+        {
+            printf("process_getSubscribe_ack() SUCCESS!\n");
+        }
+    }
+
+    if (false != success)
+    {
+        // gets the first publish subscribed for
+        success                 = process_getPublish( clientSocket_UDP );
+        if (false == success)
+        {
+            printf("process_getPublish() FAIL!\n");
+        }
+        else
+        {
+            printf("process_getPublish() SUCCESS!\n");
+        }
+
+/*
+        copAmplitudeHO          = getAmplitude(recvFDL[0].cop[0], recvFDL[0].cop[1]);
+        copPhaseHO              = getPhase(recvFDL[0].cop[0], recvFDL[0].cop[1]);
+        copPowerHO              = getPower(copAmplitudeHO);
+        copAmplitudeFO          = getAmplitude(recvFDL[0].cop[2], recvFDL[0].cop[3]);
+        copPhaseFO              = getPhase(recvFDL[0].cop[2], recvFDL[0].cop[3]);
+        copPowerFO              = getPower(copAmplitudeFO);
+
+        crankAmplitudeHO        = getAmplitude(recvFDL[0].crank[0], recvFDL[0].crank[1]);
+        crankPhaseHO            = getPhase(recvFDL[0].crank[0], recvFDL[0].crank[1]);
+        crankPowerHO            = getPower(crankAmplitudeHO);
+        crankAmplitudeFO        = getAmplitude(recvFDL[0].crank[2], recvFDL[0].crank[3]);
+        crankPhaseFO            = getPhase(recvFDL[0].crank[2], recvFDL[0].crank[3]);
+        crankPowerFO            = getPower(crankAmplitudeFO);
+
+        printf("CALC AMPLITUDE, COP HO: %f\n",     copAmplitudeHO);
+        printf("CALC PHASE, COP HO: %f\n",         copPhaseHO);
+        printf("CALC POWER, COP HO: %f\n",         copPowerHO);
+        printf("CALC AMPLITUDE, COP FO: %f\n",     copAmplitudeFO);
+        printf("CALC PHASE, COP FO: %f\n",         copPhaseFO);
+        printf("CALC POWER, COP FO: %f\n",         copPowerFO);
+
+        printf("CALC AMPLITUDE, CRANK HO: %f\n",   crankAmplitudeHO);
+        printf("CALC PHASE, CRANK HO: %f\n",       crankPhaseHO);
+        printf("CALC POWER, CRANK HO: %f\n",       crankPowerHO);
+        printf("CALC AMPLITUDE, CRANK FO: %f\n",   crankAmplitudeFO);
+        printf("CALC PHASE, CRANK FO: %f\n",       crankPhaseFO);
+        printf("CALC POWER, CRANK FO: %f\n",       crankPowerFO);
+*/
+
+    }
+    return success;
+}
+
+/**
+ * Starts three threads per main description.  Only executes if
+ * fdl init passes.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
+static void fdl_run(void)
+{
+        bool success = true;
+        int32_t rc_sendPublish;
+        int32_t rc_getSubscribe;
+        int32_t rc_getPublish;
+        sigset_t set;
+        siginfo_t sig;
+
+        errno = 0;
+        rc_getPublish = pthread_create(&thread_getPublish, NULL, fdl_runtime_getPublish, NULL);
+        if (0 != rc_getPublish)
+        {
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_getPublish, strerror(rc_getPublish));
+        }
+
+        errno = 0;
+        rc_getSubscribe = pthread_create(&thread_getSubscribe, NULL, fdl_runtime_getSubscribe, NULL);
+        if (0 != rc_getSubscribe)
+        {
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_getSubscribe, strerror(rc_getSubscribe));
+        }
+
+        errno = 0;
+        rc_sendPublish = pthread_create(&thread_sendPublish, NULL, fdl_runtime_sendPublish, NULL);
+        if (0 != rc_sendPublish)
+        {
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! failed to create TCP thread (%d:%s)",__FUNCTION__, __LINE__, rc_sendPublish, strerror(rc_sendPublish));
+        }
+
+        errno = 0;
+        if (0 > sigfillset(&set))
+        {
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! unable to generate fillset (%d:%s)",__FUNCTION__, __LINE__, errno, strerror(errno));
+        }
+
+        // signal handling .. are these the ones I need?
+        while (true == success)
+        {
+            errno = 0;
+            if (0 >= sigwaitinfo(&set, &sig))
+            {
+                success = false;
+                syslog(LOG_ERR, "%s:%d ERROR! waiting for signals (%d:%s)",__FUNCTION__, __LINE__, errno, strerror(errno));
+                //printf("\nsigwaitinfo error\n");
+            }
+            else
+            { /* ! (0 >= sigwaitinfo(&set, &sig)) */
+                /* some signals are expected, so just print debugging information
+                 * and continue */
+                switch (sig.si_signo)
+                {
+                case SIGCHLD:
+                    syslog(LOG_DEBUG, "DEBUG! ignoring signal %d (code: %d, pid: %d, uid: %d, status: %d)",sig.si_signo, sig.si_code, sig.si_pid, sig.si_uid, sig.si_status);
+                    break;
+                case SIGALRM:
+                case SIGPIPE:
+                    syslog(LOG_DEBUG, "DEBUG! ignoring signal %d (code: %d, value: %d)",sig.si_signo, sig.si_code, sig.si_value.sival_int);
+                    break;
+                default:
+                    /* print as much debugging as possible for the unhandled sig. */
+                    syslog(LOG_WARNING, "WARNING! received signal %d (code: %d, pid: %d, uid: %d, addr: %p)",sig.si_signo, sig.si_code, sig.si_pid, sig.si_uid, sig.si_addr);
+                    /* exit the application */
+                    success = false;
+                    break;
+                } /* switch (sig.si_signo) */
+            } /* else ! (0 >= sigwaitinfo(&set, &sig)) */
+        }
+        /* set of signals to watch for */
+        /* watch for signals */
+  }
+
+
+/**
+ * SUBSCRIBE thread.  Polls/waits for a subscribe.  Once
+ * received, locks (mutex) data and alloactes space for a new
+ * topic/subscription.  Once done, sends subscribe acknowledge
+ * message.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
+static void* fdl_runtime_getSubscribe(void * UNUSED(param) )
+{
+    int32_t rc;
+    int32_t numSub;
+
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+      //success = false;
+      syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
+    }
+
+    numSub = 0;
+    while ( 1 )
+    {
+        process_getSubscribe( clientSocket_TCP );
+        numSub++;
+        pthread_mutex_lock(&pubMutex);
+
+        num_topics_total++;
+
+        publishMe = realloc(publishMe, sizeof(topicToPublish)*num_topics_total);
+        if (NULL == publishMe)
+        {
+            syslog(LOG_ERR, "%s:%d REALLOC ERROR!", __FUNCTION__, __LINE__);
+        }
+
+        currentTopic++;
+        buildPublishData();
+
+        process_sendSubscribe_ack( clientSocket_TCP );
+        pthread_mutex_unlock(&pubMutex);
+    }
+    return 0;
+}
+
+/**
+ * PUBLISH thread for receiving data.  Data should originate
+ * only if this app made a subscription. At a minimum during
+ * boot, this app should subscribe for real and imaginary values
+ * for the half-order and first-order cam, crank and turbo
+ * sensors.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
+static void* fdl_runtime_getPublish(void * UNUSED(param) )
+{
+    bool success = true;
+    int32_t rc;
+
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
+    }
+
+    while ( true == success )
+    {
+        success = process_getPublish( clientSocket_UDP );
+    }
+    return 0;
+}
+
+/**
+ * PUBLISH thread for sending data.  Every second, checks which
+ * available topics/subscriptions are ready to
+ * publish.  After publish is made, determines next availble
+ * list of topics/subscriptions to publish.
+ *
+ * @param[in] void
+ * @param[out] void
+ *
+ * @return void
+ */
+static void* fdl_runtime_sendPublish(void * UNUSED(param) )
+{
+    int32_t rc, cntPublishes; //, i;
+    int32_t hrtBt;
+    static int32_t numberToPublish;
+    bool success = true;
+    bool timeHasElapsed = true;
+    struct timespec sec_begin, sec_end;
+
+    hrtBt = 0;
+
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",__FUNCTION__, __LINE__, rc, strerror(rc));
+    }
+
+    numberToPublish = 0;
+    nextPublishPeriod = 1000;
+    clock_gettime(CLOCK_REALTIME, &sec_begin);
+
+    while ( true == success )
+    {
+        if (false == timeHasElapsed)
+        {
+            clock_gettime(CLOCK_REALTIME, &sec_end);                        // time to check
+            timeHasElapsed = numSecondsHaveElapsed(sec_begin, sec_end, 1);     // check elapsed time of 1 second ... consider changing this based on nextPublishPeriod
+        }
+        else
+        {
+            hrtBt++;
+            pthread_mutex_lock(&pubMutex);
+
+            process_HeartBeat( clientSocket_TCP, hrtBt );
+
+            cntPublishes = 0;
+            //printf("FROM PUBLISH, num_topics_total: %d\n", num_topics_total);
+            //for( i = 0 ; i < num_topics_total ; i++ )
+            //{
+                if (true == publishMe[1].publishReady)
+                {
+                    //process_publish( clientSocket_UDP , DestAddr_UDP , Logicals , TimeStamp_s , TimeStamp_ns, i );
+                    process_sendPublish( clientSocket_UDP , DestAddr_UDP , 1 );
+                    cntPublishes++;
+                }
+                if ( (numberToPublish == cntPublishes) && (numberToPublish == num_topics_total) )
+                {
+                    nextPublishPeriod = 0;
+                }
+           // }
+            pthread_mutex_unlock(&pubMutex);
+            timeHasElapsed = false;
+            clock_gettime(CLOCK_REALTIME, &sec_begin);
+            nextPublishPeriod += 1000;
+            numberToPublish = publishManager();
+        }
+    }
+    return 0;
+}
+
+
+/**
+ * Establish UDP socket.
+ *
+ * @param[in] void
+ * @param[out] true/false
+ *
+ * @return true/false status of socket setup.
+ */
+bool UDPsetup(void)
+{
+
+    bool success = true;
+    struct ip_mreq mreq;
+
+    if (true == success)
+    {
+        errno = 0;
+        clientSocket_UDP = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (0 > clientSocket_UDP)
+        {
+            printf("ERROR WITH UDP socket() config \n");
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! Failed to create UDP socket %d (%d:%s) - configure socket failed", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+        }
+    }
+
+    errno = 0;
+    if (true == success)
+    {
+        memset(&DestAddr_UDP,0,sizeof(DestAddr_UDP));               // clear struct
+        DestAddr_UDP.sin_family = AF_INET;                          // must be this
+        DestAddr_UDP.sin_port = htons(UDPPort);                     // set the port to write to
+        DestAddr_UDP.sin_addr.s_addr = inet_addr(UDPAddress);
+        memset(&(DestAddr_UDP.sin_zero), '\0', 8);                  // zero the rest of the struct
+    }
+
+    errno = 0;
+    mreq.imr_multiaddr.s_addr = inet_addr(UDPAddress);
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    if (setsockopt(clientSocket_UDP, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq, sizeof(mreq)) < 0)
+    {
+        printf("ERROR setsockopt() IP_ADD_MEMBERSHIP \n");
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! error with setsockopt multicast group IP_ADD_MEMBERSHIP %d (%d:%s)", __FUNCTION__, __LINE__, clientSocket_UDP, errno, strerror(errno));
+    }
+
+    return success;
+}
+
+/**
+ * Establish TCP socket.
+ *
+ * @param[in] void
+ * @param[out] true/false
+ *
+ * @return true/false status of socket setup.
+ */
+bool TCPsetup(void)
+{
+    bool success            = true;
+    char ServerIPAddress[]  = "127.0.0.1";
+    int TCPServerPort       =  8000;
+    int32_t reuse           = 1;
+    int32_t chkSetSockOpt   = 0;
+
+    if (true == success)
+    {
+        errno = 0;
+        clientSocket_TCP = socket(AF_INET, SOCK_STREAM, 0);
+        if (0 > clientSocket_TCP)
+        {
+            printf("ERROR WITH TCP socket() config \n");
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! Failed to create socket %d (%d:%s) ", __FUNCTION__, __LINE__, clientSocket_TCP, errno, strerror(errno));
+        }
+
+        errno = 0;
+        chkSetSockOpt = setsockopt(clientSocket_TCP, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+        if ( 0 > chkSetSockOpt )
+        {
+            printf("ERROR setsockopt() SO_REUSEADDR \n");
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! setsockopt for reusing address failed %d (%d:%s) ", __FUNCTION__, __LINE__, clientSocket_TCP, errno, strerror(errno));
+        }
+    }
+
+    errno = 0;
+    if (true == success)
+    {
+        memset(&DestAddr_TCP,0,sizeof(DestAddr_TCP));               // clear struct
+        DestAddr_TCP.sin_family = AF_INET;                          // must be this
+        DestAddr_TCP.sin_port = htons(TCPServerPort);               // set the port to write to
+        DestAddr_TCP.sin_addr.s_addr = inet_addr(ServerIPAddress);  // set destination IP address
+        memset(&(DestAddr_TCP.sin_zero), '\0', 8);                  // zero the rest of the struct
+
+        if (0 != connect(clientSocket_TCP,(struct sockaddr *)&DestAddr_TCP, sizeof(DestAddr_TCP)))
+        {
+            printf("ERROR TCP connect() \n");
+            success = false;
+            syslog(LOG_ERR, "%s:%d ERROR! TCP failed to connect %u (%d:%s) ", __FUNCTION__, __LINE__, DestAddr_TCP.sin_port, errno, strerror(errno));
+        }
+    }
+    return success;
+}
+
+/**
+ * Initial allocation of publish structs and associated
+ * elements.
+ *
+ * @param[in] void
+ * @param[out] true/false
+ *
+ * @return true/false status of mallocs.
+ */
+bool setupPublishStructure(void)
+{
+    bool success = true;
+
+    currentTopic        = 0;
+    num_topics_total    = 1;
+    prevPeriodChk       = 0;
+
+    publishMe = malloc(sizeof(topicToPublish));
+    if (NULL == publishMe)
+    {
+        syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+        success = false;
+    }
+
+    if (true == success)
+    {
+        publishMe[ currentTopic ].topicSubscription = malloc(sizeof(MPinfo));
+        if (NULL == publishMe[ currentTopic ].topicSubscription)
+        {
+            syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+            success = false;
+        }
+    }
+
+    if (true == success)
+    {
+        recvFDL = malloc(sizeof(FDLinfo));
+        if (NULL == recvFDL)
+        {
+            syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+            success = false;
+        }
+    }
+
+    if (true == success)
+    {
+        recvFDL[0].mp = malloc(sizeof(int32_t)*10);
+        if (NULL == recvFDL[0].mp)
+        {
+            syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+            success = false;
+        }
+    }
+
+    if (true == success)
+    {
+        recvFDL[0].cop = malloc(sizeof(int32_t)*4);
+        if (NULL == recvFDL[0].cop)
+        {
+            syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+            success = false;
+        }
+    }
+
+    if (true == success)
+    {
+        recvFDL[0].crank = malloc(sizeof(int32_t)*4);
+        if (NULL == recvFDL[0].crank)
+        {
+            syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+            success = false;
+        }
+    }
+
+    if (true == success)
+    {
+        recvFDL[0].turbo = malloc(sizeof(int32_t)*2);
+        if (NULL == recvFDL[0].turbo)
+        {
+            syslog(LOG_ERR, "%s:%d MALLOC ERROR!", __FUNCTION__, __LINE__);
+            success = false;
+        }
+    }
+
+    return success;
+}

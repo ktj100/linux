@@ -1,0 +1,2 @@
+build/simm_functions.o: src/simm_functions.c src/simm_functions.h \
+ src/sensor.h makefile

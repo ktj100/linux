@@ -1,0 +1,79 @@
+#define BARSM_TO_AACM_INIT_ACK_MSG 0x00110000
+#define UNUSED(x) (x)__attribute__((unused))
+
+#define MAXBUFSIZE  1000
+
+enum WhichMsg 
+{
+    CMD_OPEN                        = 0x0008, 
+    CMD_BARSM_TO_AACM               = 0x000C,
+    CMD_BARSM_TO_AACM_ACK           = 0x000D,
+    CMD_AACM_TO_BARSM               = 0x000E,
+    CMD_AACM_TO_BARSM_ACK           = 0x000F,
+    CMD_BARSM_TO_AACM_INIT          = 0x0010,
+    CMD_BARSM_TO_AACM_INIT_ACK      = 0x0011,
+    CMD_BARSM_TO_AACM_PROCESSES     = 0x0012,
+    CMD_SYSINIT                     = 0x000B,   // send
+};
+
+enum errorCodes
+{
+    GE_SUCCESS                          = 0x00,
+    GE_REGN_TIMEOUT                     = 0x01,
+    GE_PACKET_ERR                       = 0x02,
+    GE_INVALID_COMMAND_ID               = 0x03,
+    GE_INVALID_HOST_OS                  = 0x04,
+    GE_INVALID_PROCESS_ID               = 0x05,
+    GE_INVALID_PROCESS_NAME             = 0x06,
+    GE_INVALID_NO_OF_MPS                = 0x07,
+    GE_INVALID_MP_NUMBER                = 0x08,
+    GE_STALE_DATA                       = 0x09,
+    GE_DATA_NOT_AVAIL                   = 0x0A,
+    GE_BARSM_TO_AACM_ERR                = 0x0B,
+    GE_AACM_TO_BARSM_ERR                = 0x0C,
+};
+
+struct child_pid_list_struct
+{
+    pid_t child_pid;
+    const char *dir;
+    char *item_name;
+    char proc_name[4];
+    int32_t alive;
+    struct child_pid_list_struct *next;
+};
+typedef struct child_pid_list_struct child_pid_list;
+
+/* 'alive' VALUE ENUMS */
+enum e_alive
+{
+    downPermanently         = -1,
+    normal                  = 0,
+    handledByBarsmToAacm    = 1,
+    handledByAacmToBarsm    = 2,
+};
+
+/* From barsm_functions.c */
+bool TCPsetup(int32_t *csocket);
+bool UDPsetup(int32_t *csocket);
+
+bool send_barsmToAacmInit(int32_t csocket);
+bool receive_barsmToAacmInitAck(int32_t csocket);
+
+void assign_procName(char * pName);
+char rand_letter(void);
+
+bool start_process(child_pid_list *tmp_node);
+
+bool process_openUDP(int32_t csocket);
+bool process_sysInit(int32_t csocket);
+bool send_barsmToAacmProcesses(int32_t csocket, child_pid_list *tmp_node, const char *dirs[], \
+    char barsm_name[4]);
+
+bool check_modules(/*int32_t csocket,*/ child_pid_list *tmp_node);
+/*bool send_barsmToAacm(int32_t csocket, child_pid_list *tmp_node);
+void receive_barsmToAacmAck(int32_t csocket)*/
+
+void receive_aacmToBarsm(int32_t csocket, child_pid_list *tmp_node);
+void send_aacmToBarsmAck(int32_t csocket);
+bool start_select(pid_t pid, child_pid_list *tmp_node);

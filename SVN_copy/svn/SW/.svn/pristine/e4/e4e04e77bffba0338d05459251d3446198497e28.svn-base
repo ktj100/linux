@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+
+# This script ensures that BARSM restarts any successed applications that started 
+# up good. Error logs are also checked
+
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+
+import log
+import barsm_utils
+
+import time
+import datetime
+import proc
+import subprocess
+
+barsm_top_loc = os.path.join(os.path.dirname(__file__), '../../barsm')
+barsm_loc = os.path.join(os.path.dirname(__file__), '../../barsm/src')
+apps_loc = os.path.join(os.path.dirname(__file__), '../utils/dummies')
+
+def run():
+    success = True
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+
+    # clear out all app directories
+    barsm_utils.remove()
+
+    # add apps in directories
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/system/aacm', shell=True)
+    subprocess.call('gcc '+apps_loc+'/hundred_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+
+    # start barsm
+    if success:
+        print('-Starting BARSM')
+        barsm_utils.start_barsm()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while starting BARSM!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False	
+        else:
+            print('--BARSM started')
+
+    # wait for AACM to start
+    if success:
+        print('-Waiting for AACM')
+        barsm_pid = (proc.findproc("valgrind.bin"))[0]['pid']
+        aacmStarted = False
+        while False == aacmStarted and success:
+            # check if AACM has started
+            all_child = proc.findchild(barsm_pid)
+            if 1 == len(all_child):
+                aacmStarted = True
+            # check for launch errors
+            logs = follow.read('barsm')
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while waiting for AACM startup!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False 
+        if success:
+            print('--AACM started')
+
+    # setup TCP connection
+    if success:
+        print('-Setting up TCP connection')
+        TCPconn, sVal = barsm_utils.TCPsetup()  # both return values are objects
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating TCP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--TCP connection setup successful')
+
+    # receive BARSM to AACM init
+    if success:
+        print('-Waiting for BARSM to AACM init')
+        success = barsm_utils.barsmToAacmInit(TCPconn, sVal)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while receiving BARSM to AACM init!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--Init received')
+
+    # send BARSM to AACM init ack
+    if success:
+        print('-Sending ACK')
+        barsm_utils.barsmToAacmInitAck(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while sending BARSM to AACM init ack!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--ACK sent')
+
+    # wait for the second application to be launched
+    if success:
+        print('-Waiting for launch of second app')
+        appStarted = False
+        while False == appStarted and success:
+            # check if launch completed
+            logs = follow.read('barsm')
+            # print (logs)
+            for d in logs:
+                if "COMPLETED: Launch sequence" in d.get('message'):
+                    appStarted = True
+            # check for errors during launching
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while starting up other app!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False
+        if success:
+            print('--second app launched')
+
+    # setup UDP connection
+    if success:
+        print('-Setting up UDP connection')
+        UDPsock = barsm_utils.UDPsetup()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating UDP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--UDP connection setup')
+
+    # receive OPEN message
+    if success:
+        print('-Waiting to receive OPEN message from BARSM')
+        SenderAddr = barsm_utils.udpOpen(UDPsock)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while opening UDP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--OPEN received')
+
+    # Wait for AACM_TO_BARSM_MSG
+    if success:
+        print('-Watiting AACM_TO_BARSM_MSG')
+        
+        #send AACM_TO_BARSM_MSG
+        barsm_utils.aacmToBarsmMsg(TCPconn, 'geapp')
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while waiting for AACM_TO_BARSM_MSG!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        if success:
+            print('--AACM_TO_BARSM_MSG received')
+
+    # get AACM_TO_BARSM_MSG ack
+    if success:
+        print('-Sending AACM_TO_BARSM_MSG ACK')
+        msgNotReceived = True
+        while False == msgNotReceived and success:
+            msgNotReceived = barsm_utils.aacmToBarsmAck(TCPconn, sVal)
+            logs = follow.read('barsm')
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while sending BARSM to AACM init ack!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False 
+        if success:
+            print('--AACM_TO_BARSM_MSG ACK sent')
+
+    # kill off all started processes
+    barsm_utils.kill_procs()
+
+if __name__ == '__main__':
+    run()

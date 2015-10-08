@@ -1,0 +1,7 @@
+Almost completed fixing 'restart_check()'.
+
+--This line, and those below, will be ignored--
+
+M    barsm/src/barsm.c
+M    test/barsm/restart_check.py
+M    test/utils/barsm_utils.py

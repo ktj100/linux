@@ -1,0 +1,762 @@
+Archive member included to satisfy reference by file (symbol)
+
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+                              build/simm_functions.o (__aeabi_uidiv)
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+                              build/sensor.o (__aeabi_uldivmod)
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_dvmd_lnx.o)
+                              /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o) (__aeabi_idiv0)
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+                              /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o) (__gnu_uldivmod_helper)
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+                              /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o) (__divdi3)
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+                              /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o) (__udivdi3)
+/opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+                              /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o (__libc_csu_init)
+
+As-needed library included to satisfy reference by file (symbol)
+
+libgcc_s.so.1                 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o (__aeabi_unwind_cpp_pr0@@GCC_3.5)
+
+Discarded input sections
+
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ .note.GNU-stack
+                0x00000000        0x0 build/fpga_read.o
+ .note.GNU-stack
+                0x00000000        0x0 build/sensor.o
+ .note.GNU-stack
+                0x00000000        0x0 build/simm.o
+ .note.GNU-stack
+                0x00000000        0x0 build/simm_functions.o
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_dvmd_lnx.o)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+ .note.GNU-stack
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+LOAD build/fpga_read.o
+LOAD build/sensor.o
+LOAD build/simm.o
+LOAD build/simm_functions.o
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libm.so
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/libgcc_s.so
+START GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/libgcc_s.so.1
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a
+END GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libpthread.so
+START GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/libpthread.so.0
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libpthread_nonshared.a
+END GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc.so
+START GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/libc.so.6
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/ld-linux.so.3
+END GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/libgcc_s.so
+START GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/lib/libgcc_s.so.1
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a
+END GROUP
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+LOAD /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+                0x00008000                PROVIDE (__executable_start, 0x8000)
+                0x00008134                . = (0x8000 + SIZEOF_HEADERS)
+
+.interp         0x00008134       0x13
+ *(.interp)
+ .interp        0x00008134       0x13 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.note.ABI-tag   0x00008148       0x20
+ .note.ABI-tag  0x00008148       0x20 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.note.gnu.build-id
+ *(.note.gnu.build-id)
+
+.hash           0x00008168      0x27c
+ *(.hash)
+ .hash          0x00008168      0x27c /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.gnu.hash
+ *(.gnu.hash)
+
+.dynsym         0x000083e4      0x5a0
+ *(.dynsym)
+ .dynsym        0x000083e4      0x5a0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.dynstr         0x00008984      0x470
+ *(.dynstr)
+ .dynstr        0x00008984      0x470 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.gnu.version    0x00008df4       0xb4
+ *(.gnu.version)
+ .gnu.version   0x00008df4       0xb4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.gnu.version_d  0x00008ea8        0x0
+ *(.gnu.version_d)
+ .gnu.version_d
+                0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.gnu.version_r  0x00008ea8       0xa0
+ *(.gnu.version_r)
+ .gnu.version_r
+                0x00008ea8       0xa0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.rel.dyn        0x00008f48        0x8
+ *(.rel.init)
+ *(.rel.text .rel.text.* .rel.gnu.linkonce.t.*)
+ *(.rel.fini)
+ *(.rel.rodata .rel.rodata.* .rel.gnu.linkonce.r.*)
+ *(.rel.data.rel.ro .rel.data.rel.ro.* .rel.gnu.linkonce.d.rel.ro.*)
+ *(.rel.data .rel.data.* .rel.gnu.linkonce.d.*)
+ *(.rel.tdata .rel.tdata.* .rel.gnu.linkonce.td.*)
+ *(.rel.tbss .rel.tbss.* .rel.gnu.linkonce.tb.*)
+ *(.rel.ctors)
+ *(.rel.dtors)
+ *(.rel.got)
+ .rel.got       0x00008f48        0x8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ *(.rel.bss .rel.bss.* .rel.gnu.linkonce.b.*)
+ .rel.bss       0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x00008f50                PROVIDE (__rel_iplt_start, .)
+ *(.rel.iplt)
+ .rel.iplt      0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x00008f50                PROVIDE (__rel_iplt_end, .)
+                0x00008f50                PROVIDE (__rela_iplt_start, .)
+                0x00008f50                PROVIDE (__rela_iplt_end, .)
+
+.rela.dyn       0x00008f50        0x0
+ *(.rela.init)
+ *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+ *(.rela.fini)
+ *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+ *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+ *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+ *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+ *(.rela.ctors)
+ *(.rela.dtors)
+ *(.rela.got)
+ *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+                0x00008f50                PROVIDE (__rel_iplt_start, .)
+                0x00008f50                PROVIDE (__rel_iplt_end, .)
+                0x00008f50                PROVIDE (__rela_iplt_start, .)
+ *(.rela.iplt)
+                0x00008f50                PROVIDE (__rela_iplt_end, .)
+
+.rel.plt        0x00008f50      0x140
+ *(.rel.plt)
+ .rel.plt       0x00008f50      0x140 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.rela.plt
+ *(.rela.plt)
+
+.init           0x00009090        0xc
+ *(SORT(.init))
+ .init          0x00009090        0x8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+                0x00009090                _init
+ .init          0x00009098        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+
+.plt            0x0000909c      0x1f4
+ *(.plt)
+ .plt           0x0000909c      0x1f4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x000090b0                pthread_mutex_unlock@@GLIBC_2.4
+                0x000090bc                raise@@GLIBC_2.4
+                0x000090c8                setsockopt@@GLIBC_2.4
+                0x000090d4                printf@@GLIBC_2.4
+                0x000090e0                read@@GLIBC_2.4
+                0x000090ec                memmove@@GLIBC_2.4
+                0x000090f8                pthread_mutex_lock@@GLIBC_2.4
+                0x00009104                pthread_detach@@GLIBC_2.4
+                0x00009110                clock_gettime@@GLIBC_2.17
+                0x0000911c                pthread_self@@GLIBC_2.4
+                0x00009128                memcpy@@GLIBC_2.4
+                0x00009134                recvfrom@@GLIBC_2.4
+                0x00009140                realloc@@GLIBC_2.4
+                0x0000914c                poll@@GLIBC_2.4
+                0x00009158                pthread_create@@GLIBC_2.4
+                0x00009164                puts@@GLIBC_2.4
+                0x00009170                malloc@@GLIBC_2.4
+                0x0000917c                __libc_start_main@@GLIBC_2.4
+                0x00009188                strerror@@GLIBC_2.4
+                0x000091a0                open@@GLIBC_2.4
+                0x000091ac                timerfd_create@@GLIBC_2.8
+                0x000091b8                getpid@@GLIBC_2.4
+                0x000091c4                mmap@@GLIBC_2.4
+                0x000091d0                sigfillset@@GLIBC_2.4
+                0x000091dc                __errno_location@@GLIBC_2.4
+                0x000091e8                memset@@GLIBC_2.4
+                0x000091f4                sendto@@GLIBC_2.4
+                0x00009200                syslog@@GLIBC_2.4
+                0x0000920c                openlog@@GLIBC_2.4
+                0x00009218                timerfd_settime@@GLIBC_2.8
+                0x00009224                socket@@GLIBC_2.4
+                0x00009230                sigwaitinfo@@GLIBC_2.4
+                0x0000923c                inet_addr@@GLIBC_2.4
+                0x00009248                abort@@GLIBC_2.4
+                0x00009254                recv@@GLIBC_2.4
+                0x00009260                close@@GLIBC_2.4
+                0x0000926c                send@@GLIBC_2.4
+                0x00009278                connect@@GLIBC_2.4
+                0x00009284                cos@@GLIBC_2.4
+
+.iplt           0x00009290        0x0
+ *(.iplt)
+ .iplt          0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+
+.text           0x00009290     0x576c
+ *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+ *(.text.exit .text.exit.*)
+ *(.text.startup .text.startup.*)
+ .text.startup  0x00009290      0x894 build/simm.o
+                0x00009290                main
+ *(.text.hot .text.hot.*)
+ *(.text .stub .text.* .gnu.linkonce.t.*)
+ .text          0x00009b24       0x3c /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x00009b24                _start
+ .text          0x00009b60       0x24 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+ .text          0x00009b84       0xc8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ *fill*         0x00009c4c        0x4 
+ .text          0x00009c50      0x6a8 build/fpga_read.o
+                0x00009c50                setup_fpga_comm
+                0x00009e70                send_fpga_config
+                0x00009ea4                fpga_init
+                0x00009f1c                wait_for_fpga
+                0x0000a034                get_fpga_data
+                0x0000a10c                calcHannWindowCo
+                0x0000a220                bufferFPGAdata
+ .text          0x0000a2f8      0xa2c build/sensor.o
+                0x0000a2f8                timestamp_offset_config
+                0x0000a400                subscribe_config
+                0x0000a6e8                make_logicals
+                0x0000a7f0                convert_pfp
+                0x0000a804                convert_ptxt
+                0x0000a818                convert_tcmp
+                0x0000a82c                convert_cop
+                0x0000a844                split_timestamps
+                0x0000a9f0                check_ts_values
+                0x0000abc0                calculate_timestamps
+ .text          0x0000ad24      0x89c build/simm.o
+                0x0000b18c                UDPsetup
+                0x0000b364                TCPsetup
+ .text          0x0000b5c0     0x2e40 build/simm_functions.o
+                0x0000b5c0                process_registerApp_ack
+                0x0000b8e4                process_registerData
+                0x0000bc14                process_registerData_ack
+                0x0000c4a8                process_openUDP
+                0x0000c5a0                process_sysInit
+                0x0000c844                process_publish
+                0x0000ccf0                process_subscribe
+                0x0000d220                process_subscribe_ack
+                0x0000d498                process_HeartBeat
+                0x0000d524                getVarPeriod
+                0x0000d5cc                buildPublishData
+                0x0000e0c4                remote_set16
+                0x0000e0dc                remote_set32
+                0x0000e104                remote_set64
+                0x0000e154                remote_get16
+                0x0000e164                remote_get32
+                0x0000e184                numSecondsHaveElapsed
+                0x0000e1dc                process_registerApp
+                0x0000e35c                publishManager
+ .text          0x0000e400      0x20c /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+                0x0000e400                __aeabi_uidiv
+                0x0000e400                __udivsi3
+                0x0000e5ec                __aeabi_uidivmod
+ .text          0x0000e60c       0x3c /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+                0x0000e60c                __aeabi_uldivmod
+ .text          0x0000e648       0x10 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_dvmd_lnx.o)
+                0x0000e648                __aeabi_ldiv0
+                0x0000e648                __aeabi_idiv0
+ .text          0x0000e658       0x78 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+                0x0000e658                __gnu_ldivmod_helper
+                0x0000e694                __gnu_uldivmod_helper
+ .text          0x0000e6d0      0x1a8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+                0x0000e6d0                __divdi3
+ .text          0x0000e878      0x120 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+                0x0000e878                __udivdi3
+ .text          0x0000e998       0x64 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+                0x0000e998                __libc_csu_init
+                0x0000e9f8                __libc_csu_fini
+ .text          0x0000e9fc        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+ .text          0x0000e9fc        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+ *(.gnu.warning)
+ *(.glue_7t)
+ .glue_7t       0x00000000        0x0 linker stubs
+ *(.glue_7)
+ .glue_7        0x00000000        0x0 linker stubs
+ *(.vfp11_veneer)
+ .vfp11_veneer  0x00000000        0x0 linker stubs
+ *(.v4_bx)
+ .v4_bx         0x00000000        0x0 linker stubs
+
+.fini           0x0000e9fc        0x8
+ *(SORT(.fini))
+ .fini          0x0000e9fc        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+                0x0000e9fc                _fini
+ .fini          0x0000ea00        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+                0x0000ea04                PROVIDE (__etext, .)
+                0x0000ea04                PROVIDE (_etext, .)
+                0x0000ea04                PROVIDE (etext, .)
+
+.rodata         0x0000ea04     0x25b4
+ *(.rodata .rodata.* .gnu.linkonce.r.*)
+ .rodata.cst4   0x0000ea04        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x0000ea04                _IO_stdin_used
+ .rodata        0x0000ea08       0x34 build/fpga_read.o
+ .rodata.str1.4
+                0x0000ea3c      0x22f build/fpga_read.o
+                                0x230 (size before relaxing)
+ *fill*         0x0000ec6b        0x1 
+ .rodata        0x0000ec6c       0x54 build/sensor.o
+                0x0000ecbc                MAX_TS_PERIOD
+ .rodata.str1.4
+                0x0000ecc0      0x1b6 build/sensor.o
+                                0x1b8 (size before relaxing)
+ *fill*         0x0000ee76        0x2 
+ .rodata        0x0000ee78       0x90 build/simm.o
+ .rodata.str1.4
+                0x0000ef08      0x9ed build/simm.o
+                                0x9f0 (size before relaxing)
+ *fill*         0x0000f8f5        0x3 
+ .rodata        0x0000f8f8       0xe4 build/simm_functions.o
+ .rodata.str1.4
+                0x0000f9dc     0x15dc build/simm_functions.o
+
+.rodata1
+ *(.rodata1)
+
+.ARM.extab      0x00010fb8       0x3c
+ *(.ARM.extab* .gnu.linkonce.armextab.*)
+ .ARM.extab     0x00010fb8        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ .ARM.extab     0x00010fb8        0xc /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ .ARM.extab     0x00010fc4        0xc build/fpga_read.o
+ .ARM.extab     0x00010fd0        0x0 build/sensor.o
+ .ARM.extab     0x00010fd0        0x0 build/simm.o
+ .ARM.extab.text.startup
+                0x00010fd0        0x0 build/simm.o
+ .ARM.extab     0x00010fd0       0x24 build/simm_functions.o
+ .ARM.extab     0x00010ff4        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .ARM.extab     0x00010ff4        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .ARM.extab     0x00010ff4        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .ARM.extab     0x00010ff4        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+                0x00010ff4                PROVIDE (__exidx_start, .)
+
+.ARM.exidx      0x00010ff4      0x188
+ *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+ .ARM.exidx     0x00010ffc        0x8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ .ARM.exidx     0x00011004       0x18 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+                                 0x20 (size before relaxing)
+ .ARM.exidx     0x0001101c       0x38 build/fpga_read.o
+ .ARM.exidx     0x00011054       0x38 build/sensor.o
+                                 0x50 (size before relaxing)
+ .ARM.exidx     0x0001108c       0x28 build/simm.o
+ .ARM.exidx.text.startup
+                0x00010ff4        0x8 build/simm.o
+ .ARM.exidx     0x000110b4       0x90 build/simm_functions.o
+                                 0x98 (size before relaxing)
+ .ARM.exidx     0x00011144       0x10 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .ARM.exidx     0x00011154        0x8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .ARM.exidx     0x0001115c        0x8 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .ARM.exidx     0x00011164       0x18 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+                                 0x10 (size before relaxing)
+                0x0001117c                PROVIDE (__exidx_end, .)
+
+.eh_frame_hdr
+ *(.eh_frame_hdr)
+ *(.eh_frame_entry .eh_frame_entry.*)
+
+.eh_frame       0x0001117c        0x4
+ *(.eh_frame)
+ .eh_frame      0x0001117c        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+ *(.eh_frame.*)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.gnu_extab
+ *(.gnu_extab*)
+
+.exception_ranges
+ *(.exception_ranges .exception_ranges*)
+                0x00011180                . = (ALIGN (0x8000) - ((0x8000 - .) & 0x7fff))
+                0x00019180                . = DATA_SEGMENT_ALIGN (0x8000, 0x1000)
+
+.eh_frame
+ *(.eh_frame)
+ *(.eh_frame.*)
+
+.gnu_extab
+ *(.gnu_extab)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.exception_ranges
+ *(.exception_ranges .exception_ranges*)
+
+.tdata
+ *(.tdata .tdata.* .gnu.linkonce.td.*)
+
+.tbss
+ *(.tbss .tbss.* .gnu.linkonce.tb.*)
+ *(.tcommon)
+
+.preinit_array  0x00019180        0x0
+                0x00019180                PROVIDE (__preinit_array_start, .)
+ *(.preinit_array)
+                0x00019180                PROVIDE (__preinit_array_end, .)
+
+.init_array     0x00019180        0x4
+                0x00019180                PROVIDE (__init_array_start, .)
+ *(SORT(.init_array.*))
+ *(.init_array)
+ .init_array    0x00019180        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+                0x00019184                PROVIDE (__init_array_end, .)
+
+.fini_array     0x00019184        0x4
+                0x00019184                PROVIDE (__fini_array_start, .)
+ *(SORT(.fini_array.*))
+ *(.fini_array)
+ .fini_array    0x00019184        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+                0x00019188                PROVIDE (__fini_array_end, .)
+
+.ctors
+ *crtbegin.o(.ctors)
+ *crtbegin?.o(.ctors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+ *(SORT(.ctors.*))
+ *(.ctors)
+
+.dtors
+ *crtbegin.o(.dtors)
+ *crtbegin?.o(.dtors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+ *(SORT(.dtors.*))
+ *(.dtors)
+
+.jcr            0x00019188        0x4
+ *(.jcr)
+ .jcr           0x00019188        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ .jcr           0x00019188        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+
+.data.rel.ro
+ *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*)
+ *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*)
+
+.dynamic        0x0001918c      0x100
+ *(.dynamic)
+ .dynamic       0x0001918c      0x100 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x0001918c                _DYNAMIC
+                0x0001928c                . = DATA_SEGMENT_RELRO_END (., 0x0)
+
+.got            0x0001928c      0x160
+ *(.got.plt)
+ .got.plt       0x0001928c       0xac /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x0001928c                _GLOBAL_OFFSET_TABLE_
+ *(.igot.plt)
+ .igot.plt      0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ *(.got)
+ .got           0x00019338       0xb4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ *(.igot)
+
+.data           0x000193ec       0x20
+                0x000193ec                PROVIDE (__data_start, .)
+ *(.data .data.* .gnu.linkonce.d.*)
+ .data          0x000193ec        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+                0x000193ec                data_start
+                0x000193ec                __data_start
+ .data          0x000193f0        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+ .data          0x000193f0        0x4 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+                0x000193f0                __dso_handle
+ .data          0x000193f4        0x0 build/fpga_read.o
+ .data          0x000193f4        0x0 build/sensor.o
+ .data          0x000193f4       0x18 build/simm.o
+                0x000193fc                UDPPort
+                0x00019400                UDPAddress
+ .data          0x0001940c        0x0 build/simm_functions.o
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_dvmd_lnx.o)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+ .data          0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+
+.tm_clone_table
+                0x0001940c        0x0
+ .tm_clone_table
+                0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ .tm_clone_table
+                0x0001940c        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+
+.data1
+ *(.data1)
+                0x0001940c                _edata = .
+                0x0001940c                PROVIDE (edata, .)
+                0x0001940c                . = .
+                0x0001940c                __bss_start = .
+                0x0001940c                __bss_start__ = .
+
+.bss            0x00019410      0x514
+ *(.dynbss)
+ .dynbss        0x00000000        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ *(.bss .bss.* .gnu.linkonce.b.*)
+ .bss           0x00019410        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ .bss           0x00019410        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+ .bss           0x00019410        0x1 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ *fill*         0x00019411        0x3 
+ .bss           0x00019414       0xcc build/fpga_read.o
+                0x00019414                fpga_timer_fd
+                0x00019418                hannWindowCo
+                0x0001941c                fpga_regs
+                0x00019420                device_fd
+                0x00019424                ts_HiLoCnt_toGet
+                0x00019430                timestamps_toGet
+                0x00019454                voltages_toGet
+                0x00019468                ts_HiLoCnt
+                0x00019474                timestamps
+                0x00019498                voltages
+                0x000194ac                timestamp_index
+                0x000194b0                logical_index
+                0x000194b4                total_ts
+                0x000194b8                returnVoltages
+                0x000194cc                cop_val
+                0x000194d0                tcmp_val
+                0x000194d4                ptrt_val
+                0x000194d8                ptlt_val
+                0x000194dc                pfp_val
+ .bss           0x000194e0      0x158 build/sensor.o
+                0x000195e0                mutex_PublishedTimeStamps
+                0x000195f8                mutex_PublishedLogicals
+                0x00019610                cam_nsecs_chk
+                0x00019614                cam_secs_chk
+                0x00019618                cam_nsecs
+                0x0001961c                cam_secs
+                0x00019620                cop_values
+                0x00019624                tcmp_values
+                0x00019628                ptrt_values
+                0x0001962c                ptlt_values
+                0x00019630                pfp_values
+ .bss           0x00019638      0x13c build/simm.o
+                0x00019648                publishMe
+                0x0001964c                simmAppName
+                0x00019650                goStart
+                0x00019658                publish
+                0x0001965c                TimeStamp_ns
+                0x00019680                TimeStamp_s
+                0x000196a4                Logicals
+                0x00019728                DestAddr_SUBSCRIBE
+                0x00019738                localInterface
+                0x0001973c                DestAddr_UDP
+                0x0001974c                DestAddr_TCP
+                0x0001975c                pubMutex
+ .bss           0x00019774      0x1b0 build/simm_functions.o
+                0x00019774                nextPublishPeriod
+                0x00019778                prevPeriodChk
+                0x0001977c                maxPublishPeriod
+                0x00019780                currentTopic
+                0x00019784                num_topics_atCurrentRate
+                0x00019788                num_topics_total
+                0x0001978c                subAppName
+                0x00019790                sub_mpNumSamples
+                0x00019794                sub_mpPer
+                0x00019798                sub_mp
+                0x0001979c                MPnum
+                0x000197a0                num_mps
+                0x000197a4                toSendUDP
+                0x00019824                toRcvUDP
+                0x000198a4                serverStorage_UDP
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_dvmd_lnx.o)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+ .bss           0x00019924        0x0 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+ *(COMMON)
+                0x00019924                . = ALIGN ((. != 0x0)?0x4:0x1)
+                0x00019924                _bss_end__ = .
+                0x00019924                __bss_end__ = .
+                0x00019924                . = ALIGN (0x4)
+                0x00019924                . = SEGMENT_START ("ldata-segment", .)
+                0x00019924                . = ALIGN (0x4)
+                0x00019924                __end__ = .
+                0x00019924                _end = .
+                0x00019924                PROVIDE (end, .)
+                0x00019924                . = DATA_SEGMENT_END (.)
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.stab.excl
+ *(.stab.excl)
+
+.stab.exclstr
+ *(.stab.exclstr)
+
+.stab.index
+ *(.stab.index)
+
+.stab.indexstr
+ *(.stab.indexstr)
+
+.comment        0x00000000       0x30
+ *(.comment)
+ .comment       0x00000000       0x30 build/fpga_read.o
+                                 0x31 (size before relaxing)
+ .comment       0x00000000       0x31 build/sensor.o
+ .comment       0x00000000       0x31 build/simm.o
+ .comment       0x00000000       0x31 build/simm_functions.o
+
+.ARM.attributes
+                0x00000000       0x35
+ .ARM.attributes
+                0x00000000       0x37 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crt1.o
+ .ARM.attributes
+                0x00000037       0x27 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crti.o
+ .ARM.attributes
+                0x0000005e       0x37 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtbegin.o
+ .ARM.attributes
+                0x00000095       0x37 build/fpga_read.o
+ .ARM.attributes
+                0x000000cc       0x37 build/sensor.o
+ .ARM.attributes
+                0x00000103       0x37 build/simm.o
+ .ARM.attributes
+                0x0000013a       0x37 build/simm_functions.o
+ .ARM.attributes
+                0x00000171       0x25 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+ .ARM.attributes
+                0x00000196       0x25 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+ .ARM.attributes
+                0x000001bb       0x25 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_dvmd_lnx.o)
+ .ARM.attributes
+                0x000001e0       0x37 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .ARM.attributes
+                0x00000217       0x37 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .ARM.attributes
+                0x0000024e       0x37 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .ARM.attributes
+                0x00000285       0x39 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+ .ARM.attributes
+                0x000002be       0x37 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/crtend.o
+ .ARM.attributes
+                0x000002f5       0x27 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/crtn.o
+
+.debug
+ *(.debug)
+
+.line
+ *(.line)
+
+.debug_srcinfo
+ *(.debug_srcinfo)
+
+.debug_sfnames
+ *(.debug_sfnames)
+
+.debug_aranges
+ *(.debug_aranges)
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.debug_info
+ *(.debug_info .gnu.linkonce.wi.*)
+
+.debug_abbrev
+ *(.debug_abbrev)
+
+.debug_line
+ *(.debug_line .debug_line.* .debug_line_end)
+
+.debug_frame    0x00000000      0x14c
+ *(.debug_frame)
+ .debug_frame   0x00000000       0x20 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivsi3.o)
+ .debug_frame   0x00000020       0x28 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_aeabi_uldivmod.o)
+ .debug_frame   0x00000048       0x54 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(bpabi.o)
+ .debug_frame   0x0000009c       0x34 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_divdi3.o)
+ .debug_frame   0x000000d0       0x38 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../lib/gcc/arm-xilinx-linux-gnueabi/4.9.1/libgcc.a(_udivdi3.o)
+ .debug_frame   0x00000108       0x44 /opt/petalinux-v2015.2-final/tools/linux-i386/arm-xilinx-linux-gnueabi/bin/../arm-xilinx-linux-gnueabi/libc/usr/lib/libc_nonshared.a(elf-init.oS)
+
+.debug_str
+ *(.debug_str)
+
+.debug_loc
+ *(.debug_loc)
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.debug_weaknames
+ *(.debug_weaknames)
+
+.debug_funcnames
+ *(.debug_funcnames)
+
+.debug_typenames
+ *(.debug_typenames)
+
+.debug_varnames
+ *(.debug_varnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.debug_ranges
+ *(.debug_ranges)
+
+.debug_macro
+ *(.debug_macro)
+
+.gnu.attributes
+ *(.gnu.attributes)
+
+.note.gnu.arm.ident
+ *(.note.gnu.arm.ident)
+
+/DISCARD/
+ *(.note.GNU-stack)
+ *(.gnu_debuglink)
+ *(.gnu.lto_*)
+OUTPUT(build/simm_app elf32-littlearm)

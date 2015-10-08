@@ -1,0 +1,619 @@
+#!/usr/bin/env python3
+
+import sys
+import socket
+import select
+import subprocess
+import proc
+import time
+import datetime
+import random
+import struct
+import os
+import multiprocessing
+import threading
+
+
+#TCP
+TCP_IP                              = "127.0.0.1"   
+TCP_PORT                            = 8000 
+
+#UDP
+UDP_IP                              = "225.0.0.37"
+UDP_PORT                            = 4096
+
+#COMMAND ID
+CMD_REGISTER_APP                    = 1
+CMD_REGISTER_APP_ACK                = 2
+CMD_REGISTER_DATA                   = 3
+CMD_REGISTER_DATA_ACK               = 4
+CMD_SUBSCRIBE                       = 5
+CMD_SUBSCRIBE_ACK                   = 6
+CMD_HEARTBEAT                       = 7
+CMD_OPEN                            = 8 
+CMD_CLOSE                           = 9 
+CMD_PUBLISH                         = 10
+CMD_SYSINIT                         = 11
+
+#USED TO TRIGGER A FAIL IN fdl
+INVALID_CMD                         = 90
+ERROR_toFAIL                        = 91
+NUM_BYTES                           = 92
+TRIGGER_FAIL                        = 93
+
+#MPs
+MP_SOURCE_TIME_SEC                  = 1001
+MP_SOURCE_TIME_NSEC                 = 1002
+MP_PFP_VALUE                        = 1003
+MP_PTLT_TEMPERATURE                 = 1004
+MP_PTRT_TEMPERATURE                 = 1005
+MP_TCMP                             = 1006
+MP_COP_HO_REAL                      = 1007
+MP_COP_HO_IMAG                      = 1008
+MP_COP_FO_REAL                      = 1009
+MP_COP_FO_IMAG                      = 1010
+MP_CRANK_HO_REAL                    = 1011
+MP_CRANK_HO_IMAG                    = 1012
+MP_CRANK_FO_REAL                    = 1013
+MP_CRANK_FO_IMAG                    = 1014
+MP_TURBO_REAL                       = 1015
+MP_TURBO_IMAG                       = 1016
+MP_COP_HALFORDER_AMPLITUDE          = 1017
+MP_COP_HALFORDER_ENERGY             = 1018
+MP_COP_HALFORDER_PHASE              = 1019
+MP_COP_FIRSTORDER_AMPLITUDE         = 1020
+MP_COP_FIRSTORDER_ENERGY            = 1021
+MP_COP_FIRSTORDER_PHASE             = 1022
+MP_CRANK_HALFORDER_AMPLITUDE        = 1023
+MP_CRANK_HALFORDER_ENERGY           = 1024
+MP_CRANK_HALFORDER_PHASE            = 1025
+MP_CRANK_FIRSTORDER_AMPLITUDE       = 1026
+MP_CRANK_FIRSTORDER_ENERGY          = 1027
+MP_CRANK_FIRSTORDER_PHASE           = 1028
+MP_TURBO_OIL_FIRSTORDER_AMPLITUDE   = 1029
+MP_TURBO_OIL_FIRSTORDER_ENERGY      = 1030
+MP_CAM_SEC_1                        = 1031
+MP_CAM_NSEC_1                       = 1032
+MP_CAM_SEC_2                        = 1033
+MP_CAM_NSEC_2                       = 1034
+MP_CAM_SEC_3                        = 1035
+MP_CAM_NSEC_3                       = 1036
+MP_CAM_SEC_4                        = 1037
+MP_CAM_NSEC_4                       = 1038
+MP_CAM_SEC_5                        = 1039
+MP_CAM_NSEC_5                       = 1040
+MP_CAM_SEC_6                        = 1041
+MP_CAM_NSEC_6                       = 1042
+MP_CAM_SEC_7                        = 1043
+MP_CAM_NSEC_7                       = 1044
+MP_CAM_SEC_8                        = 1045
+MP_CAM_NSEC_8                       = 1046
+MP_CAM_SEC_9                        = 1047
+MP_CAM_NSEC_9                       = 1048
+MP_COP_PRESSURE                     = 1049
+
+
+MP_PERIOD                           = 2000
+MP_NUM_SAMPLES                      = 2
+MP_PERIOD_1                         = 1000
+MP_NUM_SAMPLES_1                    = 1
+MP_PERIOD_2                         = 3000
+MP_NUM_SAMPLES_2                    = 3
+
+INVALID_MP                          = 500
+INVALID_MP_PERIOD                   = 500
+
+FDL_MPS                             = 17
+SIMM_MPS                            = 26
+
+#UNPACK STRING FORMATS (see enums from fdl.h)
+#THIS IS SPECIFIC TO FDL
+REGISTER_APP_STR_FMT                = '=HHBI4s'
+REGISTER_APP_ACK_STR_FMT            ='HHH'
+#REGISTER_DATA_STR_FMT               = '=HHB'+10*'I' 
+#REGISTER_DATA_STR_FMT               = '=HHB'+FDL_MPS*'I'
+REGISTER_DATA_STR_FMT               = '=HHBI4sI'+14*'I'
+#REGISTER_DATA_ACK_STR_FMT           = 10*'H'
+REGISTER_DATA_ACK_STR_FMT           = '=HHH'+14*'H'
+UDP_OPEN_MSG_FMT                    = '=HHI'
+SYS_INIT_MSG_FMT                    = '=HH'
+SUBSCRIBE_STR_FMT                   = '=HHBIIIH'+69*'I'
+SUBSCRIBE_STR_FMT_RUN_FDL           = '=HHBIIIH'+42*'I'
+SUBSCRIBE_STR_FMT_RUN               = '=HHBIIIH'+9*'I'
+SUBSCRIBE_STR_FMT_RUN2               = '=HHBIIIH'+6*'I'
+PUBLISH_HDR_STR_FMT                 = '=HHIIH'
+SUBSCRIBE_ACK_HDR_STR_FMT           = '=HHIH'
+HEARTBEAT_STR_FMT                   = '=HHI'
+
+GET_SUBSCRIBE_STR_FMT               = '=HHBIIIH'+30*'I'
+SEND_SUBSCRIBE_ACK_HDR_STR_FMT      = '=HHIH'+10*'H'
+SEND_PUBLISH_HDR_STR_FMT            = '=HHIIH'+20*'I'
+
+fdl_appname = b'fdla'
+TCPserver = 0
+TCPconn = 0
+UDPsock = 0
+pub_thread = None
+hb_thread = None
+rec_thread = None
+fdl_subproc = None
+
+fdl_top_loc = os.path.join(os.path.dirname(__file__), '../../fdlapp')
+fdl_loc = os.path.join(os.path.dirname(__file__), '../../fdlapp/src')
+
+
+class StoppableThread(threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+
+    def __init__(self, target=None, args=(), **kwargs):
+        super(StoppableThread, self).__init__(**kwargs)
+        self.daemon = True
+        self.target = target
+        self.args = args
+        self._stop = threading.Event()
+
+    def run(self):
+        start_time = time.time()
+        while not self.stopped():
+            # If the target fails, exit
+            if not self.target(*self.args):
+                print('thread {} exiting'.format(self.name))
+                break
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+def startfdl():
+    # start/restart app here
+    #os.chdir("/home/norwood/sandbox/repos/trunk/SW/fdl/build")
+    #subprocess.Popen("valgrind ./fdl --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A") #vs. call vs. ?
+    #subprocess.Popen("./fdlapp") #vs. call vs. ?
+
+    # start/restart app here
+    subprocess.call('cd {}; make debug'.format(fdl_top_loc), shell=True)
+
+    args = [
+        'valgrind',
+        '--read-var-info=yes',
+        '--leak-check=full',
+        '--track-origins=yes',
+        '--show-reachable=yes',
+        '--malloc-fill=B5',
+        '--free-fill=4A',
+        '{}/build/fdlapp'.format(fdl_top_loc),
+    ]
+    global fdl_subproc
+    test_output = open('test.out', 'a')
+    fdl_subproc = subprocess.Popen(args, stdout=test_output, stderr=subprocess.STDOUT)
+    assert fdl_subproc
+    print('FDL pid {}'.format(fdl_subproc.pid))
+
+    time.sleep(0.1)    
+
+# for FDL, 14 are published by FDL app ... 10 are received by FDL app.  
+def getPublishThread():#, lock):
+#        lock.acquire()
+#        pubMsg, SenderAddr = UDPsock.recvfrom(1024)
+#        lock.release()
+#        retBytes = len(pubMsg)
+#        print('GET getPublishThread retBytes: ', retBytes)
+#        mpData = int((retBytes - struct.calcsize(PUBLISH_HDR_STR_FMT))/struct.calcsize('=I'))
+#        PUBLISH_STR_FMT = PUBLISH_HDR_STR_FMT+mpData*'I'
+#        print('PUB DATA RECEIVED', struct.unpack(PUBLISH_STR_FMT, pubMsg))
+#        #print(SenderAddr)
+#        print('PYTHON: PUBLISH DONE!')
+
+        global UDPsock
+        #lock.acquire()
+        pubMsg, SenderAddr = UDPsock.recvfrom(1024)
+        #lock.release()
+        print('PublishThread recv bytes: {}'.format(pubMsg))
+        if pubMsg:
+            if 8 < len(pubMsg):
+                mpData = int((len(pubMsg) - struct.calcsize(PUBLISH_HDR_STR_FMT))/struct.calcsize('=I'))
+                PUBLISH_STR_FMT = PUBLISH_HDR_STR_FMT+mpData*'I'
+                print(struct.unpack(PUBLISH_STR_FMT, pubMsg))
+                print('PYTHON: PUBLISH DONE!')
+                return True
+        else:
+            return False        
+        
+def sendPublishThread():
+    global UDPsock
+    time.sleep(1)
+    sendPublish(UDPsock);
+    return True
+
+def HeartBeatThread():#, lock):
+#        #lock.acquire()
+#        hrtBtData = TCPconn.recv(1024)
+#        #lock.release()
+#        retBytes = len(hrtBtData)
+#        print('HeartBeatThread retBytes: ', retBytes)
+#        if 8 == retBytes:
+#            print(struct.unpack(HEARTBEAT_STR_FMT , hrtBtData))
+#            print('HEARTBEAT!')
+
+    global TCPconn
+    hrtBtData = TCPconn.recv(1024)
+    print('HeartBeatThread recv bytes: '.format(hrtBtData))
+    if hrtBtData:
+        if 8 == len(hrtBtData):
+            print(struct.unpack(HEARTBEAT_STR_FMT , hrtBtData))
+            print('HEARTBEAT!')
+            return True
+    else:
+        return False            
+        
+
+def TCPsetup():
+    global TCPconn, TCPserver
+    TCPserver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print('TCP Socket created')
+    TCPserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    try:
+        TCPserver.bind( (TCP_IP, TCP_PORT) )
+    except msg:
+        print( 'TCP Bind failed. Error code: ' + str(msg[0]) + 'Error message: ' + msg[1])
+        TCPserver.close()
+        sys.exit()
+
+    # Start FDL now
+    TCPserver.listen(1)
+
+    startfdl()
+
+    (TCPconn, TCPaddr) = TCPserver.accept()
+    print('DONE WITH TCP SETUP')
+    return TCPconn, TCPserver
+
+def UDPsetup():
+    global UDPsock
+    UDPsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #print( 'UDP Socket created')
+    UDPsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    UDPsock.bind( ('', UDP_PORT) )
+    mreq = struct.pack("=4sl", socket.inet_aton(UDP_IP), socket.INADDR_ANY)
+    UDPsock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+    return UDPsock
+
+def registerApp(TCPconn, sVal):
+    print('GOT REGISTER APP')
+    regAppData = TCPconn.recv(1024)
+    print('recv {}'.format(regAppData))
+    if 13 == len(regAppData):
+        msg = struct.unpack(REGISTER_APP_STR_FMT, regAppData)
+        print('unpacked {}'.format(msg))
+    else:
+        raise Exception('ERROR: FDL Register App message was {} bytes rather than 13.'.format(len(regAppData)))
+
+    # command
+    assert msg[0] == CMD_REGISTER_APP
+    # length
+    assert msg[1] == 9
+
+    # OS == petalinux
+    assert msg[2] == 0
+
+    global fdl_subproc
+    # FDL pid
+    assert msg[3] == int(fdl_subproc.pid)
+
+    global fdl_appname
+    assert msg[4] == fdl_appname
+
+
+    retBytes = len(regAppData)
+    print(struct.unpack(REGISTER_APP_STR_FMT , regAppData))
+    print('REGISTER APP DONE!')
+
+
+def registerAppAck(TCPconn, regAppAck_passfail):
+    if 0 == regAppAck_passfail:
+        regAppAckData   = [INVALID_CMD, 2, 0]
+    elif 1 == regAppAck_passfail:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 999, 0]
+    elif 2 == regAppAck_passfail:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 2, 999]
+    elif 3 == regAppAck_passfail:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 2, 0]
+    else:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 2, 0]
+    print(regAppAckData)
+    TCPconn.send(struct.pack(REGISTER_APP_ACK_STR_FMT, *regAppAckData))
+    #print('REGISTER APP ACK DONE!')
+
+
+def registerData(TCPconn):
+    # 14 MPs
+    mp_list = [
+        MP_COP_HALFORDER_AMPLITUDE,
+        MP_COP_HALFORDER_ENERGY,
+        MP_COP_HALFORDER_PHASE,
+        MP_COP_FIRSTORDER_AMPLITUDE,
+        MP_COP_FIRSTORDER_ENERGY,
+        MP_COP_FIRSTORDER_PHASE,
+        MP_CRANK_HALFORDER_AMPLITUDE,
+        MP_CRANK_HALFORDER_ENERGY,
+        MP_CRANK_HALFORDER_PHASE,
+        MP_CRANK_FIRSTORDER_AMPLITUDE,
+        MP_CRANK_FIRSTORDER_ENERGY,
+        MP_CRANK_FIRSTORDER_PHASE,
+        MP_TURBO_OIL_FIRSTORDER_AMPLITUDE,
+        MP_TURBO_OIL_FIRSTORDER_ENERGY,
+    ]
+
+    regDataData = TCPconn.recv(1024)
+
+    print('recv {}'.format(regDataData))
+    if 73 == len(regDataData):
+        msg = struct.unpack(REGISTER_DATA_STR_FMT, regDataData)
+        print('unpacked {}'.format(msg))
+    else:
+        raise Exception('ERROR: FDL Register Data message was {} bytes rather than 73.'.format(len(regDataData)))
+
+    # command
+    assert msg[0] == CMD_REGISTER_DATA
+    # length (fixed for FDL)
+    assert msg[1] == 69
+
+    # OS == petalinux
+    assert msg[2] == 0
+
+    global fdl_subproc
+    # FDL pid
+    assert msg[3] == int(fdl_subproc.pid)
+
+    global fdl_appname
+    assert msg[4] == fdl_appname
+
+    assert msg[5] == 14
+    for (mp, i) in zip(mp_list, range(6,20)):
+        if mp != msg[i]:
+            raise Exception('ERROR: FDL MP[{}]: {} != {}'.format(i, mp, msg[i]))
+
+    print('REGISTER DATA DONE!')
+
+
+def registerDataAck(TCPconn, regDataAck_passfail):
+    regDataAckErrors                = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
+    #regDataAckErrors                = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    if regDataAck_passfail < 15:
+        regDataAckErrors[regDataAck_passfail]  = 999
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, len(regDataAckErrors)*2] + regDataAckErrors
+    elif 15 == regDataAck_passfail:
+        regDataAckData              = [INVALID_CMD, len(regDataAckErrors)*2] + regDataAckErrors
+    elif 16 == regDataAck_passfail:
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, 999] + regDataAckErrors
+    elif 17 == regDataAck_passfail:
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, len(regDataAckErrors)*2] + regDataAckErrors
+    else:
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, len(regDataAckErrors)*2] + regDataAckErrors
+    print(regDataAckData)
+    TCPconn.send(struct.pack(REGISTER_DATA_ACK_STR_FMT, *regDataAckData))
+    #print('REGISTER DATA ACK DONE!')
+
+
+def udpOpen(UDPsock):
+    print('UDP Socket bind complete')
+    #UDPsock.sendto(b'test', (UDP_IP, UDP_PORT))
+    UDPopenMsg, SenderAddr = UDPsock.recvfrom(1024)
+    #print(SenderAddr)
+
+    print('recv {} from {}'.format(UDPopenMsg, SenderAddr))
+    if 8 == len(UDPopenMsg):
+        msg = struct.unpack(UDP_OPEN_MSG_FMT, UDPopenMsg)
+        print('unpacked {}'.format(msg))
+    else:
+        raise Exception('ERROR: FDL UDP open message was {} bytes rather than 8.'.format(len(UDPopenMsg)))
+
+    # command
+    assert msg[0] == CMD_OPEN
+    # length
+    assert msg[1] == 4
+
+    global fdl_subproc
+    # FDL pid
+    assert msg[2] == int(fdl_subproc.pid)
+
+    
+
+def sysInit(UDPsock, sysInit_passfail):
+    if sysInit_passfail == 0:
+        sendSysInitMsg  = [INVALID_CMD, 0]
+    elif sysInit_passfail == 1:
+        sendSysInitMsg  = [CMD_SYSINIT, 999]
+    elif sysInit_passfail == 2:
+        sendSysInitMsg  = [CMD_SYSINIT, 0]
+    else:
+        sendSysInitMsg  = [CMD_SYSINIT, 0]
+    print(sendSysInitMsg)
+    UDPsock.sendto(struct.pack(SYS_INIT_MSG_FMT, *sendSysInitMsg ), (UDP_IP, UDP_PORT))
+
+    UDPsysInit, senderAddr = UDPsock.recvfrom(1024)
+    msg = struct.unpack("=HH", UDPsysInit)
+
+    assert msg[0] == sendSysInitMsg[0]
+    assert msg[1] == sendSysInitMsg[1]    
+
+    print('sysinit unpacked {}'.format(msg))
+    #print('SYS INIT DONE!')
+
+
+def subscribe(TCPconn, subscribe_passfail):
+    subscribeMPdata_run = [ MP_PFP_VALUE,       MP_PERIOD_1, MP_NUM_SAMPLES_1, 
+                            MP_CAM_SEC_1,       MP_PERIOD_1, MP_NUM_SAMPLES_1,
+                            MP_CAM_SEC_2,       MP_PERIOD_1, MP_NUM_SAMPLES_1 ]
+
+    subscribeMPdata_run2 = [ MP_TCMP,               MP_PERIOD_2, MP_NUM_SAMPLES_2, 
+                            MP_COP_PRESSURE,        MP_PERIOD_2, MP_NUM_SAMPLES_2 ]
+
+    subscribeMPdata = [ MP_PFP_VALUE,           MP_PERIOD, MP_NUM_SAMPLES, 
+                        MP_PTLT_TEMPERATURE,    MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_PTRT_TEMPERATURE,    MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_TCMP,                MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_COP_PRESSURE,        MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_1,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_1,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_2,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_2,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_3,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_3,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_4,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_4,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_5,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_5,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_6,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_6,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_7,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_7,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_8,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_8,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_9,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_9,          MP_PERIOD, MP_NUM_SAMPLES ]
+    subscribeData = [CMD_SUBSCRIBE, 291, 0, 0, 0, 23, 0] + subscribeMPdata
+    if 100 == subscribe_passfail:
+        subscribeData = [CMD_SUBSCRIBE, 51, 0, 0, 0, 3, 0] + subscribeMPdata_run
+    elif 200 == subscribe_passfail:
+        subscribeData = [CMD_SUBSCRIBE, 39, 0, 0, 0, 2, 0] + subscribeMPdata_run2
+    elif 0 == subscribe_passfail:
+        subscribeData[subscribe_passfail] = 999
+    elif 1 == subscribe_passfail:
+        subscribeData[subscribe_passfail] = 999
+    elif 5 == subscribe_passfail:
+        subscribeData[subscribe_passfail] = 999
+    elif 6 < subscribe_passfail < 76:
+        subscribeData[subscribe_passfail] = 999
+    else:
+        subscribeData = [CMD_SUBSCRIBE, 291, 0, 0, 0, 23, 0] + subscribeMPdata
+
+    print(subscribeData)
+    if 100 == subscribe_passfail:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN, *subscribeData))
+    elif 200 == subscribe_passfail:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN2, *subscribeData))
+    else:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT, *subscribeData))
+    print('SUBSCRIBE DONE! ', subscribe_passfail)
+
+
+
+
+
+def sendSubscribe(TCPconn):
+    subscribeMPdata =   [   MP_COP_HALFORDER_AMPLITUDE          , 1000,    1, 
+                            MP_COP_HALFORDER_ENERGY             , 1000,    1, 
+                            MP_COP_HALFORDER_PHASE              , 1000,    1, 
+                            MP_COP_FIRSTORDER_AMPLITUDE         , 1000,    1, 
+                            MP_COP_FIRSTORDER_ENERGY            , 1000,    1, 
+                            MP_COP_FIRSTORDER_PHASE             , 1000,    1, 
+                            MP_CRANK_HALFORDER_AMPLITUDE        , 1000,    1, 
+                            MP_CRANK_HALFORDER_ENERGY           , 1000,    1, 
+                            MP_CRANK_HALFORDER_PHASE            , 1000,    1, 
+                            MP_CRANK_FIRSTORDER_AMPLITUDE       , 1000,    1, 
+                            MP_CRANK_FIRSTORDER_ENERGY          , 1000,    1, 
+                            MP_CRANK_FIRSTORDER_PHASE           , 1000,    1, 
+                            MP_TURBO_OIL_FIRSTORDER_AMPLITUDE   , 1000,    1, 
+                            MP_TURBO_OIL_FIRSTORDER_ENERGY      , 1000,    1    ]
+    subscribeData = [CMD_SUBSCRIBE, 183, 0, 0, 15137, 14, 0] + subscribeMPdata
+    print('SEND SUBSCRIBE: ', subscribeData)
+    TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN_FDL, *subscribeData))
+
+def getSubscribe(TCPconn):
+    getSubscribeData = TCPconn.recv(1024)
+    retBytes = len(getSubscribeData)
+    print("GET SUBSCRIBE BYTES: ", retBytes)
+    print(struct.unpack(GET_SUBSCRIBE_STR_FMT , getSubscribeData))
+    print("GET SUBSCRIBE DONE!")
+
+def sendSubscribeAck(TCPconn):
+    sendSubscribeAckErrors          = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
+    sendSubscribeAckData            = [CMD_SUBSCRIBE_ACK, len(sendSubscribeAckErrors)*2 + 4, 15137] + sendSubscribeAckErrors
+    print("SEND SUB ACK DATA: ", sendSubscribeAckData)
+    TCPconn.send(struct.pack(SEND_SUBSCRIBE_ACK_HDR_STR_FMT, *sendSubscribeAckData))
+
+def sendPublish(UDPsock):
+    copRealImag                     = [MP_COP_HO_REAL, 3, MP_COP_HO_IMAG, 4, MP_COP_FO_REAL, 3, MP_COP_FO_IMAG, 4] 
+    crankRealImag                   = [MP_CRANK_HO_REAL, 3, MP_CRANK_HO_IMAG, 4, MP_CRANK_FO_REAL, 3, MP_CRANK_FO_IMAG, 4] 
+    turboRealImag                   = [MP_TURBO_REAL, 3, MP_TURBO_IMAG, 4] 
+    publishMPdata                   = copRealImag + crankRealImag + turboRealImag
+    print("SEND PUB (len(publishMPdata)", (len(publishMPdata)))
+    sendPublishData                 = [CMD_PUBLISH, (len(publishMPdata)*4 + 4 + 4 + 2), 15137, 10, 0] + publishMPdata
+    print("SEND PUB DATA: ", sendPublishData)
+    UDPsock.sendto(struct.pack(SEND_PUBLISH_HDR_STR_FMT, *sendPublishData ), (UDP_IP, UDP_PORT) )
+
+def subscribeAck(TCPconn, subscribe_passfail):
+    subAckData = TCPconn.recv(1024)
+    retBytes = len(subAckData)
+    print('subscribeAck retBytes: ', retBytes)
+    if 8 < retBytes:
+        mpErr = int((retBytes - struct.calcsize(SUBSCRIBE_ACK_HDR_STR_FMT))/struct.calcsize('=H'))
+        SUBSCRIBE_ACK_STR_FMT = SUBSCRIBE_ACK_HDR_STR_FMT+mpErr*'H'
+        subAckResponse = struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData)
+        print(struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData))
+        print('SUBSCRIBE ACK DONE!')
+
+def start_threads():
+    global pub_thread, hb_thread, rec_thread
+    pub_thread = StoppableThread(group=None, target=getPublishThread, name='GetPubThread')
+    hb_thread = StoppableThread(group=None, target=HeartBeatThread, name='HBThread')
+    rec_thread = StoppableThread(group=None, target=sendPublishThread, name='SendPubThread')
+    pub_thread.start()
+    hb_thread.start()
+    rec_thread.start()
+
+def check_fdl_running():
+    global fdl_subproc
+    if fdl_subproc:
+        if fdl_subproc.poll():
+            # Some of the FDL tests send FDL errors which cause it to exit, so expect
+            # that it will have exited sometimes
+            if fdl_subproc.returncode:
+                raise Exception('FDL already exited with code {}'.format(fdl_subproc.returncode))
+            fdl_subproc = None
+
+def stop_fdl():
+    global TCPconn, TCPserver, UDPsock, fdl_subproc, pub_thread, hb_thread, rec_thread
+
+    check_fdl_running()
+
+    if fdl_subproc:
+        try:
+            #os.kill(simm_subproc.pid, signal.SIGKILL)
+            fdl_subproc.kill()
+        except ProcessLookupError:
+            pass
+        fdl_subproc = None
+
+    if pub_thread:
+        pub_thread.stop()
+        pub_thread = None
+
+    if hb_thread:
+        hb_thread.stop()
+        hb_thread = None
+
+    if rec_thread:
+        rec_thread.stop()
+        rec_thread = None        
+
+    if TCPconn:
+        TCPconn.close()
+        TCPconn = 0
+
+    if TCPserver:
+        TCPserver.close()
+        TCPserver = 0
+
+    if UDPsock:
+        UDPsock.close()
+        UDPsock = 0
+
+import atexit
+atexit.register(stop_fdl)

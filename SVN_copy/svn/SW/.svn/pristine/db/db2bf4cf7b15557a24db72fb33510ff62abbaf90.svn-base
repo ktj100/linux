@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+
+# This script tests whether the applications/modules are launched in the correct order.
+
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+import barsm_utils
+import log
+import proc
+
+def run():
+    success = True
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+    launchErrors = log.logfollower()
+
+
+
+    # start barsm
+    if success:
+        print('-Starting BARSM')
+        #barsm_utils.start_barsm()
+        barsm_utils.norm_launch()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while starting BARSM!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--BARSM started')
+
+    # wait for AACM to start
+    if success:
+        print('-Waiting for AACM')
+        barsm_pid = (proc.findproc("valgrind.bin"))[0]['pid']
+        aacmStarted = False
+        while False == aacmStarted and success:
+            # check if AACM has started
+            all_child = proc.findchild(barsm_pid)
+            if 1 == len(all_child):
+                aacmStarted = True
+            # check for launch errors
+            logs = follow.read('barsm')
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while waiting for AACM startup!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False 
+        if success:
+            print('--AACM started')
+
+    # setup TCP connection
+    if success:
+        print('-Setting up TCP connection')
+        TCPconn, sVal = barsm_utils.TCPsetup()  # both return values are objects
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating TCP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--TCP connection setup successful')
+
+    # receive BARSM to AACM init
+    if success:
+        print('-Waiting for BARSM to AACM init')
+        success = barsm_utils.barsmToAacmInit(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while receiving BARSM to AACM init!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--Init received')
+
+    # send BARSM to AACM init ack
+    if success:
+        print('-Sending ACK')
+        barsm_utils.barsmToAacmInitAck(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while sending BARSM to AACM init ack!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--ACK sent')
+
+    # wait for children to complete launching
+    if success:
+        print('-Waiting for launch completion')
+        children = barsm_utils.waitForLaunch(follow)
+        if 5 == children:
+            print('--Launch complete!')
+        else: 
+            print('ERROR: only {} child procs (should have 5)'.format(children))
+            success = False
+
+    # setup UDP connection
+    if success:
+        print('-Setting up UDP connection')
+        UDPsock = barsm_utils.UDPsetup()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating UDP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--UDP connection setup')
+
+    # send sysInit message
+    if success:
+        print('-Waiting to receive OPEN message from BARSM')
+        print('-Sending SYS_INIT message to BARSM')
+        barsm_utils.sysInit(UDPsock)
+        print('--OPEN received')
+
+    # receive barsm to aacm processes
+    if success: 
+        print('-Receiving BARSM_TO_AACM_PROCESSES')
+
+        barsm_utils.receiveTcpMessage(TCPconn)
+
+        print('--BARSM_TO_AACM_PROCESSES message received')
+
+    if success:
+
+        # check logs for launch errors
+        logs = launchErrors.read('barsm')
+        #print('logs : {}'.format(logs))
+
+        launch_errors = sum(1 for d in logs if "File launch failed!" in d.get('message'))
+
+        all_child = proc.findchild(barsm_pid)
+        launch_result = len(all_child)
+
+        if launch_result == 5 and launch_errors == 0:
+            # store all timestamps
+            aacm_ts =   list(filter(lambda t: "/opt/rc360/system" in t['message'], logs))[0]['timestamp']
+            gemod_ts =  list(filter(lambda t: "/opt/rc360/modules/GE" in t['message'], logs))[0]['timestamp']
+            tpamod_ts = list(filter(lambda t: "/opt/rc360/modules/TPA" in t['message'], logs))[0]['timestamp']
+            geapp_ts =  list(filter(lambda t: "/opt/rc360/apps/GE" in t['message'], logs))[0]['timestamp']
+            tpaapp_ts = list(filter(lambda t: "/opt/rc360/apps/TPA" in t['message'], logs))[0]['timestamp']
+
+            # Ensure that 5 apps were launched, there were no errors, and that the apps
+            # were launched in the correct order. 
+            if gemod_ts  < aacm_ts   :
+                print('gemod_ts  < aacm_ts')
+                success = False
+            if tpamod_ts < aacm_ts   :
+                print('tpamod_ts < aacm_ts ')
+                success = False
+            if geapp_ts  < gemod_ts  :
+                print('geapp_ts  < gemod_ts')
+                success = False
+            if tpaapp_ts < gemod_ts  :
+                print('tpaapp_ts < gemod_ts')
+                success = False
+            if geapp_ts  < tpamod_ts :
+                print('geapp_ts  < tpamod_ts')
+                success = False
+            if tpaapp_ts < tpamod_ts:
+                print('tpaapp_ts < tpamod_ts')
+                success = False
+        else:
+            success = False
+
+
+    # kill off all started processes
+    barsm_utils.kill_procs()
+
+    print('{}'.format('PASSED' if success else 'FAILED'))
+    return success
+
+if __name__ == '__main__':
+    run()

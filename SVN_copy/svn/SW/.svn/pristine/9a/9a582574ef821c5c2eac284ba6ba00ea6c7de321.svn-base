@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+
+import log
+import barsm_utils
+import proc
+
+import subprocess
+import random
+import time
+
+# This program will place an executable only in the AACM directory that instantly ends, or place
+# a non-executable in the AACM directory. BARSM should try to launch it five times, then exit.
+
+def run():
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+    logError = log.logfollower()
+
+
+    result = False
+    success = True
+
+    # clear out all app directories
+    barsm_utils.remove()
+
+    # compile needed applications and place in required directories
+    random.seed()
+    r = random.randint(1, 2)
+    print(r)
+    if 1 == r:
+        subprocess.call('gcc '+barsm_utils.apps_loc+'/zero_sec.c -o /opt/rc360/system/zero_sec_aacm', shell=True)
+    else:
+        subprocess.call('cp '+barsm_utils.apps_loc+'/non_exec.c /opt/rc360/system/', shell=True)
+
+    print('-Starting BARSM')
+    barsm_utils.start_barsm()
+    logs = follow.read('barsm')
+    errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+    if 0 < errors:
+        print('ERROR: SYSLOG errors while starting BARSM!')
+        for d in logs:
+            if "ERROR" in d.get('message'):
+                print (d.get('message'))
+        success = False 
+    else:
+        print('--BARSM started')
+        success = True
+
+    # wait for AACM to start
+    if success:
+        print('-Waiting for AACM')
+        barsm_pid = (proc.findproc("valgrind.bin"))[0]['pid']
+        aacmStarted = False
+        while False == aacmStarted and success:
+            # check if AACM has started
+            all_child = proc.findchild(barsm_pid)
+            if 1 == len(all_child):
+                aacmStarted = True
+            # check for launch errors
+            logs = follow.read('barsm')
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while waiting for AACM startup!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False 
+        if success:
+            print('--AACM start attempt finished')
+
+    if success:
+        #takes about 20 seconds to restart 5 times
+        time.sleep(25)
+
+        # check logs to see if five errors were logged for each launch failure
+        logs = logError.read('barsm')
+        #print('logs : {}'.format(logs))
+        launch_errors = sum(1 for d in logs if "File launch failed!" in d.get('message') and "/opt/rc360/" in d.get('message'))
+
+        if 5 == launch_errors:
+            result = True
+
+    # kill off all started processes
+    barsm_utils.kill_procs()
+
+    print('{}'.format('PASSED' if result else 'FAILED'))
+    return result
+
+if __name__ == '__main__':
+    run()

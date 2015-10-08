@@ -1,0 +1,368 @@
+#!/usr/bin/env python3
+
+import sys
+import socket
+import select
+import subprocess
+import proc
+import time
+import datetime
+import random
+import struct
+import os
+import multiprocessing
+
+RUNTIME                             = 185
+
+#TCP
+TCP_IP                              = "127.0.0.1"   
+TCP_PORT                            = 8000 
+
+#UDP
+UDP_IP                              = "225.0.0.37"
+UDP_PORT                            = 4096
+
+#COMMAND ID
+CMD_REGISTER_APP                    = 1
+CMD_REGISTER_APP_ACK                = 2
+CMD_REGISTER_DATA                   = 3
+CMD_REGISTER_DATA_ACK               = 4
+CMD_SUBSCRIBE                       = 5
+CMD_SUBSCRIBE_ACK                   = 6
+CMD_HEARTBEAT                       = 7
+CMD_OPEN                            = 8 
+CMD_CLOSE                           = 9 
+CMD_PUBLISH                         = 10
+CMD_SYSINIT                         = 11
+
+#USED TO TRIGGER A FAIL IN SIMM
+INVALID_CMD                         = 90
+ERROR_toFAIL                        = 91
+NUM_BYTES                           = 92
+TRIGGER_FAIL                        = 93
+
+#MPs
+MP_SOURCE_TIME_SEC                  = 1001
+MP_SOURCE_TIME_NSEC                 = 1002
+MP_PFP_VALUE                        = 1003
+MP_PTLT_TEMPERATURE                 = 1004
+MP_PTRT_TEMPERATURE                 = 1005
+MP_TCMP                             = 1006
+MP_COP_HO_REAL                      = 1007
+MP_COP_HO_IMAG                      = 1008
+MP_COP_FO_REAL                      = 1009
+MP_COP_FO_IMAG                      = 1010
+MP_CRANK_HO_REAL                    = 1011
+MP_CRANK_HO_IMAG                    = 1012
+MP_CRANK_FO_REAL                    = 1013
+MP_CRANK_FO_IMAG                    = 1014
+MP_TURBO_REAL                       = 1015
+MP_TURBO_IMAG                       = 1016
+MP_COP_HALFORDER_AMPLITUDE          = 1017
+MP_COP_HALFORDER_ENERGY             = 1018
+MP_COP_HALFORDER_PHASE              = 1019
+MP_COP_FIRSTORDER_AMPLITUDE         = 1020
+MP_COP_FIRSTORDER_ENERGY            = 1021
+MP_COP_FIRSTORDER_PHASE             = 1022
+MP_CRANK_HALFORDER_AMPLITUDE        = 1023
+MP_CRANK_HALFORDER_ENERGY           = 1024
+MP_CRANK_HALFORDER_PHASE            = 1025
+MP_CRANK_FIRSTORDER_AMPLITUDE       = 1026
+MP_CRANK_FIRSTORDER_ENERGY          = 1027
+MP_CRANK_FIRSTORDER_PHASE           = 1028
+MP_TURBO_OIL_FIRSTORDER_AMPLITUDE   = 1029
+MP_TURBO_OIL_FIRSTORDER_ENERGY      = 1030
+MP_CAM_SEC_1                        = 1031
+MP_CAM_NSEC_1                       = 1032
+MP_CAM_SEC_2                        = 1033
+MP_CAM_NSEC_2                       = 1034
+MP_CAM_SEC_3                        = 1035
+MP_CAM_NSEC_3                       = 1036
+MP_CAM_SEC_4                        = 1037
+MP_CAM_NSEC_4                       = 1038
+MP_CAM_SEC_5                        = 1039
+MP_CAM_NSEC_5                       = 1040
+MP_CAM_SEC_6                        = 1041
+MP_CAM_NSEC_6                       = 1042
+MP_CAM_SEC_7                        = 1043
+MP_CAM_NSEC_7                       = 1044
+MP_CAM_SEC_8                        = 1045
+MP_CAM_NSEC_8                       = 1046
+MP_CAM_SEC_9                        = 1047
+MP_CAM_NSEC_9                       = 1048
+MP_COP_PRESSURE                     = 1049
+
+
+MP_PERIOD                           = 2000
+MP_NUM_SAMPLES                      = 2
+MP_PERIOD_1                         = 1000
+MP_NUM_SAMPLES_1                    = 1
+MP_PERIOD_2                         = 3000
+MP_NUM_SAMPLES_2                    = 3
+
+INVALID_MP                          = 500
+INVALID_MP_PERIOD                   = 500
+
+
+#UNPACK STRING FORMATS (see enums from simm_functions.h)
+REGISTER_APP_STR_FMT                = '=HHBII'
+REGISTER_APP_ACK_STR_FMT            ='HHH'
+#REGISTER_DATA_STR_FMT               = '=HHB'+10*'I' 
+REGISTER_DATA_STR_FMT               = '=HHB'+36*'I'
+#REGISTER_DATA_ACK_STR_FMT           = 10*'H'
+REGISTER_DATA_ACK_STR_FMT           = 36*'H'
+UDP_OPEN_MSG_FMT                    = '=HHH'
+SYS_INIT_MSG_FMT                    = '=HH'
+SUBSCRIBE_STR_FMT                   = '=HHBIIIH'+69*'I'
+SUBSCRIBE_STR_FMT_RUN               = '=HHBIIIH'+9*'I'
+SUBSCRIBE_STR_FMT_RUN2               = '=HHBIIIH'+6*'I'
+PUBLISH_HDR_STR_FMT                 = '=HHIIH'
+SUBSCRIBE_ACK_HDR_STR_FMT           = '=HHIH'
+HEARTBEAT_STR_FMT                   = '=HHI'
+BARSM_TO_AACM_INIT_FMT              = '=HH'
+BARSM_TO_AACM_INIT_ACK_FMT          = '=HH'
+
+def startFPGAsimult():
+    # start/restart app here
+    os.chdir("/home/norwood/sandbox/repos/trunk/SW/simm/")
+    #subprocess.Popen("valgrind ./simm --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A") #vs. call vs. ?
+    subprocess.Popen("./fpga") #vs. call vs. ?
+
+def startSimm():
+    # start/restart app here
+    os.chdir("/home/norwood/sandbox/repos/trunk/SW/simm/build/")
+    #subprocess.Popen("valgrind ./simm --tool=memcheck --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes --show-possibly-lost=yes --malloc-fill=B5 --free-fill=4A") #vs. call vs. ?
+    subprocess.Popen("./simm_app") #vs. call vs. ?
+
+def publishThread(UDPsock, lock):
+    pubThreadStartTime = time.time()
+    while 1:
+        lock.acquire()
+        pubMsg, SenderAddr = UDPsock.recvfrom(1024)
+        lock.release()
+        retBytes = len(pubMsg)
+        print('publishThread retBytes: ', retBytes)
+        pubThreadEndTime = time.time() - pubThreadStartTime
+        if 8 < retBytes:
+            mpData = int((retBytes - struct.calcsize(PUBLISH_HDR_STR_FMT))/struct.calcsize('=I'))
+            PUBLISH_STR_FMT = PUBLISH_HDR_STR_FMT+mpData*'I'
+            print(struct.unpack(PUBLISH_STR_FMT, pubMsg))
+            #print(SenderAddr)
+            print('PYTHON: PUBLISH DONE!')
+        if pubThreadEndTime >= RUNTIME:
+            sys.exit()
+        
+
+def HeartBeatThread(TCPconn, lock):
+    htbtThreadStartTime = time.time()
+    while 1:
+        #lock.acquire()
+        hrtBtData = TCPconn.recv(1024)
+        #lock.release()
+        retBytes = len(hrtBtData)
+        print('HeartBeatThread retBytes: ', retBytes)
+        htbtThreadEndTime = time.time() - htbtThreadStartTime
+        if 8 == retBytes:
+            print(struct.unpack(HEARTBEAT_STR_FMT , hrtBtData))
+            print('HEARTBEAT!')
+        if htbtThreadEndTime >= RUNTIME:
+            sys.exit()
+
+def TCPsetup():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #s.setblocking(True)
+    print('TCP Socket created')
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind( (TCP_IP, TCP_PORT) )
+    except msg:
+        #print( 'TCP Bind failed. Error code: ' + str(msg[0]) + 'Error message: ' + msg[1])
+        s.close()
+        sys.exit()
+    #print('TCP Socket bind complete')
+    s.listen(1)
+    #print('TCP Socket now listening')
+    #p = multiprocessing.Process(target=startFPGAsimult)
+    #p.start()
+    simmProc = multiprocessing.Process(target=startSimm)
+    simmProc.start()
+    (TCPconn, TCPaddr) = s.accept()
+    print('DONE WITH TCP SETUP')
+    return TCPconn, s, simmProc
+
+def UDPsetup():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #print( 'UDP Socket created')
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind( (UDP_IP, UDP_PORT) )
+        mreq = struct.pack("=4sl", socket.inet_aton(UDP_IP), socket.INADDR_ANY)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    except Exception as msg:
+        print( 'UDP Bind failed. Error code: ' + str(msg[0]) + 'Error message: ' + msg[1])
+        # conn.close()
+        # UDPsock.close()
+        sys.exit()
+    return s
+
+
+def registerApp(TCPconn, sVal):
+    selectList = [sVal]
+    #print('BEFORE SELECT?')
+#   inputReady = select.select(selectList, [], [],)
+#   for s in inputReady :
+#       if s == sVal:
+            #if toSelect == inputReady:  
+    print('GOT REGISTER APP')
+    regAppData = TCPconn.recv(1024)
+    retBytes = len(regAppData)
+    print(struct.unpack(REGISTER_APP_STR_FMT , regAppData))
+    print('REGISTER APP DONE!')
+
+
+def registerAppAck(TCPconn, regAppAck_passfail):
+    if 0 == regAppAck_passfail:
+        regAppAckData   = [INVALID_CMD, 2, 0]
+    elif 1 == regAppAck_passfail:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 999, 0]
+    elif 2 == regAppAck_passfail:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 2, 999]
+    elif 3 == regAppAck_passfail:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 2, 0]
+    else:
+        regAppAckData   = [CMD_REGISTER_APP_ACK, 2, 0]
+    print(regAppAckData)
+    TCPconn.send(struct.pack(REGISTER_APP_ACK_STR_FMT, *regAppAckData))
+    #print('REGISTER APP ACK DONE!')
+
+
+def registerData(TCPconn):
+    regDataData = TCPconn.recv(1024)
+    retBytes = len(regDataData)
+    print('REGISTER DATA, retBytes: ', retBytes)
+    print(struct.unpack(REGISTER_DATA_STR_FMT , regDataData))
+    #print('REGISTER DATA DONE!')
+
+
+def registerDataAck(TCPconn, regDataAck_passfail):
+    regDataAckErrors                = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    if regDataAck_passfail < 34:
+        regDataAckErrors[regDataAck_passfail]  = 999
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, len(regDataAckErrors)*2] + regDataAckErrors
+    elif 34 == regDataAck_passfail:
+        regDataAckData              = [INVALID_CMD, len(regDataAckErrors)*2] + regDataAckErrors
+    elif 35 == regDataAck_passfail:
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, 999] + regDataAckErrors
+    elif 36 == regDataAck_passfail:
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, len(regDataAckErrors)*2] + regDataAckErrors
+    else:
+        regDataAckData              = [CMD_REGISTER_DATA_ACK, len(regDataAckErrors)*2] + regDataAckErrors
+    print(regDataAckData)
+    TCPconn.send(struct.pack(REGISTER_DATA_ACK_STR_FMT, *regDataAckData))
+    #print('REGISTER DATA ACK DONE!')
+
+def udpOpen(UDPsock):
+    print('UDP Socket bind complete')
+    UDPopenMsg, SenderAddr = UDPsock.recvfrom(1024)
+    print(SenderAddr)
+    #print(struct.unpack(UDP_OPEN_MSG_FMT , UDPopenMsg))
+    #print('UDP OPEN DONE!')
+    return SenderAddr
+
+#def udpOpen(UDPsock):
+#    try:
+#        UDPsock.bind( (UDP_IP, UDP_PORT) )
+#    except msg:
+#        print( 'UDP Bind failed. Error code: ' + str(msg[0]) + 'Error message: ' + msg[1])
+#        # conn.close()
+#        # UDPsock.close()
+#        sys.exit()
+#    #print('UDP Socket bind complete')
+#    UDPopenMsg, SenderAddr = UDPsock.recvfrom(1024)
+#    #print(SenderAddr)
+#    #print(struct.unpack(UDP_OPEN_MSG_FMT , UDPopenMsg))
+#    #print('UDP OPEN DONE!')
+#    return SenderAddr
+    
+
+def sysInit(UDPsock, SenderAddr, sysInit_passfail):
+    if sysInit_passfail == 0:
+        sendSysInitMsg  = [INVALID_CMD, 0]
+    elif sysInit_passfail == 1:
+        sendSysInitMsg  = [CMD_SYSINIT, 999]
+    elif sysInit_passfail == 2:
+        sendSysInitMsg  = [CMD_SYSINIT, 0]
+    else:
+        sendSysInitMsg  = [CMD_SYSINIT, 0]
+    print(sendSysInitMsg)
+    UDPsock.sendto((struct.pack(SYS_INIT_MSG_FMT, *sendSysInitMsg )), SenderAddr )
+    #print('SYS INIT DONE!')
+
+
+def subscribe(TCPconn, subscribe_passfail):
+    subscribeMPdata_run = [ MP_PFP_VALUE,       MP_PERIOD_1, MP_NUM_SAMPLES_1, 
+                            MP_CAM_SEC_1,       MP_PERIOD_1, MP_NUM_SAMPLES_1,
+                            MP_CAM_SEC_2,       MP_PERIOD_1, MP_NUM_SAMPLES_1 ]
+
+    subscribeMPdata_run2 = [ MP_TCMP,               MP_PERIOD_2, MP_NUM_SAMPLES_2, 
+                            MP_COP_PRESSURE,        MP_PERIOD_2, MP_NUM_SAMPLES_2 ]
+
+    subscribeMPdata = [ MP_PFP_VALUE,           MP_PERIOD, MP_NUM_SAMPLES, 
+                        MP_PTLT_TEMPERATURE,    MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_PTRT_TEMPERATURE,    MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_TCMP,                MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_COP_PRESSURE,        MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_1,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_1,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_2,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_2,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_3,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_3,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_4,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_4,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_5,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_5,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_6,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_6,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_7,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_7,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_8,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_8,          MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_SEC_9,           MP_PERIOD, MP_NUM_SAMPLES,
+                        MP_CAM_NSEC_9,          MP_PERIOD, MP_NUM_SAMPLES ]
+    subscribeData = [CMD_SUBSCRIBE, 291, 0, 0, 0, 23, 0] + subscribeMPdata
+    if 100 == subscribe_passfail:
+        subscribeData = [CMD_SUBSCRIBE, 51, 0, 0, 0, 3, 0] + subscribeMPdata_run
+    elif 200 == subscribe_passfail:
+        subscribeData = [CMD_SUBSCRIBE, 39, 0, 0, 0, 2, 0] + subscribeMPdata_run2
+    elif 0 == subscribe_passfail:
+        subscribeData[subscribe_passfail] = 999
+    elif 1 == subscribe_passfail:
+        subscribeData[subscribe_passfail] = 999
+    elif 5 == subscribe_passfail:
+        subscribeData[subscribe_passfail] = 999
+    elif 6 < subscribe_passfail < 76:
+        subscribeData[subscribe_passfail] = 999
+    else:
+        subscribeData = [CMD_SUBSCRIBE, 291, 0, 0, 0, 23, 0] + subscribeMPdata
+    print(subscribeData)
+    if 100 == subscribe_passfail:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN, *subscribeData))
+    elif 200 == subscribe_passfail:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT_RUN2, *subscribeData))
+    else:
+        TCPconn.send(struct.pack(SUBSCRIBE_STR_FMT, *subscribeData))
+    time.sleep(1)
+    print('SUBSCRIBE DONE! ', subscribe_passfail)
+
+def subscribeAck(TCPconn, subscribe_passfail):
+    subAckData = TCPconn.recv(1024)
+    retBytes = len(subAckData)
+    print('subscribeAck retBytes: ', retBytes)
+    if 8 < retBytes:
+        mpErr = int((retBytes - struct.calcsize(SUBSCRIBE_ACK_HDR_STR_FMT))/struct.calcsize('=H'))
+        SUBSCRIBE_ACK_STR_FMT = SUBSCRIBE_ACK_HDR_STR_FMT+mpErr*'H'
+        subAckResponse = struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData)
+        print(struct.unpack(SUBSCRIBE_ACK_STR_FMT , subAckData))
+        print('SUBSCRIBE ACK DONE!')
+

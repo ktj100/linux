@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+
+# This script uses an AACM that never ends, and one app/module in each directory.
+# One directory is selected at random, in which an app/module is placed that ends
+# immediately. A success is returned if the app/module is attempted to start five
+# times, and then forgotten.
+
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+
+import barsm_utils
+import log
+import proc
+
+def run():
+    success = True
+
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+    logError = log.logfollower()
+
+    # clear out all app directories
+    barsm_utils.remove()
+
+    # place items in directories
+    barsm_utils.random_fail_start()
+
+    print('-Starting BARSM')
+    barsm_utils.start_barsm()
+    logs = follow.read('barsm')
+    errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+    if 0 < errors:
+        print('ERROR: SYSLOG errors while starting BARSM!')
+        for d in logs:
+            if "ERROR" in d.get('message'):
+                print (d.get('message'))
+        success = False 
+    else:
+        print('--BARSM started')
+        success = True
+
+    # wait for AACM to start
+    if success:
+        print('-Waiting for AACM')
+        barsm_pid = (proc.findproc("valgrind.bin"))[0]['pid']
+        aacmStarted = False
+        while False == aacmStarted and success:
+            # check if AACM has started
+            all_child = proc.findchild(barsm_pid)
+            if 1 == len(all_child):
+                aacmStarted = True
+            # check for launch errors
+            logs = follow.read('barsm')
+            errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+            if 0 < errors:
+                print('ERROR: SYSLOG errors while waiting for AACM startup!')
+                for d in logs:
+                    if "ERROR" in d.get('message'):
+                        print (d.get('message'))
+                success = False 
+        if success:
+            print('--AACM started')
+
+    # setup TCP connection
+    if success:
+        print('-Setting up TCP connection')
+        TCPconn, sVal = barsm_utils.TCPsetup()  # both return values are objects
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating TCP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--TCP connection setup successful')
+
+    # receive BARSM to AACM init
+    if success:
+        print('-Waiting for BARSM to AACM init')
+        success = barsm_utils.barsmToAacmInit(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while receiving BARSM to AACM init!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--Init received')
+
+    # send BARSM to AACM init ack
+    if success:
+        print('-Sending ACK')
+        barsm_utils.barsmToAacmInitAck(TCPconn)
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while sending BARSM to AACM init ack!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--ACK sent')
+
+    # wait for children to complete launching
+    if success:
+        print('-Waiting for launch completion')
+        children = barsm_utils.waitForLaunch(follow)
+        if 4 == children:
+            print('--Launch complete!')
+            # check logs to see if five errors were logged for each launch failure
+            logs = logError.read('barsm')
+            launch_errors = sum(1 for d in logs if "File launch failed!" in d.get('message') and "/opt/rc360/" in d.get('message'))
+            launch_errors_execl = sum(1 for d in logs if "non_exec.c!" in d.get('message') and "/opt/rc360" in d.get('message') and "'execl()' failed" in d.get('message'))
+        
+        else: 
+            print('ERROR: only {} child procs (should have 4)'.format(children))
+            success = False
+
+    # setup UDP connection
+    if success:
+        print('-Setting up UDP connection')
+        UDPsock = barsm_utils.UDPsetup()
+        logs = follow.read('barsm')
+        errors = sum(1 for d in logs if "ERROR" in d.get('message'))
+        if 0 < errors:
+            print('ERROR: SYSLOG errors while initiating UDP connection!')
+            for d in logs:
+                if "ERROR" in d.get('message'):
+                    print (d.get('message'))
+            success = False 
+        else:
+            print('--UDP connection setup')
+
+    # send sysInit message
+    if success:
+        print('-Waiting to receive OPEN message from BARSM')
+        print('-Sending SYS_INIT message to BARSM')
+        barsm_utils.sysInit(UDPsock)
+        print('--OPEN received')
+
+    # receive barsm to aacm processes
+    if success: 
+        print('-Receiving BARSM_TO_AACM_PROCESSES')
+        barsm_utils.receiveTcpMessage(TCPconn)
+        print('--BARSM_TO_AACM_PROCESSES message received')
+
+    if success:
+
+        all_child = proc.findchild(barsm_pid)
+        launch_result = len(all_child)
+
+        if launch_result != 4 or launch_errors != 5:
+            success = False
+
+    if success:
+        other_errors = sum(1 for d in logs if "ERROR" in d.get('message')) - launch_errors - launch_errors_execl
+        if 0 < other_errors:
+            success = False
+
+    # kill off all started processes
+    barsm_utils.kill_procs()
+
+    print('{}'.format('PASSED' if success else 'FAILED'))
+    return success
+
+if __name__ == '__main__':
+    run()

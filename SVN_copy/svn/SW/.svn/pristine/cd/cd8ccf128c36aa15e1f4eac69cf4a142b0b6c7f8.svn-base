@@ -1,0 +1,636 @@
+#!/usr/bin/env python3
+
+# This file provides supporting classes/functions to all the BARSM Python scripts.
+
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+
+import subprocess
+import proc
+import time
+import datetime
+import random
+import shutil
+import os
+import signal
+import socket
+import multiprocessing
+import struct
+import select
+
+barsm_top_loc = os.path.join(os.path.dirname(__file__), '../../barsm')
+barsm_loc = os.path.join(os.path.dirname(__file__), '../../barsm/src')
+apps_loc = os.path.join(os.path.dirname(__file__), '../utils/dummies')
+
+
+#TCP
+TCP_IP                              = "127.0.0.1"
+TCP_PORT                            = 8000
+
+#UDP
+UDP_IP                              = "225.0.0.37"
+UDP_PORT                            = 4096
+
+#COMMAND ID
+CMD_OPEN                            = 8
+CMD_SYSINIT                         = 11
+CMD_AACM_TO_BARSM_MSG_ACK           = 15
+CMD_BARSM_TO_AACM_INIT              = 16
+CMD_BARSM_TO_AACM_INIT_ACK          = 17
+CMD_AACM_TO_BARSM_MSG               = 14
+
+#UNPACK STRING FORMATS (see enums from simm_functions.h)
+UDP_OPEN_MSG_FMT                    = '=HHL'
+SYS_INIT_MSG_FMT                    = '=HH'
+BARSM_TO_AACM_INIT_FMT              = '=HH'
+BARSM_TO_AACM_INIT_ACK_FMT          = '=HH'
+AACM_TO_BARSM_MSG_FMT               = '=HHIHII'
+
+TCPserver = 0
+TCPconn = 0
+UDPsock = 0
+barsm_subproc = None
+barsm_spawned_pids = []
+barsm_pid = 0
+
+def remove():
+    # Ensure that there are instances of barsm (or valgrind) running
+    kill_procs()
+
+    shutil.rmtree('/opt/rc360', ignore_errors=True)
+    for d in ['system', 'modules/GE', 'modules/TPA', 'apps/GE', 'apps/TPA']:
+        os.makedirs('/opt/rc360/' + d)
+
+
+def random_fail_start():
+    random.seed()
+    r = random.randint(1, 8)
+    print(r)
+
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/system/aacm', shell=True)
+
+    if 1 == r:
+        subprocess.call('gcc '+apps_loc+'/zero_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+    elif 5 == r:
+        subprocess.call('cp '+apps_loc+'/non_exec.c /opt/rc360/modules/GE/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+
+    if 2 == r:
+        subprocess.call('gcc '+apps_loc+'/zero_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+    elif 6 == r:
+        subprocess.call('cp '+apps_loc+'/non_exec.c /opt/rc360/modules/TPA/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+
+    if 3 == r:
+        subprocess.call('gcc '+apps_loc+'/zero_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+    elif 7 == r:
+        subprocess.call('cp '+apps_loc+'/non_exec.c /opt/rc360/apps/GE/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+
+    if 4 == r:
+        subprocess.call('gcc '+apps_loc+'/zero_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+    elif 8 == r:
+        subprocess.call('cp '+apps_loc+'/non_exec.c /opt/rc360/apps/TPA/', shell=True)
+    else:
+        subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+
+
+def start_barsm():
+    # start BARSM
+    test_output = open('test.out', 'w')
+
+    subprocess.call('cd {}; make debug'.format(barsm_top_loc), shell=True)
+
+    global barsm_subproc
+    args = [
+        'valgrind',
+        '--read-var-info=yes',
+        '--leak-check=full',
+        '--track-origins=yes',
+        '--show-reachable=yes',
+        '--malloc-fill=B5',
+        '--free-fill=4A',
+        '{}/build/barsm'.format(barsm_top_loc),
+    ]
+    barsm_subproc = subprocess.Popen(args, stdout=test_output, stderr=subprocess.STDOUT)
+    assert barsm_subproc
+
+    time.sleep(0.1)
+
+    # Get BARSM PID
+    global barsm_pid
+    barsm_pid = int(barsm_subproc.pid)
+    print('BARSM: {}'.format(barsm_pid))
+
+    check_barsm_running()
+
+def get_barsm_child_pids():
+    global barsm_pid
+    info = proc.findchild(barsm_pid)
+    return info
+
+def aacm_setup():
+    success = True
+    aacmStarted = False
+    global barsm_pid
+    while False == aacmStarted:
+        check_barsm_running()
+        all_child = proc.findchild(barsm_pid)
+        if 1 == len(all_child):
+            aacmStarted = True
+
+    global TCPconn, TCPserver, UDPsock
+    TCPconn, TCPserver = TCPsetup()  # both return values are objects
+    UDPsock = UDPsetup()
+
+    success = barsmToAacmInit(TCPconn)
+    if success:
+        barsmToAacmInitAck(TCPconn)
+
+    sysInit(UDPsock)
+
+    return success
+
+
+def TCPsetup():
+    serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    try:
+        serversock.bind( (TCP_IP, TCP_PORT) )
+    except msg:
+        print( 'TCP Bind failed. Error code: ' + str(msg[0]) + 'Error message: ' + msg[1])
+        conn.close()
+        serversock.close()
+        sys.exit()
+
+    serversock.listen(1)
+    (connsock, connaddr) = serversock.accept()
+    print('CONNECT FROM {}'.format(connaddr))
+    return connsock, serversock
+
+
+def UDPsetup():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind( (UDP_IP, UDP_PORT) )
+    mreq = struct.pack("=4sl", socket.inet_aton(UDP_IP), socket.INADDR_ANY)
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    print('UDP Socket setup complete')
+    return s
+
+
+def barsmToAacmInit(connsock):
+    success = True
+    # print('GOT BARSM TO AACM INIT')
+    btaInit = connsock.recv(1024)
+    retBytes = len(btaInit)
+
+    if 4 != retBytes:
+        success = False
+        print('ERROR: Received BARSM to AACM init was not 4 bytes!')
+        print('Message: ', btaInit)
+        print('Number of bytes: ', retBytes)
+
+    if success:
+        success = checkB2AInit(struct.unpack(BARSM_TO_AACM_INIT_FMT, btaInit))
+
+    return (success)
+
+def checkB2AInit(msg):
+    success = True
+
+    if msg[0] != 16:
+        success = False
+        print("ERROR: Command ID wrong: ", msg[0])
+        print("    Should be '16'")
+
+    if msg[1] != 0:
+        success = False
+        print("ERROR: Length wrong: ", msg[1])
+        print("    Should be '0'")
+
+    return(success)
+
+def barsmToAacmInitAck(connsock):
+    barsmToAacmInitAckData = [CMD_BARSM_TO_AACM_INIT_ACK, 0]
+    # print('Init ACK to send: ' + str(barsmToAacmInitAckData))
+
+    connsock.send(struct.pack(BARSM_TO_AACM_INIT_ACK_FMT, barsmToAacmInitAckData[1], barsmToAacmInitAckData[0]))
+    # print('ACK SENT!')
+
+def aacmToBarsmMsg(connsock): # B is 1 byte, H is 2 bytes, I is 4 bytes
+    all_pids = [0,0]
+
+    all_child = proc.findchild(barsm_pid)
+    all_pids = [int(c['pid']) for c in all_child]
+
+    print(all_pids)
+
+    byteLength = 2+2+4+2+4+4
+
+    aacmToBarsmData = [CMD_AACM_TO_BARSM_MSG, (byteLength), int(barsm_pid), 2, all_pids[0], all_pids[1]]
+
+    connsock.send(struct.pack(AACM_TO_BARSM_MSG_FMT, aacmToBarsmData[0], aacmToBarsmData[1], aacmToBarsmData[2], aacmToBarsmData[3], aacmToBarsmData[4], aacmToBarsmData[5]))
+
+    return all_child
+
+def checkForRestart(appsToRestart):
+    oldChildPid = []
+    newChildPid = []
+    oldChildName = []
+    newChildName = []
+    newChildState = []
+
+    global barsm_pid
+    childProc = proc.findchild(barsm_pid)
+
+    for nc in childProc:
+        newChildPid.append(nc['pid'])
+        newChildName.append(nc['name'])
+        newChildState.append(nc['state'])
+
+    for oc in appsToRestart:
+        oldChildPid.append(oc['pid'])
+        oldChildName.append(oc['name'])
+
+
+    #checks that the process exists
+    for c in oldChildName:
+        if (not(c in newChildName)):
+            print('--process name not found')
+            return False
+
+    # checks the old one was stopped and the new one is running
+    #print(childProc)
+    #print(appsToRestart)
+
+    for oc in oldChildPid:
+        index = 0
+        for nc in newChildPid:
+            #checks that it is not a zombie process
+            if ((nc == oc) and ('Z' != newChildState[index])):
+                print('--matching process id found')
+                return False
+
+            index = index + 1
+
+
+    return True
+
+
+def aacmToBarsmAck(connsock):
+    msgNotReceived = False
+
+    atbInit = connsock.recv(1024)
+    #print('Message: ', atbInit)
+    retBytes = len(atbInit)
+
+    if 6 != retBytes:
+        msgNotReceived = True
+        print('ERROR: Received AACM to BARSM was not 6 bytes!')
+        # print('Message: ', atbInit)
+        print('Number of bytes: ', retBytes)
+    else:
+        success = checkA2BAck(struct.unpack('=HHH', atbInit))
+
+        if False == success:
+            #bad message so error
+            msgNotReceived = True
+
+
+    return msgNotReceived
+
+def checkA2BAck(msg):
+    success = True
+
+    if msg[0] != 15:
+        success = False
+        print("ERROR: Command ID wrong: ", msg[0])
+        print("    Should be '10'")
+
+    if msg[1] != 2:
+        success = False
+        print("ERROR: Length wrong: ", msg[1])
+        print("    Should be '2'")
+
+    if 0:
+        if msg[2] != 0:
+            success = False
+            print("ERROR: Error wrong: ", msg[2])
+            print("    Should be '0'")
+
+    return(success)
+
+def receiveBarsmToAacm(connsock):
+    msgNotReceived = False
+    pid = 0
+
+    btaInit = connsock.recv(1024)
+    retBytes = len(btaInit)
+
+    if 14 != retBytes:
+        msgNotReceived = True
+        print('ERROR: Received BARSM to AACM was not 14 bytes!')
+        print('Message: ', btaInit)
+        print('Number of bytes: ', retBytes)
+    else:
+        unpackedData = struct.unpack('=HHIIH', btaInit)
+        success = checkB2A(unpackedData)
+        pid = unpackedData[2]
+
+        if False == success:
+            #bad message so error
+            msgNotReceived = True
+
+    return msgNotReceived, pid
+
+def checkB2A(msg):
+    success = True
+
+    if msg[0] != 12:
+        success = False
+        print("ERROR: Command ID wrong: ", msg[0])
+        print("    Should be '12'")
+
+    if msg[1] != 10:
+        success = False
+        print("ERROR: Length wrong: ", msg[1])
+        print("    Should be '10'")
+
+    if msg[2] <= 0:
+        success = False
+        print("ERROR: PID wrong: ", msg[2])
+        print("    Should be greater than '0'")
+
+    if msg[3] <= 0:
+        success = False
+        print("ERROR: Name wrong: ", msg[3])
+        print("    Should be greater than '0'")
+
+    if msg[4] <= 0:
+        success = False
+        print("ERROR: Error wrong: ", msg[4])
+        print("    Should be be greater than '0'")
+
+    return(success)
+
+def sendBarsmToAacmAck(connsock, pid):
+    # B is 1 byte, H is 2 bytes, I is 4 bytes
+    BARSM_TO_AACM_ACK_FMT = 'HHIH'
+    all_pids = [0,0]
+
+    all_child = proc.findchild(pid)
+    all_pids = [int(c['pid']) for c in all_child]
+
+    byteLength = 2+2+4+2
+
+    aacmToBarsmData = [CMD_AACM_TO_BARSM_MSG_ACK, (byteLength), int(pid), 0]
+    #print ('AACM TO BARSM MSG: ' + str(aacmToBarsmData))
+
+    connsock.send(struct.pack(BARSM_TO_AACM_ACK_FMT, aacmToBarsmData[0], aacmToBarsmData[1], aacmToBarsmData[2], aacmToBarsmData[3]))
+
+    return all_child
+
+def sysInit(connsock):
+    UDPopenMsg, SenderAddr = connsock.recvfrom(1024)
+    print('recv {} from {}'.format(UDPopenMsg, SenderAddr))
+    msg = struct.unpack(UDP_OPEN_MSG_FMT, UDPopenMsg)
+    print('unpacked {}'.format(msg))
+
+    # command
+    assert msg[0] == CMD_OPEN
+    # length
+    assert msg[1] == 4
+    global barsm_pid
+    # BARSM pid
+    assert msg[2] == barsm_pid
+
+    print('UDP OPEN DONE!')
+
+    sendSysInitMsg  = [CMD_SYSINIT, 0]
+    connsock.sendto((struct.pack(SYS_INIT_MSG_FMT, *sendSysInitMsg )), SenderAddr )
+    print('SYS INIT DONE!')
+
+def barsmToAacmProcesses(connsock):
+    success = True
+
+    btaInit = connsock.recv(1024)
+    # btaString = btaInit.decode('ascii')
+    # print('Message: ', btaString)
+    retBytes = len(btaInit)
+    if 42 != retBytes:
+        success = False
+    # print(retBytes)
+    # print('Message: ', btaInit)
+    # print(struct.unpack('=HHHIIIIIIIII', btaInit))
+
+    if success:
+        message = struct.unpack('=HHHIIIIIIIII', btaInit)
+        success = checkB2AProcs1Child(message)
+
+    return success
+
+
+def checkB2AProcs1Child(msg):
+    success = True
+
+    if msg[0] != 18:
+        success = False
+        print("ERROR: Command ID wrong: ", msg[0])
+        print("    Should be '18'")
+
+    if msg[1] != 38:
+        success = False
+        print("ERROR: Length wrong: ", msg[1])
+        print("    Should be '38'")
+
+    if msg[2] != 3:
+        success = False
+        print("ERROR: Num Processes wrong: ", msg[2])
+        print("    Should be '3'")
+
+    if msg[3] == 0:
+        success = False
+        print("ERROR: Process ID for BARSM is 0")
+
+    if msg[4] == 0:
+        success = False
+        print("ERROR: Process name for BARSM is 0")
+
+    if msg[5] != 12:
+        success = False
+        print("ERROR: BARSM process type wrong: ", msg[5])
+        print("    Should be '12'")
+
+    if msg[6] == 0:
+        success = False
+        print("ERROR: Process ID for AACM is 0")
+
+    if msg[7] == 0:
+        success = False
+        print("ERROR: Process name for AACM is 0")
+
+    if msg[8] != 2:
+        success = False
+        print("ERROR: AACM process type wrong: ", msg[8])
+        print("    Should be '2'")
+
+    if msg[9] == 0:
+        success = False
+        print("ERROR: Process ID for APP is 0")
+
+    if msg[10] == 0:
+        success = False
+        print("ERROR: Process name for APP is 0")
+
+    if msg[11] != 1:
+        success = False
+        print("ERROR: APP process type wrong: ", msg[11])
+        print("    Should be '1'")
+
+    return(success)
+
+
+# delay should be 25 if an app is expected to fail, otherwise use at least 5,
+# although sometimes 5 is not quite enough for a normal launch depending on
+# startup times, so 10 is the default delay.
+def monitor_launch(delay=10, log=None, resetApps=0):
+    rst = 0
+    run_time = 0
+    child_amount = 0
+    start_tries = 0
+    start_time = datetime.datetime.now()
+
+    launch_finish_ts = None
+    global barsm_pid
+    while (10 * child_amount) + delay >= run_time:
+        check_barsm_running()
+
+        all_child = proc.findchild(barsm_pid)
+        global barsm_spawned_pids
+        child_pids = set([int(p['pid']) for p in all_child])
+        barsm_spawned_pids = list(set(barsm_spawned_pids).union(child_pids))
+
+        #print(all_child)
+        child_amount = len(all_child)
+        time.sleep(1)
+        run_time = (datetime.datetime.now() - start_time).total_seconds()
+        print(run_time)
+
+        if resetApps > rst:
+            get_Message()
+            rst = rst + 1
+
+    if log:
+        # get the time of the launch finish
+        logs = log.read('barsm')
+        # print(logs)
+        msg_list = list(filter(lambda t: "COMPLETED: Launch sequence complete!" in t['message'], logs))
+        if msg_list:
+            launch_finish_ts = msg_list[0]['timestamp']
+
+    print('Launch: {}'.format(child_amount))
+
+    if 0 == child_amount:
+        # return -1 if aacm never launched and BARSM exited
+        return(-1, None)
+    else:
+        return child_amount, launch_finish_ts
+
+
+def short_launch():
+    subprocess.call('gcc '+apps_loc+'/thirty_sec.c -o /opt/rc360/system/aacm', shell=True)
+
+
+def norm_launch():
+
+    # clear out all app directories
+    remove()
+
+    # place items in directories
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/system/aacm', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+
+    # start barsm
+    start_barsm()
+
+
+def launch_bad():
+    # place items in directories
+    subprocess.call('gcc '+apps_loc+'/thirty_sec.c -o /opt/rc360/system/thirty_aacm', shell=True)
+    subprocess.call('gcc '+apps_loc+'/thirty_sec.c -o /opt/rc360/modules/GE/thirty_gemod', shell=True)
+    subprocess.call('gcc '+apps_loc+'/thirty_sec.c -o /opt/rc360/modules/TPA/thirty_tpamod', shell=True)
+    subprocess.call('gcc '+apps_loc+'/thirty_sec.c -o /opt/rc360/apps/GE/thirty_geapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'/thirty_sec.c -o /opt/rc360/apps/TPA/thirty_tpaapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/modules/GE/gemod', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/modules/TPA/tpamod', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/apps/GE/geapp', shell=True)
+    subprocess.call('gcc '+apps_loc+'/infinite_sec.c -o /opt/rc360/apps/TPA/tpaapp', shell=True)
+
+def check_barsm_running():
+    global barsm_subproc
+    if barsm_subproc:
+        if barsm_subproc.poll():
+            raise Exception('BARSM already exited with code {}'.format(barsm_subproc.returncode))
+            barsm_subproc = None
+
+def kill_procs():
+    global TCPconn, TCPserver, UDPsock, barsm_spawned_pids, barsm_pid, barsm_subproc
+
+    check_barsm_running()
+
+    if barsm_subproc:
+        #os.kill(barsm_pid, signal.SIGKILL)
+        barsm_subproc.kill()
+        barsm_subproc = None
+        barsm_pid = 0
+
+    # find child PIDs
+    for p in barsm_spawned_pids:
+        try:
+            os.kill(p, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    barsm_spawned_pids = []
+
+    if TCPconn:
+        TCPconn.close()
+        TCPconn = 0
+
+    if TCPserver:
+        TCPserver.close()
+        TCPserver = 0
+
+    if UDPsock:
+        UDPsock.close()
+        UDPsock = 0
+
+def get_Message():
+    global TCPserver, TCPconn
+
+    pid = 0
+    retBytes = 0
+
+    while 14 != retBytes:
+        btaMsg = TCPconn.recv(1024)
+        retBytes = len(btaMsg)
+
+        if 14 == retBytes:
+            unpackedData = struct.unpack('=HHIIH', btaMsg)
+            success = checkB2A(unpackedData)
+            # TODO validate that this pid that was restarted was the expected message
+            pid = unpackedData[2]
+
+            if True == success:
+                sendBarsmToAacmAck(TCPconn, pid)
+
+import atexit
+atexit.register(kill_procs)

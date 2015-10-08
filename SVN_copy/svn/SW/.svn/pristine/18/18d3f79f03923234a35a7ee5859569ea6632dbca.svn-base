@@ -1,0 +1,280 @@
+U-Boot 2014.01-dirty (Jun 07 2015 - 16:17:28)
+
+I2C:   ready
+Memory: ECC disabled
+DRAM:  383 MiB
+MMC:   zynq_sdhci: 0
+SF: Detected S25FL256S_64K with page size 256 Bytes, erase size 64 KiB, total 32 MiB
+In:    serial
+Out:   serial
+Err:   serial
+Net:   Gem.e000b000
+Hit any key to stop autoboot:  0
+## Booting kernel from Legacy Image at 03000000 ...
+   Image Name:   Linux-3.14.0-xilinx-dirty
+   Image Type:   ARM Linux Kernel Image (uncompressed)
+   Data Size:    3360200 Bytes = 3.2 MiB
+   Load Address: 00008000
+   Entry Point:  00008000
+   Verifying Checksum ... OK
+## Loading init Ramdisk from Legacy Image at 02000000 ...
+   Image Name:
+   Image Type:   ARM Linux RAMDisk Image (gzip compressed)
+   Data Size:    3699369 Bytes = 3.5 MiB
+   Load Address: 00000000
+   Entry Point:  00000000
+   Verifying Checksum ... OK
+## Flattened Device Tree blob at 02a00000
+   Booting using the fdt blob at 0x2a00000
+   Loading Kernel Image ... OK
+   Loading Ramdisk to 17688000, end 17a0f2a9 ... OK
+   Loading Device Tree to 17683000, end 17687ff4 ... OK
+
+Starting kernel ...
+
+Uncompressing Linux... done, booting the kernel.
+Booting Linux on physical CPU 0x0
+Linux version 3.14.0-xilinx-dirty (mprocca@d00074-ubu) (gcc version 4.8.1 (Sourcery CodeBench Lite 2013.11-53) ) #58 SMP PREEMPT Mon Aug 10 13:48:38 CDT 2015
+CPU: ARMv7 Processor [413fc090] revision 0 (ARMv7), cr=18c5387d
+CPU: PIPT / VIPT nonaliasing data cache, VIPT aliasing instruction cache
+Machine model: Xilinx Zynq
+bootconsole [earlycon0] enabled
+cma: CMA: reserved 128 MiB at 0f400000
+Memory policy: Data cache writealloc
+PERCPU: Embedded 8 pages/cpu @d7ba1000 s9024 r8192 d15552 u32768
+Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 97282
+Kernel command line: maxcpus=1 console=ttyPS0,115200 root=/dev/ram rw earlyprintk clk_ignore_unused oops=panic panic=-1
+PID hash table entries: 2048 (order: 1, 8192 bytes)
+Dentry cache hash table entries: 65536 (order: 6, 262144 bytes)
+Inode-cache hash table entries: 32768 (order: 5, 131072 bytes)
+Memory: 246872K/392192K available (4577K kernel code, 234K rwdata, 1548K rodata, 188K init, 192K bss, 145320K reserved, 0K highmem)
+Virtual kernel memory layout:
+    vector  : 0xffff0000 - 0xffff1000   (   4 kB)
+    fixmap  : 0xfff00000 - 0xfffe0000   ( 896 kB)
+    vmalloc : 0xd8000000 - 0xff000000   ( 624 MB)
+    lowmem  : 0xc0000000 - 0xd7f00000   ( 383 MB)
+    pkmap   : 0xbfe00000 - 0xc0000000   (   2 MB)
+    modules : 0xbf000000 - 0xbfe00000   (  14 MB)
+      .text : 0xc0008000 - 0xc0603898   (6127 kB)
+      .init : 0xc0604000 - 0xc0633340   ( 189 kB)
+      .data : 0xc0634000 - 0xc066e820   ( 235 kB)
+       .bss : 0xc066e82c - 0xc069ea3c   ( 193 kB)
+Preemptible hierarchical RCU implementation.
+        Dump stacks of tasks blocking RCU-preempt GP.
+        RCU restricting CPUs from NR_CPUS=4 to nr_cpu_ids=2.
+RCU: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+NR_IRQS:16 nr_irqs:16 16
+ps7-slcr mapped to d8002000
+zynq_clock_init: clkc starts at d8002100
+Zynq clock init
+sched_clock: 64 bits at 333MHz, resolution 3ns, wraps every 3298534883328ns
+ps7-ttc #0 at d8004000, irq=43
+Console: colour dummy device 80x30
+Calibrating delay loop... 1332.01 BogoMIPS (lpj=6660096)
+pid_max: default: 32768 minimum: 301
+Mount-cache hash table entries: 1024 (order: 0, 4096 bytes)
+Mountpoint-cache hash table entries: 1024 (order: 0, 4096 bytes)
+CPU: Testing write buffer coherency: ok
+CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
+Setting up static identity map for 0x4550c8 - 0x455120
+L310 cache controller enabled
+l2x0: 8 ways, CACHE_ID 0x410000c8, AUX_CTRL 0x72360000, Cache size: 512 kB
+Brought up 1 CPUs
+SMP: Total of 1 processors activated.
+CPU: All CPU(s) started in SVC mode.
+devtmpfs: initialized
+VFP support v0.3: implementor 41 architecture 3 part 30 variant 9 rev 4
+regulator-dummy: no parameters
+NET: Registered protocol family 16
+DMA: preallocated 256 KiB pool for atomic coherent allocations
+cpuidle: using governor ladder
+cpuidle: using governor menu
+syscon f8000000.ps7-slcr: regmap [mem 0xf8000000-0xf8000fff] registered
+hw-breakpoint: found 5 (+1 reserved) breakpoint and 1 watchpoint registers.
+hw-breakpoint: maximum watchpoint size is 4 bytes.
+zynq-ocm f800c000.ps7-ocmc: ZYNQ OCM pool: 256 KiB @ 0xd8080000
+bio: create slab <bio-0> at 0
+vgaarb: loaded
+SCSI subsystem initialized
+usbcore: registered new interface driver usbfs
+usbcore: registered new interface driver hub
+usbcore: registered new device driver usb
+media: Linux media interface: v0.10
+Linux video capture interface: v2.00
+pps_core: LinuxPPS API ver. 1 registered
+pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+PTP clock support registered
+EDAC MC: Ver: 3.0.0
+Advanced Linux Sound Architecture Driver Initialized.
+Switched to clocksource arm_global_timer
+NET: Registered protocol family 2
+TCP established hash table entries: 4096 (order: 2, 16384 bytes)
+TCP bind hash table entries: 4096 (order: 3, 32768 bytes)
+TCP: Hash tables configured (established 4096 bind 4096)
+TCP: reno registered
+UDP hash table entries: 256 (order: 1, 8192 bytes)
+UDP-Lite hash table entries: 256 (order: 1, 8192 bytes)
+NET: Registered protocol family 1
+RPC: Registered named UNIX socket transport module.
+RPC: Registered udp transport module.
+RPC: Registered tcp transport module.
+RPC: Registered tcp NFSv4.1 backchannel transport module.
+Trying to unpack rootfs image as initramfs...
+rootfs image is not initramfs (no cpio magic); looks like an initrd
+Freeing initrd memory: 3612K (d7688000 - d7a0f000)
+hw perfevents: enabled with ARMv7 Cortex-A9 PMU driver, 7 counters available
+futex hash table entries: 512 (order: 3, 32768 bytes)
+jffs2: version 2.2. (NAND) (SUMMARY)  © 2001-2006 Red Hat, Inc.
+msgmni has been set to 745
+io scheduler noop registered
+io scheduler deadline registered
+io scheduler cfq registered (default)
+dma-pl330 f8003000.ps7-dma: Loaded driver for PL330 DMAC-2364208
+dma-pl330 f8003000.ps7-dma:     DBUFF-128x8bytes Num_Chans-8 Num_Peri-4 Num_Events-16
+e0000000.serial: ttyPS0 at MMIO 0xe0000000 (irq = 59, base_baud = 3124999) is a xuartps
+`¦¦k?¦¦+W/¦*LW¦Y¦X¦¦ed
+console [ttyPS0] enabled
+bootconsole [earlycon0] disabled
+bootconsole [earlycon0] disabled
+xdevcfg f8007000.ps7-dev-cfg: ioremap 0xf8007000 to d8066000
+[drm] Initialized drm 1.1.0 20060810
+brd: module loaded
+loop: module loaded
+m25p80 spi0.0: found s25fl256s1, expected n25q128
+m25p80 spi0.0: s25fl256s1 (32768 Kbytes)
+13 ofpart partitions found on MTD device spi0.0
+Creating 13 MTD partitions on "spi0.0":
+0x000000000000-0x000000080000 : "qspi-fsbl"
+0x000000080000-0x0000000c0000 : "qspi-device-tree"
+0x0000000c0000-0x0000002c0000 : "qspi-uboot"
+0x0000002c0000-0x000000300000 : "qspi-uboot-env"
+0x000000300000-0x000000700000 : "qspi-bitstream-A"
+0x000000700000-0x000000b00000 : "qspi-bitstream-B"
+0x000000b00000-0x000000b80000 : "qspi-bare-metal-A"
+0x000000b80000-0x000000c00000 : "qspi-bare-metal-B"
+0x000000c00000-0x000001000000 : "qspi-linux-kernel-A"
+0x000001000000-0x000001400000 : "qspi-linux-kernel-B"
+0x000001400000-0x000001900000 : "qspi-ramdisk-A"
+0x000001900000-0x000001e00000 : "qspi-ramdisk-B"
+0x000001e00000-0x000002000000 : "qspi-config"
+e1000e: Intel(R) PRO/1000 Network Driver - 2.3.2-k
+e1000e: Copyright(c) 1999 - 2013 Intel Corporation.
+libphy: XEMACPS mii bus: probed
+xemacps e000b000.ps7-ethernet: invalid address, use assigned
+xemacps e000b000.ps7-ethernet: MAC updated 3a:8e:55:35:4e:7a
+xemacps e000b000.ps7-ethernet: pdev->id -1, baseaddr 0xe000b000, irq 54
+ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+ehci-pci: EHCI PCI platform driver
+ULPI transceiver vendor/product ID 0x0424/0x0007
+Found SMSC USB3320 ULPI transceiver.
+ULPI integrity check: passed.
+zynq-ehci zynq-ehci.0: Xilinx Zynq USB EHCI Host Controller
+zynq-ehci zynq-ehci.0: new USB bus registered, assigned bus number 1
+zynq-ehci zynq-ehci.0: irq 53, io mem 0x00000000
+zynq-ehci zynq-ehci.0: USB 2.0 started, EHCI 1.00
+hub 1-0:1.0: USB hub found
+hub 1-0:1.0: 1 port detected
+usbcore: registered new interface driver usb-storage
+usbcore: registered new interface driver usbserial
+usbcore: registered new interface driver usbserial_generic
+usbserial: USB Serial support registered for generic
+usbcore: registered new interface driver pl2303
+usbserial: USB Serial support registered for pl2303
+mousedev: PS/2 mouse device common for all mice
+i2c /dev entries driver
+zynq-edac f8006000.ps7-ddrc: ecc not enabled
+cpufreq_cpu0: failed to get cpu0 regulator: -19
+Xilinx Zynq CpuIdle Driver started
+sdhci: Secure Digital Host Controller Interface driver
+sdhci: Copyright(c) Pierre Ossman
+sdhci-pltfm: SDHCI platform and OF driver helper
+mmc0: no vqmmc regulator found
+mmc0: no vmmc regulator found
+mmc0: SDHCI controller on e0100000.ps7-sdio [e0100000.ps7-sdio] using ADMA
+usbcore: registered new interface driver usbhid
+usbhid: USB HID core driver
+TCP: cubic registered
+NET: Registered protocol family 17
+Registering SWP/SWPB emulation handler
+regulator-dummy: disabling
+drivers/rtc/hctosys.c: unable to open rtc device (rtc0)
+clk: Not disabling unused clocks
+ALSA device list:
+  No soundcards found.
+RAMDISK: gzip image found at block 0
+usb 1-1: new high-speed USB device number 2 using zynq-ehci
+EXT2-fs (ram0): warning: mounting unchecked fs, running e2fsck is recommended
+VFS: Mounted root (ext2 filesystem) on device 1:0.
+devtmpfs: mounted
+Freeing unused kernel memory: 188K (c0604000 - c0633000)
+hub 1-1:1.0: USB hub found
+hub 1-1:1.0: 3 ports detected
+Starting rcS...
+++ Mounting filesystem
+++ Setting up mdev
+++ Configure static IP 192.168.1.10
+++ Starting telnet daemon
+++ Starting http daemon
+++ Starting ftp daemon
+++ Starting dropbear (ssh) daemon
+random: dropbear urandom read with 0 bits of entropy available
+++ Starting OLED Display
+insmod: can't read '/lib/modules/3.14.0-xilinx-dirty/pmodoled-gpio.usb 1-1.2: new high-speed USB device number 3 using zynq-ehci
+ko': No such file or directory
+++ Exporting LEDs & SWs
+rcS Complete
+zynq> usb-storage 1-1.2:1.0: USB Mass Storage device detected
+scsi0 : usb-storage 1-1.2:1.0
+scsi 0:0:0:0: Direct-Access     TI-DSG   TUSB9261              PQ: 0 ANSI: 6
+sd 0:0:0:0: Attached scsi generic sg0 type 0
+sd 0:0:0:0: [sda] Attached SCSI removable disk
+
+zynq> pwd
+/
+zynq> ls -Fla
+total 28
+drwxr-xr-x   17 12319    300           1024 Jan  1 00:01 ./
+drwxr-xr-x   17 12319    300           1024 Jan  1 00:01 ../
+-rw-------    1 root     0               12 Jan  1 00:01 .ash_history
+drwxr-xr-x    2 12319    300           2048 Jan  9  2012 bin/
+drwxr-xr-x    7 root     0             3260 Jan  1 00:00 dev/
+drwxr-xr-x    4 12319    300           1024 Jan  1 00:00 etc/
+-rw-r--r--    1 root     0               57 Apr  8  2015 hi_from_mike.txt
+drwxr-xr-x    3 12319    300           2048 Jul 12  2012 lib/
+drwxr-xr-x   11 12319    300           1024 Jan  9  2012 licenses/
+lrwxrwxrwx    1 12319    300             11 Jan  9  2012 linuxrc -> bin/busybox*
+drwx------    2 root     0            12288 Jan  9  2012 lost+found/
+drwxr-xr-x    2 12319    300           1024 Aug 21  2010 mnt/
+drwxr-xr-x    2 12319    300           1024 Aug 21  2010 opt/
+dr-xr-xr-x   50 root     0                0 Jan  1 00:00 proc/
+drwxr-xr-x    2 12319    300           1024 Jul 12  2012 root/
+drwxr-xr-x    2 12319    300           1024 Jan  9  2012 sbin/
+dr-xr-xr-x   12 root     0                0 Jan  1 00:00 sys/
+drwxrwxrwt    2 root     0               40 Jan  1 00:00 tmp/
+drwxr-xr-x    5 12319    300           1024 Mar 30  2012 usr/
+drwxr-xr-x    4 12319    300           1024 Oct 25  2010 var/
+zynq> clear
+zynq>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

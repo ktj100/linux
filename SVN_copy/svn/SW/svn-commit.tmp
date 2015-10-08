@@ -1,0 +1,6 @@
+Added testing to message_testing.py to see if the BARSM TO AACM PROCESSES message was being sent correctly, it was not, and all bugs were fixed.
+--This line, and those below, will be ignored--
+
+M    barsm/src/barsm_functions.c
+M    test/barsm/message_testing.py
+M    test/utils/barsm_utils.py

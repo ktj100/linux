@@ -1,0 +1,611 @@
+/** @file barsm.c
+ * This application handles the startup, health monitoring, and upkeep of the
+ * all the software applications and modules in the GE RC360 Assimilator.
+ *
+ * Copyright (c) 2015, DornerWorks, Ltd.
+ */
+
+/* valgrind: --read-var-info=yes --leak-check=full --track-origins=yes --show-reachable=yes
+   --malloc-fill=B5 --free-fill=4A */
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <libgen.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <syslog.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+#include <sys/stat.h>
+#include <signal.h>
+
+#include "barsm_functions.h"
+
+static int32_t clientSocket_TCP = -1;
+static int32_t clientSocket_UDP = -1;
+
+/****************
+* PRIVATE CONSTANTS
+****************/
+#define MAX_LAUNCH_ATTEMPTS    5
+/* LAUNCH_CHECK_PERIOD is the amount of time given between status checks on a
+ * module/appplication immediately after launch. Recommmended: 5 */
+#define LAUNCH_CHECK_PERIOD    5
+/* START_ENSURE_DELAY must be greater than any possible amount of time that may
+ * pass between a child process being forked and the execl() command completion
+ * in the child process. Recommmended: 4 */
+#define START_ENSURE_DELAY     4
+
+/* THREADS */
+static pthread_t msgRcvThread;
+
+/* RETURN VALUE ENUMS */
+enum e_return
+{
+    terminalError = -1,
+    dirIsEmpty    = 1,
+    /* normal = 0 is already a defined enumeration in barsm_functions.h */
+    /* normal        = 0, */
+};
+
+/****************
+* GLOBALS
+****************/
+child_pid_list *first_node, *nth_node, *tmp_toFree;
+
+const char *dirs[] =
+{
+    "/opt/rc360/system",
+    "/opt/rc360/modules/GE",
+    "/opt/rc360/modules/TPA",
+    "/opt/rc360/apps/GE",
+    "/opt/rc360/apps/TPA"
+};
+
+/****************
+* PRIVATE FUNCTION PROTOTYPES
+****************/
+static bool aacmSetup(void);
+static int32_t launch_itemsInDir( const char *directory );
+static void* rcv_errMsgs(void *param);
+
+
+
+/**
+ *
+ *
+ * @param[in] UNUSED(argc)
+ * @param[in] UNUSED(*argv[])
+ * @param[out] true/false
+ *
+ * @return true/false status of system startup success
+ */
+/* MAIN */
+bool main(int32_t UNUSED(argc), char UNUSED(*argv[]))
+{
+    int32_t launch_status;
+    int32_t dir_index;
+    int32_t dirs_array_size;
+    bool success = true;
+    int32_t rc;
+    char barsm_name[4];
+
+    /* create linked list ... */
+    printf("EXECUTING: 'malloc()' for creating 'first_node'\n");
+    errno = 0;
+    first_node = (child_pid_list *)malloc(sizeof(child_pid_list));
+    if ( 0 != errno && success )
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: In 'malloc()' when creating 'first_node'! (%d: %s)",
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+        printf("ERROR: In 'malloc()' when creating 'first_node'! (%d: %s)\n",
+               errno, strerror(errno));
+        success = false;
+    }
+    else
+    {
+        printf("SUCCESS: 'malloc()' for creating 'first_node'\n");
+    }
+
+    if ( success )
+    {
+        if ( NULL != first_node )
+        {
+            first_node->next = NULL;
+            nth_node = first_node;
+            printf("SUCCESS: creation of linked list\n");
+        }
+        else
+        {
+            syslog(LOG_ERR, "ERROR: In 'malloc()' when creating linked list!");
+            printf("ERROR: In 'malloc()' when creating linked list!\n");
+        }
+
+        launch_status = 0;
+        dir_index = 0;
+
+        /* get number of elements in dirs ... */
+        dirs_array_size = 0;
+        while( '\0' != dirs[++dirs_array_size] );
+    } /* if (success) */
+
+    /* launch items in each dirs directory.  If directory empty, do nothing. */
+    if ( success )
+    {
+        for (dir_index = 0; dir_index < dirs_array_size; dir_index++)
+        {
+            printf("EXECUTING: Launching all items in directory %s\n", dirs[dir_index]);
+
+            launch_status = launch_itemsInDir(dirs[dir_index]);
+            if ( terminalError == launch_status )
+            {
+                /* AACM was not able to start. */
+                /* this is to give the test scripts time to confirm that there
+                 * were no lasting children. */
+                sleep(1);
+
+                success = false;
+                break;
+            }
+            else if ( dirIsEmpty == launch_status )
+            {
+                syslog(LOG_NOTICE, "NOTICE: Directory %s empty!", dirs[dir_index] );
+                printf("NOTICE: Directory %s empty!\n\n", dirs[dir_index]);
+            }
+            else /* ( normal == launch_status ) */
+            {
+                syslog(LOG_NOTICE, "SUCCESS: All items in %s launched!", dirs[dir_index] );
+                printf("SUCCESS: All items in %s launched!\n", dirs[dir_index] );
+
+                if ( 0 == dir_index )
+                {
+                    // connect to the AACM TCP server
+                    // send startup message
+                    // receive ack
+                    if ( success )
+                    {
+                        printf("EXECUTING: 'aacmSetup()'\n");
+                        success = aacmSetup();
+                    }
+
+                    // start thread for recieving AACM messages
+                    if ( success )
+                    {
+                        printf("SUCCESS: 'aacmSetup()'\n");
+                        printf("EXECUTING: creating thread for 'rcv_errMsgs()'\n");
+
+                        errno = 0;
+                        rc = pthread_create(&msgRcvThread, NULL, rcv_errMsgs, NULL);
+                        if ( 0 != rc )
+                        {
+                            success = false;
+                            syslog(LOG_ERR, "%s:%d ERROR: thread creation for 'rcv_errMsgs()' failed (%d:%s)",
+                                __FUNCTION__, __LINE__, errno, strerror(errno));
+                        }
+                        else
+                        {
+                            printf("SUCCESS: thread created for 'rcv_errMsgs()'\n");
+                        }
+                    }
+                    else
+                    {
+                        syslog(LOG_DEBUG, "%s:%d EXECUTING: Failure to start thread for recieving AACM messages\n",__FUNCTION__, __LINE__);
+                        break;
+                    }
+                } /* if ( 0 == dir_index ) */
+            } /* else if (normal == launch_status) */
+        } /* for (dir_index = 0; dir_index < dirs_array_size; dir_index++) */
+        syslog(LOG_NOTICE, "COMPLETED: Launch sequence complete!");
+        // syslog(LOG_DEBUG, "\nCOMPLETED: Launch sequence complete!\n\n");
+
+        /* all done, so last node is NULL */
+        nth_node->next = NULL;
+
+        if ( success )
+        {
+            /* BARSM needs to be assigned a name as all the child processes were
+             * given when they were launched */
+            printf("SUCCESS: Launch sequence complete!\n");
+            printf("EXECUTING: Assigning a 4 character name to BARSM\n");
+
+            assign_procName(&barsm_name[0]);
+            printf("SUCCESS: 'assign_procName()'\n");
+
+            sleep(3);
+            printf("EXECUTING: Sending OPEN message over UDP\n");
+            process_openUDP(clientSocket_UDP);
+            printf("SUCCESS: OPEN message sent\n");
+
+            printf("EXECUTING: Receiving SYS_INIT message over UDP\n");
+            success = process_sysInit(clientSocket_UDP);
+        }
+        if ( success )
+        {
+            printf("SUCCESS: SYS_INIT message recieved over UDP\n");
+            printf("EXECUTING: Sending the AACM_TO_BARSM_PROCESSES message on TCP\n");
+            success = send_barsmToAacmProcesses(clientSocket_TCP, first_node,
+                                                dirs, barsm_name);
+        }
+
+        while( success )
+        {
+            sleep(60);
+            /* check if any of the processes have gone zombie or killed */
+            /* list back to first node */
+            nth_node = first_node;
+            printf("EXECUTING: BARSM health monitoring system\n");
+
+            success = check_modules(clientSocket_TCP, nth_node);
+            if (success)
+            {
+                printf("SUCCESS: Health monitoring sequence complete\n");
+            }
+            else
+            {
+                printf("ERROR: While checking the health of the apps/modules\n");
+            }
+        }
+    } /* if (success) */
+
+    printf("NOTICE: BARSM exiting due to terminal error!\n");
+    syslog(LOG_NOTICE, "NOTICE: BARSM exiting due to terminal error!");
+
+    /* Won't get here with the above while(1) loop.  But, if this main ever
+     * exits, this free's all the nodes in the linked list. */
+    nth_node = first_node;
+    while( NULL != nth_node->next )
+    {
+        /* Need to kill all child processes that were started up */
+        printf("EXECUTING: Killing process with PID %d\n", nth_node->child_pid);
+        errno = 0;
+        if ( -1 == kill(nth_node->child_pid, SIGTERM) )
+        {
+            syslog(LOG_ERR, "%s:%d ERROR! Not able to kill process with PID %d (%d:%s)",
+                __FUNCTION__, __LINE__, nth_node->child_pid, errno, strerror(errno));
+        }
+        else
+        {
+            printf("SUCCESS: Process with PID %d eliminated successfully\n",
+                   nth_node->child_pid);
+        }
+
+        tmp_toFree = nth_node;
+        nth_node = nth_node->next;
+        free(tmp_toFree);
+    }
+    free(first_node);
+    return(success);
+} /* int32_t main(void) */
+
+
+
+/**
+ * Runs through the steps required to communicate with the AACM  after launching
+ * it, including setting up the sockets and seding an initial message over them.
+ *
+ * @param[in] void
+ *
+ * @return true/false whether a terminal error has occured
+ */
+bool aacmSetup(void)
+{
+    bool success            = true;
+
+    if ( success )
+    {
+        printf("EXECUTING: TCP Setup\n");
+        success = TCPsetup(&clientSocket_TCP);
+    }
+    if ( success )
+    {
+        printf("SUCCESS: TCP Setup Complete!\n");
+        printf("EXECUTING: UDP Setup\n");
+        success = UDPsetup(&clientSocket_UDP);
+    }
+    if ( success )
+    {
+        printf("SUCCESS: UDP Setup Complete!\n");
+        printf("EXECUTING: Sending BARSM to AACM INIT\n");
+        success = send_barsmToAacmInit(clientSocket_TCP);
+    }
+    if ( success )
+    {
+        printf("SUCCESS: BARSM to AACM INIT sent!\n");
+        printf("EXECUTING: Receiveing INIT ACK\n");
+        success = receive_barsmToAacmInitAck(clientSocket_TCP);
+    }
+    if (success)
+    {
+        syslog(LOG_DEBUG, "SUCCESS: INIT ACK recieved!\n");
+    }
+
+    return (success);
+}
+
+
+
+/**
+ * Used to launch all the items in a passed in directory location. This function
+ * indicates if a terminal error has occurred, or if the directory is empty with
+ * the return value.
+ *
+ * @param[in] const char *directory: The directory location from which things
+ *      need to be luanched.
+ *
+ * @return int: To indicate normal operation, empty directory, or terminal error
+ */
+int32_t launch_itemsInDir( const char *directory )
+{
+    int32_t rc = 0;
+    int32_t launch_attempts = 0, run_time = 0;
+    struct dirent *dp;
+    bool success = true;
+    bool empty_dir = true;
+    DIR *dir;
+
+    printf("EXECUTING: Opening directory %s\n", directory);
+
+    errno = 0;
+    dir = opendir(directory);
+    if (NULL == dir)
+    {
+        syslog(LOG_ERR, "%s:%d ERROR: unable to open dir %s (%d:%s)",
+            __FUNCTION__, __LINE__, directory, errno, strerror(errno));
+        success = false;
+    }
+    else
+    {
+        printf("SUCCESS: Directory %s opened!\n", directory);
+        printf("EXECUTING: Checking if files are present in directory %s\n", directory);
+        errno = 0;
+        dp = readdir(dir);
+        while ((NULL != dp) && (true == success))
+        {
+            if ('.' != dp->d_name[0])
+            {
+                printf("SUCCESS: File found: %s\n", dp->d_name);
+
+                empty_dir = false;
+
+                printf("EXECUTING: Putting file path and name together in malloc()'ed area\n");
+                nth_node->dir = NULL;
+                errno = 0;
+                rc = asprintf(&nth_node->dir, "%s/%s", directory, dp->d_name);
+                if ((0 >= rc) || (NULL == nth_node->dir))
+                {
+                    syslog(LOG_ERR, "%s:%d ERROR: unable to allocate %s/%s (%d: %s)",
+                        __FUNCTION__, __LINE__, directory, dp->d_name, errno, strerror(errno));
+                    success = false;
+                }
+                else
+                {
+                    printf("SUCCESS: String combination completed\n");
+                }
+
+                if (true == success)
+                {
+                    printf("EXECUTING: Copying filename\n");
+
+                    errno = 0;
+                    nth_node->item_name = strdup(dp->d_name);
+                    if (NULL == nth_node->item_name)
+                    {
+                        syslog(LOG_ERR, "%s:%d ERROR: unable to dup filename %s (%d: %s)",
+                               __FUNCTION__, __LINE__, dp->d_name, errno, strerror(errno));
+                        success = false;
+                    }
+                    else
+                    {
+                        printf("SUCCESS: String copying completed\n");
+                    }
+                }
+
+                if (true == success)
+                {
+                    printf("EXECUTING: Allocating space for next item in linked list\n");
+                    errno = 0;
+                    nth_node->next = (child_pid_list *)malloc(sizeof(child_pid_list));
+                    if (NULL == nth_node->next)
+                    {
+                        syslog(LOG_ERR, "%s:%d ERROR: unable to malloc new node (%d: %s)",
+                               __FUNCTION__, __LINE__, errno, strerror(errno));
+                        success = false;
+                    }
+                    else
+                    {
+                        printf("SUCCESS: Space allocated for next item\n");
+                    }
+                }
+
+                if (true == success)
+                {
+                    printf("EXECUTING: Assigning a 4 character name to item %s\n",
+                           nth_node->item_name);
+                    assign_procName(nth_node->proc_name);
+                    if (true == success)
+                    {
+                        printf("SUCCESS: Assigned name of %s\n", nth_node->proc_name);
+                    }
+                }
+
+                if (true == success)
+                {
+                    printf("EXECUTING: Launching item %s\n", nth_node->dir);
+                    success = start_process(nth_node);
+                    if (true == success)
+                    {
+                        printf("SUCCESS: Item launch attempt complete\n");
+                    }
+                }
+
+                if (true == success)
+                {
+                    /* Check if the process just launched was successful, if
+                     * not, try up to four times to restart it. The waitpid()
+                     * function will return a false positive if the child
+                     * process has not yet tried to execl(). The run_time value
+                     * is used to make sure that enough time has been given to
+                     * make sure that execl() was called. */
+                    launch_attempts = 1;
+                    run_time = 0;
+                    while ( launch_attempts < MAX_LAUNCH_ATTEMPTS && run_time <= START_ENSURE_DELAY )
+                    {
+                        sleep(LAUNCH_CHECK_PERIOD);
+                        errno = 0;
+                        printf("EXECUTING: Checking status of %s after initial launch\n",
+                               nth_node->item_name);
+                        nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+
+                        if ( normal != nth_node->alive )
+                        {
+                            syslog(LOG_ERR, "ERROR: File launch failed! (%s in %s) (try #%d) (%d:%s)",
+                                dp->d_name, directory, launch_attempts, errno, strerror(errno));
+                            printf("ERROR: File %s not launched properly! (%d:%s)\n",
+                                dp->d_name, errno, strerror(errno));
+
+                            start_process(nth_node);
+                            launch_attempts++;
+                            nth_node->alive = normal;
+                            run_time = 0;
+                        }
+                        else
+                        {
+                            run_time += LAUNCH_CHECK_PERIOD;
+                        }
+                    } /* while ( launch_attempts < MAX_LAUNCH_ATTEMPTS && run_time <= START_ENSURE_DELAY ) */
+                    sleep(START_ENSURE_DELAY);
+                    errno = 0;
+                    nth_node->alive = waitpid(nth_node->child_pid, &rc, WNOHANG);
+
+                    if ( normal != nth_node->alive )
+                    {
+                        /* This last launch error needs to be outside the previous for loop in order to
+                         * log the error for a fifth launch error. */
+                        syslog(LOG_ERR, "ERROR: File launch failed! (%s in %s) (try #%d) (%d:%s)",
+                            dp->d_name, directory, launch_attempts, errno, strerror(errno));
+                        printf("ERROR: File %s not launched properly! (%d:%s)\n",
+                            dp->d_name, errno, strerror(errno));
+
+                        syslog(LOG_ERR, "NOTICE: Process for %s in %s disabled permanently! (%d:%s)",
+                            dp->d_name, directory, errno, strerror(errno));
+                        printf("NOTICE: Process for %s in %s disabled permanently! (%d:%s)\n",
+                            dp->d_name, directory, errno, strerror(errno));
+
+                        nth_node->alive = downPermanently;
+
+                        /* return a termination value if it is AACM that failed */
+                        if ( dirs[0] == directory )
+                        {
+                            syslog(LOG_ERR, "ERROR: AACM Cannot be started! (%d:%s)",
+                                errno, strerror(errno));
+                            printf("ERROR: AACM Cannot be started! (%d:%s)\n",
+                                errno, strerror(errno));
+
+                            success = false;
+                        }
+                    } /* if ( normal != nth_node->alive ) */
+
+                    printf("SUCCESS: Status check completed\n");
+                    if ( NULL == nth_node->next )
+                    {
+                        syslog(LOG_ERR, "ERROR: In 'realloc()' when adding node to linked list!");
+                        printf("ERROR: In 'realloc()' when adding node to linked list!\n");
+                        success = false;
+                    }
+
+                    if (success)
+                    {
+                        printf( "CHILD linked list 'pid': %d\n" , nth_node->child_pid );
+                        printf( "CHILD linked list 'dir': %s\n" , nth_node->dir );
+                        printf( "CHILD linked list 'name': %s\n" , nth_node->item_name );
+                        printf( "this address %p\n" , (void *)nth_node );
+                        printf( "next address %p\n" , (void *)nth_node->next );
+                    }
+
+                    nth_node = nth_node->next;
+                } /* if ( success ) */
+            } /* if ('.' != dp->d_name[0]) */
+
+            printf("EXECUTING: Checking if another file is present in directory %s\n", directory);
+
+            errno = 0;
+            dp = readdir(dir);
+        } /* while ((NULL != dp) && (true == success)) */
+
+        if ((NULL == dp) && (errno != 0))
+        {
+            syslog(LOG_ERR, "%s:%d ERROR: unable to read dir %s (%d:%s)",
+                   __FUNCTION__, __LINE__, directory, errno, strerror(errno));
+            success = false;
+        }
+
+        printf("EXECUTING: Leaving directory %s\n", directory);
+        closedir(dir);
+    } /* else ! (NULL == dir) */
+
+    if (true != success)
+    {
+        rc = terminalError;
+    }
+    else if ( empty_dir )
+    {
+        rc = dirIsEmpty;
+    }
+    else
+    {
+        rc = normal;
+    }
+
+    return rc;
+} /* int32_t launch_itemsInDir( const char *directory ) */
+
+
+
+/**
+ * Used to run the thread which watches for messages from the AACM and responds
+ * to the messages by restarting or possibly terminating (not yet implemented)
+ * the modules/applications.
+ *
+ * @param[in] void * UNUSED(param)
+ *
+ * @return void
+ */
+void* rcv_errMsgs( void * UNUSED(param) )
+{
+    int32_t rc;
+    bool success = true;
+
+    printf("EXECUTING: Detaching thread\n");
+    rc = pthread_detach( pthread_self() );
+    if (rc != 0)
+    {
+        success = false;
+        syslog(LOG_ERR, "%s:%d ERROR! Failed to detach thread (%d:%s)",
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+    }
+    else
+    {
+        printf("SUCCESS: Thread detach completed\n");
+    }
+
+    while ( success )
+    {
+        printf("EXECUTING: Waiting for AACM_TO_BARSM message\n");
+        receive_aacmToBarsm( clientSocket_TCP, first_node );
+
+        printf("SUCCESS: AACM_TO_BARSM message received and handled\n");
+        printf("EXECUTING: Sending ACK\n");
+        send_aacmToBarsmAck( clientSocket_TCP );
+
+        printf("EXECUTING: ACK sent\n");
+    }
+
+    return (0);
+}
