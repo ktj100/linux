@@ -1,0 +1,337 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <errno.h>
+#include <syslog.h>
+#include <string.h>
+#include <time.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "sensor.h"
+#include "fpga_read.h"
+
+#define LOG_DEBUG_PRINT 0
+#define TS_DEBUG_PRINT 0
+#define FULL_DEBUG_PRINT 0
+#define CLOCK_OFFSET_TOLERANCE 2    // in seconds
+#define MAX_DATA_PERIOD 60          // in seconds
+
+;
+
+const int32_t MAX_TS_PERIOD = MAX_DATA_PERIOD*9;
+static uint64_t offset = 0;
+
+/* This function calculates the offset to be added to the cam timestamps to change their relative
+ * time (number of clock ticks since startup in FPGA, 1 per 10 ns) to a real-time value. */
+void timestamp_offset_config(void)
+{
+    struct timespec real_time;
+    struct timespec time_from_launch;
+
+    uint64_t full_real_time;
+    uint64_t full_time_from_launch;
+
+    errno = 0;
+    if ( -1 == clock_gettime(CLOCK_REALTIME, &real_time) ) 
+    {
+        printf("\nERROR: Time read of CLOCK_REALTIME for offset calculation failed! (%d: %s)\n\n", errno, strerror(errno));
+        syslog(LOG_ERR, "%s:%d ERROR: Time read of CLOCK_REALTIME for offset calculation failed! (%d:%s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+    }
+    if ( -1 == clock_gettime(CLOCK_MONOTONIC, &time_from_launch) ) 
+    {
+        printf("\nERROR: Time read of CLOCK_MONOTONIC for offset calculation failed! (%d: %s)\n\n", errno, strerror(errno));
+        syslog(LOG_ERR, "%s:%d ERROR: Time read of CLOCK_MONOTONIC for offset calculation failed! (%d: %s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+    }
+
+    full_real_time = ((real_time.tv_sec * 1000000000L) + real_time.tv_nsec);
+    full_time_from_launch = ((time_from_launch.tv_sec * 1000000000L) + time_from_launch.tv_nsec);
+
+    /* Offset value needs to be stored with units of 10 ns */
+    offset = (full_real_time - full_time_from_launch) / 10;
+    /* DEBUGGING */
+    // offset = 0;
+}
+
+/* This function allocates storage space for the data values that will be read in from the fpga.
+ * Each array of values will store the last MAX_XXXX_PERIOD worth of data, overwriting each value 
+ * as new values are read in. Index values will keep track of the location of the newest value
+ * read in from the FPGA. */
+bool subscribe_config(void)
+{
+    bool success = true;
+
+    // ALLOCATE SPACE FOR THE STORAGE OF THE LOGICAL VALUES
+    // = maximum period of collection time in seconds
+    errno = 0;
+    pfp_values = (int32_t*)malloc(MAX_DATA_PERIOD * sizeof(int32_t));
+    ptlt_values = (int32_t*)malloc(MAX_DATA_PERIOD * sizeof(int32_t));
+    ptrt_values = (int32_t*)malloc(MAX_DATA_PERIOD * sizeof(int32_t));
+    tcmp_values = (int32_t*)malloc(MAX_DATA_PERIOD * sizeof(int32_t));
+    cop_values = (int32_t*)malloc(MAX_DATA_PERIOD * sizeof(int32_t));
+    if ( NULL==pfp_values || NULL==ptlt_values || NULL==ptrt_values || NULL==tcmp_values || NULL==cop_values )
+    {
+        printf("\nERROR: malloc() failed for logical value storage! (%d: %s)\n\n", errno, strerror(errno));
+        syslog(LOG_ERR, "%s:%d ERROR: malloc() failed for logical value storage! (%d: %s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+        success = false;
+    }
+    logical_index = MAX_DATA_PERIOD - 1;
+
+    // ALLOCATE SPACE FOR THE STORAGE OF THE TIMESTAMP VALUES
+    // = maximum period of collection time in seconds * 9 values per second
+    errno = 0;
+    cam_secs = (int32_t*)malloc(MAX_TS_PERIOD * sizeof(int32_t));
+    cam_nsecs = (int32_t*)malloc(MAX_TS_PERIOD * sizeof(int32_t));
+    if ( NULL == cam_secs || NULL == cam_nsecs )
+    {
+        printf("\nERROR: malloc() failed for timestamp value storage! (%d: %s)\n\n", errno, strerror(errno));
+        syslog(LOG_ERR, "%s:%d ERROR: malloc() failed for timestamp value storage! (%d: %s)", \
+            __FUNCTION__, __LINE__, errno, strerror(errno));
+        success = false;
+    }
+    timestamp_index = MAX_TS_PERIOD - 1;
+
+    /* FILL ARRAYS WITH ZEROS TO START OFF */
+    memset(pfp_values, 0, MAX_DATA_PERIOD * sizeof(int32_t));
+    memset(ptlt_values, 0, MAX_DATA_PERIOD * sizeof(int32_t));
+    memset(ptrt_values, 0, MAX_DATA_PERIOD * sizeof(int32_t));
+    memset(tcmp_values, 0, MAX_DATA_PERIOD * sizeof(int32_t));
+    memset(cop_values, 0, MAX_DATA_PERIOD * sizeof(int32_t));
+    memset(cam_secs, 0, MAX_TS_PERIOD * sizeof(int32_t));
+    memset(cam_nsecs, 0, MAX_TS_PERIOD * sizeof(int32_t));
+
+    return(success);
+}
+
+void make_logicals(uint32_t *voltages)
+{
+    /* To compensate for storage rollover */
+    logical_index = (MAX_DATA_PERIOD-1 <= logical_index)? 0: logical_index+1;
+
+    pfp_values[logical_index] = convert_pfp(voltages[0]);
+    ptlt_values[logical_index] = convert_ptxt(voltages[1]);
+    ptrt_values[logical_index] = convert_ptxt(voltages[2]);
+    tcmp_values[logical_index] = convert_tcmp(voltages[3]);
+    cop_values[logical_index] = convert_cop(voltages[4]);
+
+    /* DEBUGGING */
+    // print out the last LOG_DEBUG_PRINT stored values
+    // this chunk of code results in many VALGRIND errors !!!!
+    int32_t i, j;
+    for (i = LOG_DEBUG_PRINT-1; i >= 0; i--)
+    {
+        /* To compensate for storage rollover */
+        j = (logical_index-i < 0)? logical_index-i+60: logical_index-i;
+
+        printf("\nPFP %d: %d\n", j+1, pfp_values[j]);
+        printf("PTLT %d: %d\n", j+1, ptlt_values[j]);
+        printf("PTRT %d: %d\n", j+1, ptrt_values[j]);
+        printf("TCMP %d: %d\n", j+1, tcmp_values[j]);
+        printf("COP %d: %d\n", j+1, cop_values[j]);
+    }
+}
+
+int32_t convert_pfp (uint32_t voltage)
+{
+    int32_t pressure;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    pressure = voltage / 20;
+
+    return (pressure);
+}
+
+int32_t convert_ptxt (uint32_t voltage)
+{
+    int32_t temp;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    temp = voltage / 20;
+
+    return (temp);
+}
+
+int32_t convert_tcmp (uint32_t voltage)
+{
+    int32_t temp;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    temp = voltage / 200;
+
+    return (temp);
+}
+
+int32_t convert_cop (uint32_t voltage)
+{
+    int32_t pressure;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    pressure = voltage / 500 - 5;
+
+    return (pressure);
+}
+
+int32_t calculate_timestamps(uint32_t *timestamps, uint32_t *ts_HiLoCnt)
+{
+    uint64_t full_ts[9] = {0,0,0,0,0,0,0,0,0};
+
+    static int32_t fpga_reads = 0;
+    fpga_reads++;
+    // printf("Reads: %u\n", fpga_reads);
+
+    /* "timestamps" array only contains lower 32 bits of 64 bit value, so the 
+     * high and low values are used to calculate whether to just add the high 
+     * value 32 bits or 1 second less than that. */
+    int32_t i;
+    for (i = 0; i < 9; i++)
+    {
+        /* If there were fewer than 9 timestamps read in this round, leave
+         * the extra spots in full_ts[] as zero padding. */
+        if (i < ts_HiLoCnt[2])
+        {
+            /* Every 42.9 seconds (32 bit value at 10 ns resolution), the high value
+             * will have rolled over halfway through the timestamps. So whenever the 
+             * timestamp value is greater than the lower 32 bit value, that means 
+             * the rollover occured, and the high value minus one must be added.*/
+            if (timestamps[i] > ts_HiLoCnt[1])
+            {
+                full_ts[i] += ((uint64_t)(ts_HiLoCnt[0] - 1) << 32) | timestamps[i];
+            }
+            else
+            {
+                full_ts[i] += ((uint64_t)ts_HiLoCnt[0] << 32) | timestamps[i];
+            }
+        }
+        
+    }
+
+    /* Timestamps are currently the value of the number of FPGA clock ticks
+     * with units of 10 ns. */
+    for (i = 0; i < 9 && full_ts[i] != 0; i++)
+    {
+        full_ts[i] = full_ts[i] + offset;
+    }
+
+    /* The timestamps need to be split into seconds and nanoseconds and stored
+     * as globals for the PUBLISH part of the SIMM to access. */
+    split_timestamps(&full_ts[0]);
+
+    /* A check needs to be made to make sure that the timestamp values are not getting
+     * messed up by any of the modifications being made to the storage changes. */
+    check_ts_values();
+
+    return(0);
+}
+
+void split_timestamps(uint64_t *timestamps)
+{
+    int32_t dif;
+    struct timespec real_time;
+    
+    int32_t i;
+    for(i = 0; i < 9; i++)
+    {
+        /* To compensate for storage rollover */
+        timestamp_index = (MAX_TS_PERIOD-1 <= timestamp_index)? 0: timestamp_index+1;
+
+        cam_secs[ timestamp_index ] = timestamps[i] / 100000000L;
+        cam_nsecs[ timestamp_index ] = (timestamps[i] - cam_secs[ timestamp_index ] * 100000000L) * 10;
+        // printf("Nano Stamps: %d\n", cam_nsecs[tot_stamps[1] + i]);
+    }
+
+    /* DEBUGGING */
+    // print out all stored values
+    int32_t j;
+    for (i = TS_DEBUG_PRINT-1; i >= 0; i--)
+    {
+        /* To compensate for storage rollover */
+        j = timestamp_index-i + ((timestamp_index-i < 0)? MAX_TS_PERIOD: 0);
+
+        printf("Second Stamp %d: %d\n", j+1, cam_secs[j]);
+    }
+
+    for (i = TS_DEBUG_PRINT-1; i >= 0; i--)
+    {
+        /* To compensate for storage rollover */
+        j = timestamp_index-i + ((timestamp_index-i < 0)? MAX_TS_PERIOD: 0);
+
+        printf("Nano Stamp %d:   %d\n", j+1, cam_nsecs[j]);
+    }
+
+    /* DEBUGGING */
+    // printf("Logical Index: %d\nTimestamp Index: %d\n", logical_index, timestamp_index);
+
+    /* This check ensures that the first of the last nine timestamps saved are 
+     * within CLOCK_OFFSET_TOLERANCE of the current time to ensure that the offset 
+     * was calculated and applied correctly. */
+    clock_gettime(CLOCK_REALTIME, &real_time);
+    dif = real_time.tv_sec - cam_secs[timestamp_index-8];
+
+    if( abs(dif) > CLOCK_OFFSET_TOLERANCE )
+    {
+        printf("\nERROR: Corrected timestamps are more than %d seconds different from the realtime clock!\n", \
+            CLOCK_OFFSET_TOLERANCE);
+        syslog(LOG_ERR, "%s:%d ERROR: Corrected timestamps are more than %d seconds different from the realtime clock!", \
+            __FUNCTION__, __LINE__, CLOCK_OFFSET_TOLERANCE);
+    }
+}
+
+/* This fucntion checks the timestamps just before they are shipped out to 
+ * ensure that all the conversions and transfers have not messed up the order
+ * of the timestamps or misplaced them. */
+void check_ts_values(void)
+{
+    /* Holds 30 most recent timestamps. */
+    static uint64_t all_stamps[30];
+    /* Keeps track of the size of  all_stamps[] */
+    static int32_t total_stamps = 0;
+
+    uint64_t new_stamps[9];
+
+    // Calculate new timestamps
+    int32_t i, j;
+    for ( j = timestamp_index - 8, i = 0; j <= timestamp_index; j++, i++ )
+    {
+        new_stamps[i] = (cam_secs[j] * 1000000000L) + cam_nsecs[j];
+    }
+
+    for ( i = 0; i < 9 && new_stamps[i] != 0; i++ )
+    {
+        if ( total_stamps < 30 )
+        {
+            all_stamps[total_stamps] = new_stamps[i];
+            // printf("1) all_stamps[%d] written\n", total_stamps);
+            total_stamps++;
+        }
+        else
+        {
+            for ( j = 1; j < 30; j++ )
+            {
+                all_stamps[j-1] = all_stamps[j];
+            }
+            all_stamps[total_stamps-1] = new_stamps[i];
+            // printf("2) all_stamps[%d] written\n", total_stamps);
+        }
+    }
+
+    /* DEBUGGING */
+    i = ( (total_stamps - FULL_DEBUG_PRINT < 0) ? 0: (total_stamps - FULL_DEBUG_PRINT) );
+    // printf("Total stamps: %d\nStamps to print: %d\nStart: %d\n", total_stamps, FULL_DEBUG_PRINT, i);
+
+    for ( ; i < total_stamps; i++)
+    {
+        printf("TS %2d: %lu \n", i, all_stamps[i]);
+    }
+
+    for ( i = 1; i < total_stamps; i++ )
+    {
+        if ( all_stamps[i] < all_stamps[i-1] )
+        {
+            printf("\nERROR: Timestamps are out of order!\n\n");
+            syslog(LOG_ERR, "%s:%d ERROR: Timestamps are out of order!", __FUNCTION__, __LINE__);
+        }
+    }
+}

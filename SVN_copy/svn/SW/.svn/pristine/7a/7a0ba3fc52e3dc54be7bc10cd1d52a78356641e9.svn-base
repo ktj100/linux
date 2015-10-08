@@ -1,0 +1,208 @@
+
+/** @file fake_fpga_v2.c
+ * Main file to starting Sensor Master Module.  Init portion for
+ * FPGA and registering the app and it's data.  Opens UDP and
+ * waits for one sys init message and one subscribe message
+ * before starting 3 threads - SUBSCRIBE, PUBLISH, and SENSORS
+ * 
+ * Subscribe Thread: polls for a subscribe
+ * 
+ * Publish Thread: every second, publish respective data
+ * 
+ * Sensors Thread: interfaces to FPGA to collect data.  Once
+ * collected, generates logical MPs and timestamps in order to
+ * be published.  
+ *
+ * Copyright (c) 2010, DornerWorks, Ltd.
+ */
+
+/****************
+* INCLUDES
+****************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <errno.h>
+#include <syslog.h>
+#include <string.h>
+#include <time.h>
+#include <stdint.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include "fpga_read.h"
+
+/**
+ * Simulates FPGA.  To be used with SIMM development and
+ * testing.
+ *
+ * @param[in] void 
+ * @param[out] void
+ *
+ * @return void
+ */
+void main(void)
+{
+    // time tracking structs
+    struct timespec real_clock, start_time, mono_offset;
+
+    // temporary variables
+    int delay_finished = 0, i;
+    int num_timestamps;
+    int64_t timestamps[9] = {0,0,0,0,0,0,0,0,0};
+
+    // long term tracking variables
+    time_t run_time_s, run_time_ns;
+    double delta_time = 800000000;
+    double pfp_voltage = 0.4;
+    double ptlt_voltage = 1.0;
+    double ptrt_voltage = 1.0;
+    double tcmp_voltage = 1.0;
+    double cop_voltage = 0.3;
+
+    // file declarations
+    //FILE *rawfp, *camfp, *sigfp;
+    uint32_t dev = 0, result;
+    uint32_t *fpga_regs;
+
+    dev = open("simulation_file.bin", O_RDWR);
+
+    ftruncate(dev, 512);
+
+    // lseek(dev, 511, SEEK_SET);
+    // result = write(dev, "", 1);
+    // printf("%d\n", result);
+
+    fpga_regs = (uint32_t*) mmap(0, 512, PROT_READ | PROT_WRITE, MAP_SHARED, dev ,0);
+    printf("fpga_regs = %p\n", fpga_regs);
+
+    // using a clock to simulate the interrupt
+    // set initial time values using CLOCK_MONOTONIC
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    run_time_s = start_time.tv_sec;
+    run_time_ns = 0;
+
+    // set initial delta time value
+
+    while(1)
+    {
+
+        // using a clock to simulate the interrupt
+        for(delay_finished = 0; 1 != delay_finished;)
+        {
+            // read in the current time to see if it is a second multiple of the start time
+            clock_gettime(CLOCK_MONOTONIC, &real_clock);
+            if(run_time_s <= real_clock.tv_sec)
+            {
+                // exit the while loop and read in the values
+                delay_finished = 1;
+            }
+        }
+
+        /* Timestamp Calculation ------------------------------------------------------------------- */
+
+        // calculate all timestamps for the next second, fill places over 1 second with 0's
+        for(i = 0 ;run_time_ns < 1000000000; i++)
+        {
+            delta_time = delta_time + 0.01 * delta_time * (1 - delta_time / 114285714);
+                                                             // (1 / 8.75 = 114285714)
+            printf("Delta-Time: %lf\n", delta_time);
+ 
+            run_time_ns += delta_time;
+            timestamps[i] = 100000000L * run_time_s + run_time_ns / 10;
+        }
+        num_timestamps = i;
+        fpga_regs[TS_COUNT] = i;
+
+        // remove one second's worth of ns and add to s counter
+        run_time_ns -= 1000000000;
+        run_time_s++;
+
+        // printf("Address 1: %p\n", &fpga_regs[CAM_TS_VAL_0]);
+        // printf("Address 2: %p\n", &fpga_regs[CAM_TS_VAL_1]);
+        // printf("Address 3: %p\n", &fpga_regs[CAM_TS_VAL_2]);
+        // printf("Address 4: %p\n", &fpga_regs[CAM_TS_VAL_3]);
+        // printf("Address 5: %p\n", &fpga_regs[CAM_TS_VAL_4]);
+        // printf("Address 6: %p\n", &fpga_regs[CAM_TS_VAL_5]);
+        // printf("Address 7: %p\n", &fpga_regs[CAM_TS_VAL_6]);
+        // printf("Address 8: %p\n", &fpga_regs[CAM_TS_VAL_7]);
+        // printf("Address 9: %p\n", &fpga_regs[CAM_TS_VAL_8]);
+
+        fpga_regs[CAM_TS_VAL_0] = timestamps[0];
+        fpga_regs[CAM_TS_VAL_1] = timestamps[1];
+        fpga_regs[CAM_TS_VAL_2] = timestamps[2];
+        fpga_regs[CAM_TS_VAL_3] = timestamps[3];
+        fpga_regs[CAM_TS_VAL_4] = timestamps[4];
+        fpga_regs[CAM_TS_VAL_5] = timestamps[5];
+        fpga_regs[CAM_TS_VAL_6] = timestamps[6];
+        fpga_regs[CAM_TS_VAL_7] = timestamps[7];
+        fpga_regs[CAM_TS_VAL_8] = timestamps[8];
+        // // the result value comes out as a '0'...
+        // printf("Result = %d\n", result);
+
+        // printf("Value 1: %lu\n", timestamps[0] & 0x00000000FFFFFFFF);
+        // printf("Value 2: %lu\n", timestamps[1] & 0x00000000FFFFFFFF);
+        // printf("Value 3: %lu\n", timestamps[2] & 0x00000000FFFFFFFF);
+        // printf("Value 4: %lu\n", timestamps[3] & 0x00000000FFFFFFFF);
+        // printf("Value 5: %lu\n", timestamps[4] & 0x00000000FFFFFFFF);
+        // printf("Value 6: %lu\n", timestamps[5] & 0x00000000FFFFFFFF);
+        // printf("Value 7: %lu\n", timestamps[6] & 0x00000000FFFFFFFF);
+        // printf("Value 8: %lu\n", timestamps[7] & 0x00000000FFFFFFFF);
+        // printf("Value 9: %lu\n", timestamps[8] & 0x00000000FFFFFFFF);
+
+        printf("Value 1: %lu\n", timestamps[0]);
+        printf("Value 2: %lu\n", timestamps[1]);
+        printf("Value 3: %lu\n", timestamps[2]);
+        printf("Value 4: %lu\n", timestamps[3]);
+        printf("Value 5: %lu\n", timestamps[4]);
+        printf("Value 6: %lu\n", timestamps[5]);
+        printf("Value 7: %lu\n", timestamps[6]);
+        printf("Value 8: %lu\n", timestamps[7]);
+        printf("Value 9: %lu\n", timestamps[8]);
+
+        timestamps[0] += 100000000;
+        fpga_regs[TS_LOW] = timestamps[0] & 0x00000000FFFFFFFF;
+        fpga_regs[TS_HIGH] = timestamps[0] >> 32;
+
+        printf("Original = %lu\nTS_LOW = %u\nTS_HIGH = %u\n", timestamps[0], fpga_regs[TS_LOW], fpga_regs[TS_HIGH]);
+
+        /* Logical Value Calculation --------------------------------------------------------------- */
+
+        pfp_voltage  = pfp_voltage + 0.5 * pfp_voltage* (1 - pfp_voltage / 4.234);
+        ptlt_voltage = ptlt_voltage + 0.1 * ptlt_voltage* (1 - ptlt_voltage / 23.34);
+        ptrt_voltage = ptrt_voltage + 0.1 * ptrt_voltage* (1 - ptrt_voltage / 20.23);
+        tcmp_voltage = tcmp_voltage + 0.1 * tcmp_voltage* (1 - tcmp_voltage / 17.2);
+        cop_voltage  = cop_voltage + 0.2 * cop_voltage* (1 - cop_voltage / 3.345);
+
+        // DEBUGGING
+        printf("PFP:  %d\n", (unsigned int)(pfp_voltage*1000));
+        printf("PTLT: %d\n", (unsigned int)(ptlt_voltage*1000));
+        printf("PTRT: %d\n", (unsigned int)(ptrt_voltage*1000));
+        printf("TCMP: %d\n", (unsigned int)(tcmp_voltage*1000));
+        printf("COP:  %d\n", (unsigned int)(cop_voltage*1000));
+
+        // printf("Address 10: %p\n", &fpga_regs[PFP_VAL]);
+        // printf("Address 11: %p\n", &fpga_regs[PTLT_VAL]);
+        // printf("Address 12: %p\n", &fpga_regs[PTRT_VAL]);
+        // printf("Address 13: %p\n", &fpga_regs[TCMP_VAL]);
+        // printf("Address 14: %p\n", &fpga_regs[COP_VAL]);
+
+        fpga_regs[PFP_VAL]  = (unsigned int)(pfp_voltage*1000)  | 0xFF000000;
+        fpga_regs[PTLT_VAL] = (unsigned int)(ptlt_voltage*1000) | 0xFF000000;
+        fpga_regs[PTRT_VAL] = (unsigned int)(ptrt_voltage*1000) | 0xFF000000;
+        fpga_regs[TCMP_VAL] = (unsigned int)(tcmp_voltage*1000) | 0xFF000000;
+        fpga_regs[COP_VAL]  = (unsigned int)(cop_voltage*1000)  | 0xFF000000;
+
+        /* Send Boolean Signal --------------------------------------------------------------------- */
+
+        // NOTE: THIS IS NOT THE ACTUAL FUNCTIONALITY OF REGISTER 61!!
+        // set register 61 to 0 to signal data ready
+        printf("Address 15: %p\n", &fpga_regs[IAR]);
+        fpga_regs[IAR] = 0;
+        printf("Contents of 15: %u\n", fpga_regs[IAR]);
+
+        printf("'0' written to file.\n");
+    }
+}

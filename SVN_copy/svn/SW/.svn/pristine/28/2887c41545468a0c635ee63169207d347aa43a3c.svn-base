@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+
+# This script tests whether the applications/modules are launched in the correct order.
+
+
+# add location of the utilities for this script to search out
+import sys
+sys.path.insert(0, '/svn/SW/test/utils')
+
+import barsm 
+import log 
+import subprocess
+
+if __name__ == '__main__':
+
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+
+    # execute noraml actions
+    barsm.norm_launch()
+
+    # launch processes
+    launch_result = barsm.monitor_launch(5)
+    if launch_result != 5:
+        print("FAIL")
+        sys.exit()
+
+    # kill off all started processes
+    barsm.kill_procs()
+
+    # check logs for launch errors
+    logs = follow.read()
+
+    launch_errors = sum(1 for d in logs if "File launch failed!" in d.get('message'))
+    if 0 < launch_errors:
+        print("Launch Error Occurred")
+        print("FAIL")
+        
+        # kill off all started processes
+        barsm.kill_procs()
+
+        sys.exit()
+
+    # store all timestamps
+    aacm_ts =   (filter(lambda t: "/opt/rc360/system/" in t['message'], logs))[0]['timestamp']
+    gemod_ts =  (filter(lambda t: "/opt/rc360/modules/GE/" in t['message'], logs))[0]['timestamp']
+    tpamod_ts = (filter(lambda t: "/opt/rc360/modules/TPA/" in t['message'], logs))[0]['timestamp']
+    geapp_ts =  (filter(lambda t: "/opt/rc360/apps/GE/" in t['message'], logs))[0]['timestamp']
+    tpaapp_ts = (filter(lambda t: "/opt/rc360/apps/TPA/" in t['message'], logs))[0]['timestamp']
+
+    if  gemod_ts  > aacm_ts   and \
+        tpamod_ts > aacm_ts   and \
+        geapp_ts  > gemod_ts  and \
+        tpaapp_ts > gemod_ts  and \
+        geapp_ts  > tpamod_ts and \
+        tpaapp_ts > tpamod_ts:
+        print("SUCCESS")
+    else:
+        print("FAIL")

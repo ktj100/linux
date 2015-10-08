@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+
+import sys
+sys.path.insert(0, '/home/norwood/sandbox/repos/trunk/SW/test/utils')
+import simm
+import log
+import subprocess
+import time
+
+
+# This is structured pretty much the same way as MyServer.c
+if __name__ == '__main__':
+
+    # I'm thinking of looping through each function with a passfail option.  However, that would require
+    #   restarting SIMM each time.  Moreover, there are about 4 functions to test each having about 4 tests.  
+    #   Not sure if this is the best approach.  
+
+    SimmTestResult      = True
+    regAppAck_passfail  = 3     # 3
+    regDataAck_passfail = 26    # 26
+    sysInit_passfail    = 3     # 3
+    subscribe_passfail  = 74    # 76
+
+    sysLogFollow = log.logfollower()
+    #consider stateMachine 
+    while SimmTestResult != False:   
+        subprocess.Popen("clear")
+        #if False == KeepMoving
+        #   close TCP and UDP connections?  so far, it's working without doing so ...
+
+        KeepMoving = True
+        if KeepMoving != False:
+            # TCP SETUP
+            sysLogFollow.start()
+            TCPconn = simm.TCPsetup()
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("TCP SETUP errors: ", launch_errors)
+                KeepMoving = False
+                #sys.exit()
+            
+        if KeepMoving != False:
+            #UDP SETUP
+            sysLogFollow.start
+            UDPsock = simm.UDPsetup()
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("UDP SETUP errors: ", launch_errors)
+                KeepMoving = False
+                #sys.exit()
+
+        if KeepMoving != False:
+            # REGISTER APP
+            sysLogFollow.start
+            #time.sleep(1)
+            simm.registerApp(TCPconn)
+            #time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("REGISTER APP errors: ", launch_errors)
+                KeepMoving = False
+                #sys.exit()
+
+        if KeepMoving != False:
+            # REGISTER APP ACK
+            sysLogFollow.start
+            print("REGISTER APP ACK ATTEMPT: ", regAppAck_passfail)
+            simm.registerAppAck(TCPconn, regAppAck_passfail)
+            time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("REGISTER APP ACK errors: ", launch_errors)
+                KeepMoving = False
+                regAppAck_passfail = regAppAck_passfail + 1
+                #time.sleep(1)
+                #sys.exit()
+
+        if KeepMoving != False:
+        # REGISTER DATA
+            sysLogFollow.start
+            simm.registerData(TCPconn)
+            #time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("REGISTER DATA errors: ", launch_errors)
+                KeepMoving = False
+                #sys.exit()
+
+
+        if KeepMoving != False:
+        # REGISTER DATA ACK
+            sysLogFollow.start
+            print("REGISTER DATA ACK ATTEMPT: ", regDataAck_passfail)
+            simm.registerDataAck(TCPconn, regDataAck_passfail)
+            time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("REGISTER DATA ACK errors:",launch_errors)
+                KeepMoving = False
+                regDataAck_passfail = regDataAck_passfail + 1
+                #time.sleep(1)
+                #sys.exit()
+
+
+        if KeepMoving != False:
+        # UDP OPEN 
+        # If I don't put a large delay in my .c, this fails.  If the .c stuff executes before this starts, it fails.  
+            sysLogFollow.start
+            #print("UDP OPEN")
+            SenderAddr = simm.udpOpen(UDPsock)
+            time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("UDP OPEN errors: ", launch_errors)
+                KeepMoving = False
+                #sys.exit()
+
+        if KeepMoving != False:
+        # SYS INIT
+            sysLogFollow.start
+            print("SYS INIT ATTEMPT: ", sysInit_passfail)
+            simm.sysInit(UDPsock, SenderAddr, sysInit_passfail)
+            time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            if 0 < launch_errors:
+                print("SYS INIT errors: ", launch_errors)
+                KeepMoving = False
+                sysInit_passfail = sysInit_passfail + 1
+                #sys.exit()
+
+
+        # at least 72 iterations
+        # subscribe_passfail
+        if KeepMoving != False:
+        # SUBSCRIBE
+        # incorporate other SUBSCRIBEs during run-time and see how published data changes
+            sysLogFollow.start
+            print("SUBSCRIBE ATTEMPT: ", subscribe_passfail)
+            if 2 == subscribe_passfail:
+                simm.subscribe(TCPconn, 0)
+            elif 3 == subscribe_passfail:
+                simm.subscribe(TCPconn, 0)
+            elif 4 == subscribe_passfail:
+                simm.subscribe(TCPconn, 0)
+            elif 6 == subscribe_passfail:
+                simm.subscribe(TCPconn, 0)
+            else:
+                simm.subscribe(TCPconn, subscribe_passfail)
+            time.sleep(1)
+            #sysLog = sysLogFollow.read()
+            #launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            #if 0 < launch_errors:
+                #print("SUBSCRIBE errors: ", launch_errors)
+                #KeepMoving = False
+                #sys.exit()
+
+        #if KeepMoving != False:
+        # SUBSCRIBE ACK
+            #sysLogFollow.start
+            simm.subscribeAck(TCPconn, subscribe_passfail)
+            time.sleep(1)
+            sysLog = sysLogFollow.read()
+            launch_errors = sum(1 for d in sysLog if "ERROR!" in d.get('message'))
+            launch_success = sum(1 for d in sysLog if "simm_init() SUCCESS!" in d.get('message'))
+            if 0 < launch_errors:
+                print("SUBSCRIBE ACK errors: ", launch_errors)
+                KeepMoving = False
+                subscribe_passfail = subscribe_passfail + 1
+                #sys.exit()
+            if 0 < launch_success:
+                sys.exit()
+
+
+#       if KeepMoving != False:
+#       # RUN-TIME
+#           cnt = 0
+#           while cnt != 10:
+#               simm.publish(UDPsock)
+#               cnt = cnt + 1
+#               #publish 'n' times before exiting loop, or use args for this
+            
+

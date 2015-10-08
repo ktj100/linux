@@ -1,0 +1,151 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <errno.h>
+#include <syslog.h>
+#include <string.h>
+#include <time.h>
+
+#include "sensor.h"
+#include "fpga_sim.h"
+
+// MUTEXES
+pthread_mutex_t mutex_PublishedLogicals;
+pthread_mutex_t mutex_PublishedTimeStamps;
+
+/*int32_t tot_logicals = 0;*/
+int32_t tot_stamps = 0;
+
+//int32_t get_logicals(void)
+int32_t get_logicals(int32_t toPublish_logicals[], int32_t toPublishsize)
+{
+    int32_t i;
+    int32_t voltages[5] = {0,0,0,0,0};
+    int32_t returnVoltages[5];
+
+    // READ IN 1 HZ VOLTAGE VALUES
+    fpga_sim_voltages(&voltages[0]);
+
+    // SAVE VOLTAGE VALUES TO VARIABLES
+    pfp_val = convert_pfp(voltages[0]);
+    returnVoltages[0] = pfp_val;
+
+    ptlt_val = convert_ptxt(voltages[1]);
+    returnVoltages[1] = ptlt_val;
+
+    ptrt_val = convert_ptxt(voltages[2]);
+    returnVoltages[2] = ptrt_val;
+
+    tcmp_val = convert_tcmp(voltages[3]);
+    returnVoltages[3] = tcmp_val;
+
+    cop_val = convert_cop(voltages[4]);
+    returnVoltages[4] = cop_val;
+
+    // more security besides just a mutex? 
+    pthread_mutex_lock(&mutex_PublishedLogicals);
+        toPublish_logicals[3] = pfp_val;
+        toPublish_logicals[4] = ptlt_val;
+        toPublish_logicals[5] = ptrt_val;
+        toPublish_logicals[6] = tcmp_val;
+        toPublish_logicals[33] = cop_val;
+    pthread_mutex_unlock(&mutex_PublishedLogicals);
+
+
+//  printf("\nPFP: %d\n", pfp_val); //MP_PFP_VALUE          1003
+//  printf("PTLT: %d\n", ptlt_val); //MP_PTLT_TEMPERATURE   1004
+//  printf("PTRT: %d\n", ptrt_val); //MP_PTRT_TEMPERATURE   1005
+//  printf("TCMP: %d\n", tcmp_val); //MP_TCMP               1006
+//  printf("COP: %d\n", cop_val);   //MP_COP_PRESSURE       1033
+
+    return(0);
+    //return returnVoltages;
+}
+
+//int32_t get_timestamps(void)
+int32_t get_timestamps(int32_t sec[], int32_t nsec[], int32_t timeSize )
+{
+    // I would consider doing this either (1) dynamic or (2) #define with many more than you have ... think scalability.  
+    int64_t timestamps[9] = {0,0,0,0,0,0,0,0,0};
+
+    // READ IN TIMESTAMPS
+    fpga_sim_timestamps(&timestamps[0]);
+
+    // STORE TIMESTAMPS SEPARATELY AS SECONDS AND NANOSECONDS
+    split_timestamps(&timestamps[0], sec, nsec );
+
+
+
+    return(0);
+}
+
+int32_t convert_pfp (int32_t voltage)
+{
+    int32_t pressure;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    pressure = voltage / 20;
+
+    return (pressure);
+}
+
+int32_t convert_ptxt (int32_t voltage)
+{
+    int32_t temp;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    temp = voltage / 20;
+
+    return (temp);
+}
+
+int32_t convert_tcmp (int32_t voltage)
+{
+    int32_t temp;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    temp = voltage / 200;
+
+    return (temp);
+}
+
+int32_t convert_cop (int32_t voltage)
+{
+    int32_t pressure;
+
+    /* This algorithm is only for testing. Actual algorithm will replace it. */
+    pressure = voltage / 500 - 5;
+
+    return (pressure);
+}
+
+//void split_timestamps(int64_t *timestamps)
+void split_timestamps(int64_t *timestamps, int32_t getsec[], int32_t getnsec[] )
+{
+    int32_t i;
+
+
+    pthread_mutex_lock(&mutex_PublishedTimeStamps);
+    for(i = 0; (i < 9) && (timestamps[i] != 0); i++)
+    {
+        // these formulas will be replaced by the actual formulas
+        // they currently use the tens place for the seconds and the ones for the nsecs.
+        cam_secs[i] = timestamps[i] / 1000000000L;
+        getsec[i] = cam_secs[i];
+        cam_nsecs[i] = timestamps[i] - cam_secs[i] * 1000000000L;
+        getnsec[i] = cam_nsecs[i];
+    }
+    pthread_mutex_unlock(&mutex_PublishedTimeStamps);
+
+    
+    // INCREMENT TOTAL TRACKER
+    tot_stamps = i;
+
+    /* DEBUGGING */
+    // print out all stored values
+//  for(i = 0; i < tot_stamps; i++)
+//  {
+//      printf("\nSecond Stamp %d: %d\n", i + 1, cam_secs[i]);
+//      printf("Nano Stamp   %d: %9d\n", i + 1, cam_nsecs[i]);
+//  }
+}

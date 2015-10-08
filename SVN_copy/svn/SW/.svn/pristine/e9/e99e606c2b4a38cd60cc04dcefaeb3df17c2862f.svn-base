@@ -1,0 +1,153 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <errno.h>
+#include <syslog.h>
+#include <string.h>
+#include <time.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
+
+#include "sensor.h"
+#include "fpga_read.h"
+
+/* This file will replace fpga_sim.c as the actual file that will be 
+ * used to read from the FPGA. Three functions are required to be 
+ * implemented in order to replace: one to wait for the FPGA to activate
+ * the interrupt register, one to obtain the raw value for the logical
+ * 1 Hz values, and one to obtain the timestamps. */
+
+int32_t dev = 0;
+uint32_t *fpga_regs;
+int32_t fpga_timer_fd;
+
+void setup_registers(void)
+{
+    struct timespec start, interval;
+    struct itimerspec fpga_timer_setup;
+    int32_t delay_finished = 1, success;
+
+    // The two following functions will be replaced for the actual FPGA interface.
+    dev = open("simulation_file.bin", O_RDWR);
+    fpga_regs = (uint32_t*) mmap(0, 512, PROT_READ | PROT_WRITE, MAP_SHARED, dev ,0);
+    // printf("fpga_regs = %p\n", fpga_regs);
+
+    // create timer
+    fpga_timer_fd = timerfd_create(CLOCK_REALTIME, 0);
+    if ( -1 == fpga_timer_fd )
+    {
+        printf("ERROR: Timer file descriptor creation failed! (%d: %s)\n", errno, strerror(errno));
+    }
+
+    // align timer with FPGA output
+    // initial timer expiration will occur 1 second from FPGA's first output
+    start.tv_sec = 1;
+    start.tv_nsec = 0;
+
+    // 1 second interval for fd timer
+    interval.tv_sec = 1;
+    interval.tv_nsec = 0;
+
+    // start and interval structs will be used for the timerfd_settime setup
+    fpga_timer_setup.it_interval = interval;
+    fpga_timer_setup.it_value = start;
+
+    // timer will be set up to start immediately after FPGA sets up, then at 1 sec intervals
+    while ( delay_finished != 0 )
+    {
+        delay_finished = fpga_regs[IAR];
+    }
+    success = timerfd_settime(fpga_timer_fd, 0, &fpga_timer_setup, NULL);
+    fpga_regs[IAR] = 1;
+    // printf("Timerfd_settime result: %d\n", success);
+}
+
+void fpga_config(void)
+{
+    fpga_regs[ISR] = 1;
+    fpga_regs[IEVR] = 1;
+    fpga_regs[IMR] = 1;
+}
+
+int32_t wait_for_fpga(void)
+{
+    int32_t success;
+    int64_t num_interrupts, missed;
+
+    // read timer
+    // printf("Started blocking read...\n");
+    errno = 0;
+    success = read(fpga_timer_fd, &num_interrupts, sizeof(num_interrupts));
+    // printf("Blocking read finished!\n");
+    if ( -1 == success )
+    {
+        printf("ERROR: Read function failed! (%d: %s) \n", errno, strerror(errno));
+    }
+    if ( 1 < num_interrupts )
+    {
+        printf("ERROR: Missed %lu interrupts from FPGA! \n", num_interrupts-1);
+    }
+    // sleep(1);
+    return(1);
+}
+
+void fpga_sim_voltages(int *voltage)
+{
+    // Bits 23:0 contain the voltage values in the given registers,
+    // so the other 8 bits are masked off.
+    voltage[0] = fpga_regs[PFP_VAL] & 0x00FFFFFF;
+    voltage[1] = fpga_regs[PTLT_VAL] & 0x00FFFFFF;
+    voltage[2] = fpga_regs[PTRT_VAL] & 0x00FFFFFF;
+    voltage[3] = fpga_regs[TCMP_VAL] & 0x00FFFFFF;
+    voltage[4] = fpga_regs[COP_VAL] & 0x00FFFFFF;
+}
+
+void fpga_sim_timestamps(int64_t *timestamps)
+{
+    int32_t num_ts, i;
+    int64_t high, low;
+
+    timestamps[0] = fpga_regs[CAM_TS_VAL_0];
+    timestamps[1] = fpga_regs[CAM_TS_VAL_1];
+    timestamps[2] = fpga_regs[CAM_TS_VAL_2];
+    timestamps[3] = fpga_regs[CAM_TS_VAL_3];
+    timestamps[4] = fpga_regs[CAM_TS_VAL_4];
+    timestamps[5] = fpga_regs[CAM_TS_VAL_5];
+    timestamps[6] = fpga_regs[CAM_TS_VAL_6];
+    timestamps[7] = fpga_regs[CAM_TS_VAL_7];
+    timestamps[8] = fpga_regs[CAM_TS_VAL_8];
+
+    // The timestamp values have a resolution of 10 ns, so a 32 bit register can only
+    // hold a value up to 42.9 seconds. To compensate, one register is dedicated to 
+    // hold the bits higher than the 32 bits, and when the lower 32 are read in, each
+    // timestamp has the lower 32 bits added to the upper, and the value is stored in 
+    // the 64 bit 'timestamps' array.
+    // The extra logic is used for cases where the upper 32 bits need to be different 
+    // for the group of timestamps read in.
+    high = fpga_regs[TS_HIGH];
+    low = fpga_regs[TS_LOW];
+
+    num_ts = fpga_regs[TS_COUNT];
+    printf("Timestamps: %d\n", num_ts);
+    total_ts += num_ts;
+    for (i = 0; i < 9; i++)
+    {
+        if (i >= num_ts)
+        {
+            timestamps[i] = 0;
+        }
+        else if (timestamps[i] > low)
+        {
+            timestamps[i] += (high - 1) << 32;
+        }
+        else
+        {
+            timestamps[i] += high << 32;
+        }
+    }
+}

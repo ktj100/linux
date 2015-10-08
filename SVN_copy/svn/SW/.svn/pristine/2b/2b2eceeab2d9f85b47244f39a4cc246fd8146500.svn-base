@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+# This script ensures that BARSM restarts any failed applications that started 
+# up good. Error logs are also checked
+
+
+
+# add location of the utilities for this script to search out
+import sys
+sys.path.insert(0, '/svn/SW/test/utils')
+
+import log
+import barsm
+# import subprocess
+import time
+import datetime
+import proc
+
+if __name__ == '__main__':
+
+    # navigate to the end of the SYSLOG
+    follow = log.logfollower()
+
+    # clear out all app directories
+    barsm.remove()
+
+    # compile needed applications and place in required directories
+    # barsm.short_launch()  # testing...
+    barsm.launch_bad()
+
+    # start barsm
+    barsm.start_barsm()
+
+    # launch processes
+    fail = False
+    launch_result = barsm.monitor_launch(5)
+    if launch_result != 9:
+        print("Launch Failure")
+        fail = True
+
+    # get the time of the launch finish
+    logs = follow.read()
+    launch_finish_ts = ((filter(lambda t: "COMPLETED: Launch sequence complete!" in t['message'], logs))[0]['timestamp'])
+    
+    # timestamps from SYSLOG don't incule a year, and it defaults to 1900.. So 42003 days are added to bring it to 2015
+    launch_finish_ts = launch_finish_ts + datetime.timedelta(days = 42003)
+
+    # wait for 35 seconds to pass to check for 5 zombies
+    while 35 > (datetime.datetime.now() - launch_finish_ts).total_seconds():
+        print("Waiting 35 seconds after launch for children to become zombies...")
+        time.sleep(3)
+
+    # make sure all 5 thirty second apps ended and none others
+    barsm_pid = (proc.findproc("valgrind.bin"))[0]['pid']
+    child_pids = proc.findchild(barsm_pid)
+    print(child_pids)
+    zombies = sum(1 for c in child_pids if "Z" == c.get('state'))
+    print(zombies)
+    if 5 != zombies:
+        print("Zombie Creation Failure")
+        fail = True
+
+    # wait for 65 seconds to pass to check for child recreation
+    while 65 > (datetime.datetime.now() - launch_finish_ts).total_seconds():
+        print("Waiting 65 seconds after launch for children to be replaced...")
+        time.sleep(3)
+
+    # make sure all 5 stopped processes have logged errors to go with
+    logs = follow.read()
+    if filter(lambda t: "ERROR: Process for /opt/rc360/system/thirty_aacm" in t['message'], logs) == [] \
+    or filter(lambda t: "ERROR: Process for /opt/rc360/modules/GE/thirty_gemod" in t['message'], logs) == [] \
+    or filter(lambda t: "ERROR: Process for /opt/rc360/modules/TPA/thirty_tpamod" in t['message'], logs) == [] \
+    or filter(lambda t: "ERROR: Process for /opt/rc360/apps/GE/thirty_geapp" in t['message'], logs) == [] \
+    or filter(lambda t: "ERROR: Process for /opt/rc360/apps/TPA/thirty_tpaapp" in t['message'], logs) == [] :
+        print("SYSLOG error missing")
+        fail = True
+
+    # make sure all apps get started back up
+    child_pids = proc.findchild(barsm_pid)
+    print(child_pids)
+    zombies = sum(1 for c in child_pids if "Z" == c.get('state'))
+    print(zombies)
+    if 0 == zombies and not fail:
+        print("SUCCESS")
+    else:
+        print("FAIL")
+
+    # kill off all started processes
+    barsm.kill_procs()
